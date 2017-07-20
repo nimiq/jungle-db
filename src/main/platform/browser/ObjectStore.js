@@ -192,6 +192,22 @@ class ObjectStore {
     }
 
     /**
+     * @param {Query} query
+     * @returns {Promise.<Array.<*>>}
+     */
+    query(query) {
+        return query.getAll(this);
+    }
+
+    /**
+     * @param {Query} query
+     * @returns {Promise.<Array.<string>>}
+     */
+    queryKeys(query) {
+        return query.getAllKeys(this);
+    }
+
+    /**
      * @returns {ITransaction}
      */
     async transaction() {} // eslint-disable-line no-unused-vars
