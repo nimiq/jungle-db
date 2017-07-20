@@ -1,0 +1,6 @@
+/**
+ * @interface
+ */
+class IKeyRange {
+
+}

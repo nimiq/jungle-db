@@ -7,13 +7,18 @@ const sourcemaps = require('gulp-sourcemaps');
 const sources = {
     platform: {
         browser: [
-            './src/main/platform/browser/Class.js'
+            './src/main/platform/browser/Class.js',
+            './src/main/platform/browser/JungleDB.js',
+            './src/main/platform/browser/KeyRange.js',
+            './src/main/platform/browser/Index.js',
+            './src/main/platform/browser/Query.js',
+            './src/main/platform/browser/ObjectStore.js'
         ],
         node: [
         ]
     },
     generic: [
-        './src/main/generic/JungleDB.js'
+        './src/main/generic/Query.js'
     ],
     test: [
         './src/test/specs/**/*.spec.js'
