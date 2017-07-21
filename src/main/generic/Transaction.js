@@ -4,10 +4,12 @@
 class Transaction {
     /**
      * @param {IObjectStore} backend
+     * @param {IObjectStore} [commitBackend]
      */
-    constructor(backend) {
+    constructor(backend, commitBackend) {
         this._id = Transaction._instanceCount++;
         this._backend = backend;
+        this._commitBackend = commitBackend || backend;
         this._modified = new Map();
         this._removed = new Set();
         this._indices = TransactionIndex.derive(this, backend);
@@ -60,18 +62,17 @@ class Transaction {
         // Transaction is given, forward to backend.
         if (tx !== undefined) {
             // Make sure transaction can be based on this state.
-            if (this._state !== Transaction.STATE.COMMITTED
-                || this._state !== Transaction.STATE.FLUSHED) {
+            if (this._state !== Transaction.STATE.COMMITTED) {
                 throw 'Transaction is based on invalid state';
             }
-            return this._backend.commit(tx);
+            return this._commitBackend.commit(tx);
         }
 
         if (this._state !== Transaction.STATE.OPEN) {
             throw 'Transaction already closed';
         }
         clearTimeout(this._watchdog);
-        if (await this._backend.commit(this)) {
+        if (await this._commitBackend.commit(this)) {
             this._state = Transaction.STATE.COMMITTED;
             return true;
         } else {
@@ -87,20 +88,18 @@ class Transaction {
         // Transaction is given, forward to backend.
         if (tx !== undefined) {
             // Make sure transaction can be based on this state.
-            if (this._state !== Transaction.STATE.COMMITTED
-                || this._state !== Transaction.STATE.FLUSHED
-                || !this._openTransactions.has(tx)) {
+            if (this._state !== Transaction.STATE.COMMITTED) {
                 throw 'Transaction is based on invalid state';
             }
 
-            await this._backend.abort(tx);
+            await this._commitBackend.abort(tx);
         }
 
         if (this._state !== Transaction.STATE.OPEN) {
             throw 'Transaction already closed';
         }
         clearTimeout(this._watchdog);
-        await this._backend.abort(this);
+        await this._commitBackend.abort(this);
         this._state = Transaction.STATE.ABORTED;
     }
 
