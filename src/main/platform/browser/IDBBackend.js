@@ -1,4 +1,7 @@
-class ObjectStore {
+/**
+ * @implements {IObjectStore}
+ */
+class IDBBackend {
     /**
      * @param {JungleDB} db
      * @param {string} tableName
@@ -6,7 +9,15 @@ class ObjectStore {
     constructor(db, tableName) {
         this._db = db;
         this._tableName = tableName;
-        this._indices = [];
+        /** @type {Map.<string,IIndex>} */
+        this._indices = new Map();
+    }
+
+    /**
+     * @type {Map.<string,IIndex>}
+     */
+    get indices() {
+        return this._indices;
     }
 
     /**
@@ -14,8 +25,8 @@ class ObjectStore {
      */
     init(objectStore) {
         // Create indices.
-        for (const [indexName, keyPath] of this._indices) {
-            objectStore.createIndex(indexName, keyPath, { unique: false });
+        for (const [indexName, index] of this._indices) {
+            objectStore.createIndex(indexName, index.keyPath, { unique: false, multiEntry: index.multiEntry});
         }
     }
 
@@ -66,10 +77,14 @@ class ObjectStore {
     }
 
     /**
-     * @param {IKeyRange|*} [query]
+     * @param {Query|KeyRange} [query]
      * @returns {Promise.<Array.<*>>}
      */
-    async getAll(query=null) {
+    async values(query=null) {
+        if (query !== null && query instanceof Query) {
+            return query.values(this);
+        }
+        query = IDBTools.convertKeyRange(query);
         const db = await this._db.backend;
         return new Promise((resolve, reject) => {
             const getRequest = db.transaction([this._tableName], 'readonly')
@@ -81,42 +96,30 @@ class ObjectStore {
     }
 
     /**
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<string>}
+     * @param {Query|KeyRange} [query]
+     * @returns {Promise.<Set.<string>>}
      */
-    async getKey(query=null) {
-        const db = await this._db.backend;
-        return new Promise((resolve, reject) => {
-            const getRequest = db.transaction([this._tableName], 'readonly')
-                .objectStore(this._tableName)
-                .getKey(query);
-            getRequest.onsuccess = () => resolve(getRequest.result);
-            getRequest.onerror = () => reject(getRequest.error);
-        });
-    }
-
-    /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<Array.<string>>}
-     */
-    async getAllKeys(query=null) {
+    async keys(query=null) {
+        if (query !== null && query instanceof Query) {
+            return query.keys(this);
+        }
+        query = IDBTools.convertKeyRange(query);
         const db = await this._db.backend;
         return new Promise((resolve, reject) => {
             const getRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
                 .getAllKeys(query);
-            getRequest.onsuccess = () => resolve(getRequest.result);
+            getRequest.onsuccess = () => resolve(Set.setify(getRequest.result));
             getRequest.onerror = () => reject(getRequest.error);
         });
     }
 
     /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
+     * @param {KeyRange} [query]
      * @returns {Promise.<*>}
      */
-    async getMax(query=null) {
+    async maxValue(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._db.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
@@ -128,11 +131,11 @@ class ObjectStore {
     }
 
     /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<string>>}
+     * @param {KeyRange} [query]
+     * @returns {Promise.<string>}
      */
-    async getMaxKey(query=null) {
+    async maxKey(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._db.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
@@ -144,11 +147,11 @@ class ObjectStore {
     }
 
     /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
+     * @param {KeyRange} [query]
      * @returns {Promise.<*>}
      */
-    async getMin(query=null) {
+    async minValue(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._db.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
@@ -160,11 +163,11 @@ class ObjectStore {
     }
 
     /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<string>>}
+     * @param {KeyRange} [query]
+     * @returns {Promise.<string>}
      */
-    async getMinKey(query=null) {
+    async minKey(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._db.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
@@ -176,11 +179,11 @@ class ObjectStore {
     }
 
     /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<Array.<string>>}
+     * @param {KeyRange} [query]
+     * @returns {Promise.<number>}
      */
     async count(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._db.backend;
         return new Promise((resolve, reject) => {
             const getRequest = db.transaction([this._tableName], 'readonly')
@@ -192,33 +195,26 @@ class ObjectStore {
     }
 
     /**
-     * @param {Query} query
-     * @returns {Promise.<Array.<*>>}
+     * @param {Transaction} [tx]
+     * @returns {Promise.<boolean>}
      */
-    query(query) {
-        return query.getAll(this);
+    async commit(tx) {
+        throw 'Unsupported operation';
     }
 
     /**
-     * @param {Query} query
-     * @returns {Promise.<Array.<string>>}
+     * @param {Transaction} [tx]
      */
-    queryKeys(query) {
-        return query.getAllKeys(this);
+    async abort(tx) {
+        throw 'Unsupported operation';
     }
 
     /**
-     * @returns {ITransaction}
-     */
-    async transaction() {} // eslint-disable-line no-unused-vars
-
-    /**
-     * @abstract
      * @param {string} indexName
      * @returns {IIndex}
      */
     index(indexName) {
-        return new Index(this, indexName);
+        return this._indices.get(indexName);
     }
 
     /** @type {Promise.<IDBDatabase>} */
@@ -232,13 +228,38 @@ class ObjectStore {
     }
 
     /**
+     * @param {Transaction} tx
+     * @returns {Promise.<boolean>}
+     * @protected
+     */
+    async _apply(tx) {
+        const db = await this._db.backend;
+        return new Promise((resolve, error) => {
+            const tx = db.transaction([this._tableName], 'readwrite');
+            const objSt = tx.objectStore(this._tableName);
+
+            for (const key of tx._removed) {
+                objSt.delete(key);
+            }
+            for (const [key, value] of tx._modified) {
+                objSt.put(value, key);
+            }
+
+            tx.onsuccess = event => resolve(event.target.result);
+            tx.onerror = error;
+        });
+    }
+
+    /**
      * @param {string} indexName
      * @param {string|Array.<string>} [keyPath]
+     * @param {boolean} [multiEntry]
      */
-    async ensureIndex(indexName, keyPath) {
-        if (this._db.connected) throw 'Cannot create Index while connected';
+    async createIndex(indexName, keyPath, multiEntry=false) {
+        if (this._db.connected) throw 'Cannot create index while connected';
         keyPath = keyPath || indexName;
-        this._indices.push([indexName, keyPath]);
+        const index = new PersistentIndex(this, indexName, keyPath, multiEntry);
+        this._indices.set(indexName, index);
     }
 }
-Class.register(ObjectStore);
+Class.register(IDBBackend);

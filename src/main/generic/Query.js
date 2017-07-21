@@ -61,7 +61,7 @@ class Query {
 
     /**
      * @param {string} indexName
-     * @param {*) val
+     * @param {*} val
      * @returns {Query}
      */
     static lt(indexName, val) {
@@ -70,7 +70,7 @@ class Query {
 
     /**
      * @param {string} indexName
-     * @param {*) val
+     * @param {*} val
      * @returns {Query}
      */
     static le(indexName, val) {
@@ -79,7 +79,7 @@ class Query {
 
     /**
      * @param {string} indexName
-     * @param {*) val
+     * @param {*} val
      * @returns {Query}
      */
     static gt(indexName, val) {
@@ -88,7 +88,7 @@ class Query {
 
     /**
      * @param {string} indexName
-     * @param {*) val
+     * @param {*} val
      * @returns {Query}
      */
     static ge(indexName, val) {
@@ -97,7 +97,7 @@ class Query {
 
     /**
      * @param {string} indexName
-     * @param {*) val
+     * @param {*} val
      * @returns {Query}
      */
     static eq(indexName, val) {
@@ -107,7 +107,7 @@ class Query {
     /**
      * Excluding boundaries.
      * @param {string} indexName
-     * @param {*) lower
+     * @param {*} lower
      * @param {*} upper
      * @returns {Query}
      */
@@ -118,7 +118,7 @@ class Query {
     /**
      * Including boundaries.
      * @param {string} indexName
-     * @param {*) lower
+     * @param {*} lower
      * @param {*} upper
      * @returns {Query}
      */
@@ -162,10 +162,10 @@ class Query {
     }
 
     /**
-     * @param {ObjectStore} objectStore
+     * @param {IObjectStore} objectStore
      * @returns {Promise.<Array.<*>>}
      */
-    async getAll(objectStore) {
+    async values(objectStore) {
         const keys = await this._execute(objectStore);
         const results = [];
         for (const key of keys) {
@@ -175,16 +175,16 @@ class Query {
     }
 
     /**
-     * @param {ObjectStore} objectStore
-     * @returns {Promise.<Array.<string>>}
+     * @param {IObjectStore} objectStore
+     * @returns {Promise.<Set.<string>>}
      */
-    async getAllKeys(objectStore) {
-        return [...await this._execute(objectStore)];
+    keys(objectStore) {
+        return this._execute(objectStore);
     }
 
     /**
-     * @param {ObjectStore} objectStore
-     * @returns {Promise.<Set>}
+     * @param {IObjectStore} objectStore
+     * @returns {Promise.<Set.<string>>}
      * @private
      */
     async _execute(objectStore) {
@@ -202,8 +202,8 @@ class Query {
     }
 
     /**
-     * @param {ObjectStore} objectStore
-     * @returns {Set}
+     * @param {IObjectStore} objectStore
+     * @returns {Set.<string>}
      * @private
      */
     async _executeCombined(objectStore) {
@@ -242,32 +242,32 @@ class Query {
     }
 
     /**
-     * @param {ObjectStore} objectStore
-     * @returns {Set}
+     * @param {IObjectStore} objectStore
+     * @returns {Set.<string>}
      * @private
      */
     async _executeAdvanced(objectStore) {
         const index = objectStore.index(this._indexName);
-        let results = [];
+        let results = new Set();
         switch (this._op) {
             case Query.OPERATORS.MAX:
-                results.push(await index.getMaxKey());
+                results = await index.maxKeys();
                 break;
             case Query.OPERATORS.MIN:
-                results.push(await index.getMinKey());
+                results = await index.minKeys();
                 break;
         }
         return new Set(results);
     }
 
     /**
-     * @param {ObjectStore} objectStore
-     * @returns {Promise.<Set>}
+     * @param {IObjectStore} objectStore
+     * @returns {Promise.<Set.<string>>}
      * @private
      */
     async _executeRange(objectStore) {
         const index = objectStore.index(this._indexName);
-        return new Set(await index.getAllKeys(this._keyRange));
+        return new Set(await index.keys(this._keyRange));
     }
 }
 Query.OPERATORS = {

@@ -4,64 +4,62 @@
 class IIndex {
     /**
      * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<*>}
+     * @type {string}
      */
-    async get(query) {} // eslint-disable-line no-unused-vars
+    get keyPath() {} // eslint-disable-line no-unused-vars
 
     /**
      * @abstract
-     * @param {IKeyRange|*} [query]
+     * @type {boolean}
+     */
+    get multiEntry() {} // eslint-disable-line no-unused-vars
+
+    /**
+     * @abstract
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<Set.<string>>}
+     */
+    async keys(query=null) {} // eslint-disable-line no-unused-vars
+
+    /**
+     * @abstract
+     * @param {KeyRange|*} [query]
      * @returns {Promise.<Array.<*>>}
      */
-    async getAll(query) {} // eslint-disable-line no-unused-vars
+    async values(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
      * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<string>}
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<Array.<*>>}
      */
-    async getKey(query) {} // eslint-disable-line no-unused-vars
+    async maxValues(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
      * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<Array.<string>>}
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<Set.<string>>}
      */
-    async getAllKeys(query) {} // eslint-disable-line no-unused-vars
+    async maxKeys(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
      * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<*>}
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<Array.<*>>}
      */
-    async getMax(query) {} // eslint-disable-line no-unused-vars
+    async minValues(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
      * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<string>>}
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<Set.<string>>}
      */
-    async getMaxKey(query) {} // eslint-disable-line no-unused-vars
+    async minKeys(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
      * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<*>}
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<number>}
      */
-    async getMin(query) {} // eslint-disable-line no-unused-vars
-
-    /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<string>>}
-     */
-    async getMinKey(query) {} // eslint-disable-line no-unused-vars
-
-    /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<Array.<string>>}
-     */
-    async count(query) {} // eslint-disable-line no-unused-vars
+    async count(query=null) {} // eslint-disable-line no-unused-vars
 }

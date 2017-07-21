@@ -1,6 +1,0 @@
-/**
- * @interface
- */
-class IKeyRange {
-
-}

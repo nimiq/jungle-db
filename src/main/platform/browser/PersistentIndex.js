@@ -1,14 +1,32 @@
 /**
  * @implements IIndex
  */
-class Index {
+class PersistentIndex {
     /**
      * @param {ObjectStore} objectStore
      * @param {string} indexName
+     * @param {string|Array.<string>} keyPath
+     * @param {boolean} multiEntry
      */
-    constructor(objectStore, indexName) {
+    constructor(objectStore, indexName, keyPath, multiEntry=false) {
         this._objectStore = objectStore;
         this._indexName = indexName;
+        this._keyPath = keyPath;
+        this._multiEntry = multiEntry;
+    }
+
+    /**
+     * @type {string}
+     */
+    get keyPath() {
+        return this._keyPath;
+    }
+
+    /**
+     * @type {boolean}
+     */
+    get multiEntry() {
+        return this._multiEntry;
     }
 
     /**
@@ -22,23 +40,11 @@ class Index {
     }
 
     /**
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<*>}
-     */
-    async get(query=null) {
-        const db = await this._objectStore.backend;
-        return new Promise((resolve, reject) => {
-            const getRequest = this._index(db).get(query);
-            getRequest.onsuccess = () => resolve(getRequest.result);
-            getRequest.onerror = () => reject(getRequest.error);
-        });
-    }
-
-    /**
-     * @param {IKeyRange|*} [query]
+     * @param {KeyRange|*} [query]
      * @returns {Promise.<Array.<*>>}
      */
-    async getAll(query=null) {
+    async values(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const getRequest = this._index(db).getAll(query);
@@ -48,38 +54,25 @@ class Index {
     }
 
     /**
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<string>}
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<Set.<string>>}
      */
-    async getKey(query=null) {
-        const db = await this._objectStore.backend;
-        return new Promise((resolve, reject) => {
-            const getRequest = this._index(db).getKey(query);
-            getRequest.onsuccess = () => resolve(getRequest.result);
-            getRequest.onerror = () => reject(getRequest.error);
-        });
-    }
-
-    /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<Array.<string>>}
-     */
-    async getAllKeys(query=null) {
+    async keys(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const getRequest = this._index(db).getAllKeys(query);
-            getRequest.onsuccess = () => resolve(getRequest.result);
+            getRequest.onsuccess = () => resolve(Set.setify(getRequest.result));
             getRequest.onerror = () => reject(getRequest.error);
         });
     }
 
     /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<*>}
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<Array.<*>>}
      */
-    async getMax(query=null) {
+    async maxValues(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = this._index(db).openCursor(query, 'prev');
@@ -89,25 +82,25 @@ class Index {
     }
 
     /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<string>>}
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<Set.<string>>}
      */
-    async getMaxKey(query=null) {
+    async maxKeys(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = this._index(db).openKeyCursor(query, 'prev');
-            openCursorRequest.onsuccess = () => resolve(openCursorRequest.result.primaryKey);
+            openCursorRequest.onsuccess = () => resolve(Set.setify(openCursorRequest.result.primaryKey));
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
 
     /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<*>}
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<Array.<*>>}
      */
-    async getMin(query=null) {
+    async minValues(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = this._index(db).openCursor(query, 'next');
@@ -117,25 +110,26 @@ class Index {
     }
 
     /**
-     * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<string>>}
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<Set.<string>>}
      */
-    async getMinKey(query=null) {
+    async minKeys(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = this._index(db).openKeyCursor(query, 'next');
-            openCursorRequest.onsuccess = () => resolve(openCursorRequest.result.primaryKey);
+            openCursorRequest.onsuccess = () => resolve(Set.setify(openCursorRequest.result.primaryKey));
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
 
     /**
      * @abstract
-     * @param {IKeyRange|*} [query]
-     * @returns {Promise.<Array.<string>>}
+     * @param {KeyRange|*} [query]
+     * @returns {Promise.<number>}
      */
     async count(query=null) {
+        query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const getRequest = this._index(db).count(query);
@@ -144,5 +138,5 @@ class Index {
         });
     }
 }
-Class.register(Index);
+Class.register(PersistentIndex);
 

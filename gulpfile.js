@@ -8,17 +8,26 @@ const sources = {
     platform: {
         browser: [
             './src/main/platform/browser/Class.js',
+            './src/main/platform/browser/utils/IDBTools.js',
+            './src/main/platform/browser/IDBBackend.js',
             './src/main/platform/browser/JungleDB.js',
-            './src/main/platform/browser/KeyRange.js',
-            './src/main/platform/browser/Index.js',
-            './src/main/platform/browser/Query.js',
-            './src/main/platform/browser/ObjectStore.js'
+            './src/main/platform/browser/PersistentIndex.js'
         ],
         node: [
         ]
     },
     generic: [
-        './src/main/generic/Query.js'
+        './src/main/generic/utils/BTree.js',
+        './src/main/generic/utils/LRUMap.js',
+        './src/main/generic/utils/ObjectUtils.js',
+        './src/main/generic/utils/SetUtils.js',
+        './src/main/generic/CachedBackend.js',
+        './src/main/generic/InMemoryIndex.js',
+        './src/main/generic/KeyRange.js',
+        './src/main/generic/ObjectStore.js',
+        './src/main/generic/Query.js',
+        './src/main/generic/TransactionIndex.js',
+        './src/main/generic/Transaction.js'
     ],
     test: [
         './src/test/specs/**/*.spec.js'
