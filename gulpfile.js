@@ -14,13 +14,20 @@ const sources = {
             './src/main/platform/browser/PersistentIndex.js'
         ],
         node: [
+            './src/main/platform/nodejs/IndexTransaction.js',
+            './src/main/platform/nodejs/utils/LevelDBTools.js',
+            './src/main/platform/nodejs/LevelDBBackend.js',
+            './src/main/platform/nodejs/JungleDB.js',
+            './src/main/platform/nodejs/PersistentIndex.js'
         ]
     },
     generic: [
         './src/main/generic/utils/BTree.js',
         './src/main/generic/utils/LRUMap.js',
         './src/main/generic/utils/ObjectUtils.js',
+        './src/main/generic/utils/Observable.js',
         './src/main/generic/utils/SetUtils.js',
+        './src/main/generic/utils/Synchronizer.js',
         './src/main/generic/CachedBackend.js',
         './src/main/generic/InMemoryIndex.js',
         './src/main/generic/KeyRange.js',
@@ -40,7 +47,7 @@ const sources = {
 };
 
 gulp.task('build-web', function () {
-    return gulp.src(['./src/loader/prefix.js.template'].concat(sources.platform.browser).concat(sources.generic).concat(['./src/loader/suffix.js.template']))
+    return gulp.src(['./src/loader/prefix.js.template'].concat(sources.generic).concat(sources.platform.browser).concat(['./src/loader/suffix.js.template']))
         .pipe(sourcemaps.init())
         .pipe(concat('web.js'))
         .pipe(sourcemaps.write('.'))
@@ -49,7 +56,7 @@ gulp.task('build-web', function () {
 });
 
 gulp.task('build-node', function () {
-    return gulp.src(['./src/main/platform/nodejs/index.prefix.js'].concat(sources.platform.node).concat(sources.generic).concat(['./src/main/platform/nodejs/index.suffix.js']))
+    return gulp.src(['./src/main/platform/nodejs/index.prefix.js'].concat(sources.generic).concat(sources.platform.node).concat(['./src/main/platform/nodejs/index.suffix.js']))
         .pipe(sourcemaps.init())
         .pipe(concat('node.js'))
         .pipe(sourcemaps.write('.'))

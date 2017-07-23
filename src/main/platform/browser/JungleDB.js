@@ -10,6 +10,7 @@ class JungleDB {
         this._onUpgradeNeeded = onUpgradeNeeded;
         this._connected = false;
         this._objectStores = new Map();
+        this._objectStoreBackends = new Map();
         this._objectStoresToDelete = [];
     }
 
@@ -41,11 +42,12 @@ class JungleDB {
         delete this._objectStoresToDelete;
 
         // Create new ObjectStores.
-        for (const [tableName, backend] of this._objectStores) {
+        for (const [tableName, objStore] of this._objectStoreBackends) {
             const IDBobjStore = db.createObjectStore(tableName);
             // Create indices.
-            backend.init(IDBobjStore);
+            objStore.init(IDBobjStore);
         }
+        delete this._objectStoreBackends;
 
         // Call user defined function if requested.
         if (this._onUpgradeNeeded) {
@@ -68,7 +70,6 @@ class JungleDB {
      * @returns {ObjectStore}
      */
     getObjectStore(tableName) {
-        if (!this._connected) throw 'JungleDB is not connected';
         return this._objectStores.get(tableName);
     }
 
@@ -77,9 +78,12 @@ class JungleDB {
      */
     createObjectStore(tableName) {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
-        const cachedBackend = new CachedBackend(new IDBBackend(this, tableName));
-        const objStore = new ObjectStore(cachedBackend);
+        const backend = new IDBBackend(this, tableName);
+        const cachedBackend = new CachedBackend(backend);
+        const objStore = new ObjectStore(cachedBackend, this);
         this._objectStores.set(tableName, objStore);
+        this._objectStoreBackends.set(tableName, backend);
+        return objStore;
     }
 
     /**

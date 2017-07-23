@@ -1,7 +1,7 @@
 /**
  * @implements IIndex
  */
-class InMemoryIndex extends Observable {
+class InMemoryIndex {
     /**
      * @param {IObjectStore} objectStore
      * @param {string|Array.<string>} [keyPath]
@@ -10,7 +10,6 @@ class InMemoryIndex extends Observable {
      * @param {BTree} [tree]
      */
     constructor(objectStore, keyPath, multiEntry=false, unique=false) {
-        super();
         this._objectStore = objectStore;
         this._keyPath = keyPath;
         this._multiEntry = multiEntry;
@@ -193,7 +192,7 @@ class InMemoryIndex extends Observable {
      */
     async maxKeys(query=null) {
         const isRange = query instanceof KeyRange;
-        this._tree.goToUpperBound(isRange ? query.upper : undefined, query.upperOpen || false);
+        this._tree.goToUpperBound(isRange ? query.upper : undefined, isRange ? query.upperOpen : false);
         return Set.from(this._tree.currentRecord);
     }
 
@@ -212,7 +211,7 @@ class InMemoryIndex extends Observable {
      */
     async minKeys(query=null) {
         const isRange = query instanceof KeyRange;
-        this._tree.goToLowerBound(isRange ? query.lower : undefined, query.lowerOpen || false);
+        this._tree.goToLowerBound(isRange ? query.lower : undefined, isRange ? query.lowerOpen : false);
         return Set.from(this._tree.currentRecord);
     }
 

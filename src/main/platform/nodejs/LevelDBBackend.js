@@ -101,7 +101,7 @@ class LevelDBBackend {
         const oldValue = await this.get(key);
         // Only update if there was a value with that key.
         if (oldValue === undefined) {
-            return;
+            return Promise.resolve();
         }
         return new Promise((resolve, error) => {
             const batch = this._dbBackend.batch();

@@ -12,9 +12,9 @@
     const st = db.createObjectStore('testTable');
     st.createIndex('prop');
 
-    db.connect();
-
-    Query.and(Query.ge('prop', 'dff'), Query.min('prop')).values(st).then(console.log);
+    db.connect().then(() => {
+        st.values(Query.and(Query.ge('prop', 'dff'), Query.min('prop'))).then(console.log);
+    });
 </script>
 
 </body>

@@ -14,6 +14,7 @@ class JungleDB {
         this._valueEncoding = valueEncoding;
         this._connected = false;
         this._objectStores = new Map();
+        this._objectStoreBackends = [];
         this._objectStoresToDelete = [];
     }
 
@@ -71,9 +72,10 @@ class JungleDB {
         }
 
         // Create new ObjectStores.
-        for (const objStore of this._objectStores.values()) {
+        for (const objStore of this._objectStoreBackends) {
             promises.push(objStore.init());
         }
+        delete this._objectStoreBackends;
 
         // The order of the above promises does not matter.
         await Promise.all(promises);
@@ -99,7 +101,6 @@ class JungleDB {
      * @returns {ObjectStore}
      */
     getObjectStore(tableName) {
-        if (!this._connected) throw 'JungleDB is not connected';
         return this._objectStores.get(tableName);
     }
 
@@ -110,8 +111,10 @@ class JungleDB {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
         // LevelDB already implements a LRU cache. so we don't need to cache it.
         const backend = new LevelDBBackend(this, tableName, this._databaseDir, this._valueEncoding);
-        const objStore = new ObjectStore(backend);
+        const objStore = new ObjectStore(backend, this);
         this._objectStores.set(tableName, objStore);
+        this._objectStoreBackends.push(backend);
+        return objStore;
     }
 
     /**

@@ -4,9 +4,11 @@
 class ObjectStore {
     /**
      * @param {IObjectStore} backend
+     * @param {{connected:boolean}} db
      */
-    constructor(backend) {
+    constructor(backend, db) {
         this._backend = backend;
+        this._db = db;
         /** @type {Array.<Transaction>} */
         this._stateStack = [];
         /**
@@ -40,6 +42,7 @@ class ObjectStore {
      * @type {Map.<string,IIndex>}
      */
     get indices() {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         return this._currentState.indices;
     }
 
@@ -48,6 +51,7 @@ class ObjectStore {
      * @returns {Promise.<*>}
      */
     get(key) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         return this._currentState.get(key);
     }
 
@@ -57,6 +61,7 @@ class ObjectStore {
      * @returns {Promise}
      */
     async put(key, value) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         const tx = this.transaction();
         await tx.put(key, value);
         return tx.commit();
@@ -67,6 +72,7 @@ class ObjectStore {
      * @returns {Promise}
      */
     async remove(key) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         const tx = this.transaction();
         await tx.remove(key);
         return tx.commit();
@@ -77,6 +83,7 @@ class ObjectStore {
      * @returns {Promise.<Array.<string>>}
      */
     keys(query=null) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         if (query !== null && query instanceof Query) {
             return query.keys(this._currentState);
         }
@@ -88,6 +95,7 @@ class ObjectStore {
      * @returns {Promise.<Array.<*>>}
      */
     values(query=null) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         if (query !== null && query instanceof Query) {
             return query.values(this._currentState);
         }
@@ -100,6 +108,7 @@ class ObjectStore {
      * @returns {Promise.<*>}
      */
     maxValue(query=null) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         return this._currentState.maxValue(query);
     }
 
@@ -108,6 +117,7 @@ class ObjectStore {
      * @returns {Promise.<string>>}
      */
     maxKey(query=null) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         return this._currentState.maxKey(query);
     }
 
@@ -116,6 +126,7 @@ class ObjectStore {
      * @returns {Promise.<string>>}
      */
     minKey(query=null) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         return this._currentState.minKey(query);
     }
 
@@ -124,6 +135,7 @@ class ObjectStore {
      * @returns {Promise.<*>}
      */
     minValue(query=null) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         return this._currentState.minValue(query);
     }
 
@@ -132,6 +144,7 @@ class ObjectStore {
      * @returns {Promise.<Array.<string>>}
      */
     count(query=null) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         return this._currentState.count(query);
     }
 
@@ -140,6 +153,7 @@ class ObjectStore {
      * @returns {Promise.<boolean>}
      */
     async commit(tx) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         if (!(tx instanceof Transaction) || tx.state !== Transaction.STATE.OPEN || !this._txBaseStates.has(tx.id)) {
             throw 'Can only commit open transactions';
         }
@@ -173,6 +187,7 @@ class ObjectStore {
      * @param {Transaction} [tx]
      */
     async abort(tx) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         if (!(tx instanceof Transaction) || tx.state !== Transaction.STATE.OPEN || !this._txBaseStates.has(tx.id)) {
             throw 'Can only abort open transactions';
         }
@@ -222,6 +237,7 @@ class ObjectStore {
      * @returns {IIndex}
      */
     index(indexName) {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         return this._currentState.index(indexName);
     }
 
@@ -238,6 +254,7 @@ class ObjectStore {
      * @returns {Transaction}
      */
     transaction() {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         const tx = new Transaction(this._currentState, this);
         this._txBaseStates.set(tx.id, this._currentStateId);
         this._openTransactions[this._currentStateId]++;
@@ -257,6 +274,7 @@ class ObjectStore {
      * @returns {Promise}
      */
     async truncate() {
+        if (!this._db.connected) throw 'JungleDB is not connected';
         const tx = this.transaction();
         await tx.truncate();
         return tx.commit();
