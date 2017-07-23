@@ -62,4 +62,10 @@ class IIndex {
      * @returns {Promise.<number>}
      */
     async count(query=null) {} // eslint-disable-line no-unused-vars
+
+    /**
+     * @abstract
+     * @returns {Promise}
+     */
+    async truncate() {} // eslint-disable-line no-unused-vars
 }

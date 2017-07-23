@@ -5,22 +5,27 @@ class Transaction {
     /**
      * @param {IObjectStore} backend
      * @param {IObjectStore} [commitBackend]
+     * @param {boolean} [enableWatchdog]
      */
-    constructor(backend, commitBackend) {
+    constructor(backend, commitBackend, enableWatchdog=true) {
         this._id = Transaction._instanceCount++;
         this._backend = backend;
         this._commitBackend = commitBackend || backend;
         this._modified = new Map();
         this._removed = new Set();
+        this._oldValues = new Map();
+        this._truncated = false;
         this._indices = TransactionIndex.derive(this, backend);
 
         this._state = Transaction.STATE.OPEN;
 
-        // TODO remove this watchdog at some point
-        this._watchdog = setTimeout(() => {
-            this.abort();
-            throw 'Watchdog timer aborted transaction';
-        }, Transaction.WATCHDOG_TIMER);
+        this._enableWatchdog = enableWatchdog;
+        if (this._enableWatchdog) {
+            this._watchdog = setTimeout(() => {
+                this.abort();
+                throw 'Watchdog timer aborted transaction';
+            }, Transaction.WATCHDOG_TIMER);
+        }
     }
 
     /** @type {number} */
@@ -46,11 +51,29 @@ class Transaction {
         if (!(tx instanceof Transaction)) {
             throw 'Can only apply transactions';
         }
+        if (tx._truncated) {
+            await this.truncate();
+        }
         for (const [key, value] of tx._modified) {
             this._put(key, value);
         }
         for (const key of tx._removed) {
             this._remove(key);
+        }
+    }
+
+    /**
+     * @returns {Promise}
+     */
+    async truncate() {
+        this._truncated = true;
+        this._modified.clear();
+        this._removed.clear();
+        this._oldValues.clear();
+
+        // Update indices.
+        for (const index of this._indices) {
+            index.truncate();
         }
     }
 
@@ -71,7 +94,9 @@ class Transaction {
         if (this._state !== Transaction.STATE.OPEN) {
             throw 'Transaction already closed';
         }
-        clearTimeout(this._watchdog);
+        if (this._enableWatchdog) {
+            clearTimeout(this._watchdog);
+        }
         if (await this._commitBackend.commit(this)) {
             this._state = Transaction.STATE.COMMITTED;
             return true;
@@ -98,7 +123,9 @@ class Transaction {
         if (this._state !== Transaction.STATE.OPEN) {
             throw 'Transaction already closed';
         }
-        clearTimeout(this._watchdog);
+        if (this._enableWatchdog) {
+            clearTimeout(this._watchdog);
+        }
         await this._commitBackend.abort(this);
         this._state = Transaction.STATE.ABORTED;
     }
@@ -111,12 +138,16 @@ class Transaction {
         // Order is as follows:
         // 1. check if removed,
         // 2. check if modified,
-        // 3. request from backend
+        // 3. check if truncated
+        // 4. request from backend
         if (this._removed.has(key)) {
             return undefined;
         }
         if (this._modified.has(key)) {
             return this._modified.get(key);
+        }
+        if (this._truncated) {
+            return undefined;
         }
         return await this._backend.get(key);
     }
@@ -140,6 +171,11 @@ class Transaction {
         const oldValue = this.get(key);
         this._removed.delete(key);
         this._modified.set(key, value);
+
+        // Save for indices.
+        if (!this._oldValues.has(key)) {
+            this._oldValues.set(key, oldValue);
+        }
 
         // Update indices.
         for (const index of this._indices) {
@@ -165,6 +201,11 @@ class Transaction {
         this._removed.add(key);
         this._modified.delete(key);
 
+        // Save for indices.
+        if (!this._oldValues.has(key)) {
+            this._oldValues.set(key, oldValue);
+        }
+
         // Update indices.
         for (const index of this._indices) {
             index.remove(key, oldValue);
@@ -179,7 +220,10 @@ class Transaction {
         if (query !== null && query instanceof Query) {
             return query.keys(this);
         }
-        let keys = await this._backend.keys(query);
+        let keys = new Set();
+        if (!this._truncated) {
+            keys = await this._backend.keys(query);
+        }
         keys = keys.difference(this._removed);
         for (const key of this._modified.keys()) {
             if (query === null || query.includes(key)) {
@@ -220,7 +264,10 @@ class Transaction {
      */
     async maxKey(query=null) {
         // Take underlying maxKey.
-        let maxKey = await this._backend.maxKey(query);
+        let maxKey = undefined;
+        if (!this._truncated) {
+            maxKey = await this._backend.maxKey(query);
+        }
 
         // If this key has been removed, find next best key.
         while (maxKey !== undefined && this._removed.has(maxKey)) {
@@ -257,7 +304,10 @@ class Transaction {
      */
     async minKey(query=null) {
         // Take underlying minKey.
-        let minKey = await this._backend.minKey(query);
+        let minKey = undefined;
+        if (!this._truncated) {
+            minKey = await this._backend.minKey(query);
+        }
 
         // If this key has been removed, find next best key.
         while (minKey !== undefined && this._removed.has(minKey)) {

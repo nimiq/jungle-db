@@ -16,6 +16,13 @@ class PersistentIndex {
     }
 
     /**
+     * @returns {Promise}
+     */
+    async truncate() {
+        // Will automatically be truncated.
+    }
+
+    /**
      * @type {string}
      */
     get keyPath() {
@@ -62,7 +69,7 @@ class PersistentIndex {
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const getRequest = this._index(db).getAllKeys(query);
-            getRequest.onsuccess = () => resolve(Set.setify(getRequest.result));
+            getRequest.onsuccess = () => resolve(Set.from(getRequest.result));
             getRequest.onerror = () => reject(getRequest.error);
         });
     }
@@ -90,7 +97,7 @@ class PersistentIndex {
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = this._index(db).openKeyCursor(query, 'prev');
-            openCursorRequest.onsuccess = () => resolve(Set.setify(openCursorRequest.result.primaryKey));
+            openCursorRequest.onsuccess = () => resolve(Set.from(openCursorRequest.result.primaryKey));
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
@@ -118,7 +125,7 @@ class PersistentIndex {
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = this._index(db).openKeyCursor(query, 'next');
-            openCursorRequest.onsuccess = () => resolve(Set.setify(openCursorRequest.result.primaryKey));
+            openCursorRequest.onsuccess = () => resolve(Set.from(openCursorRequest.result.primaryKey));
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }

@@ -12,6 +12,8 @@ class LRUMap {
     }
 
     clear() {
+        this._numAccesses.clear();
+        this._accessQueue = [];
         return this._map.clear();
     }
 

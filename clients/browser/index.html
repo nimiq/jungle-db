@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>JungleDB</title>
+</head>
+<body>
+<script src="../../dist/web.js"></script>
+
+<script>
+    const db = new JungleDB('test', 1);
+    const st = db.createObjectStore('testTable');
+    st.createIndex('prop');
+
+    db.connect();
+
+    Query.and(Query.ge('prop', 'dff'), Query.min('prop')).values(st).then(console.log);
+</script>
+
+</body>
+</html>

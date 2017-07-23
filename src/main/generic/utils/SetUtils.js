@@ -24,12 +24,9 @@ Set.prototype.difference = function(setB) {
     return difference;
 };
 
-Set.prototype.sampleElement = function() {
-    return this.size > 0 ? this.values().next().value : undefined;
-};
-
-Set.setify = function(arg) {
-    if (Array.isArray(arg)) {
+Set.from = function(arg) {
+    // Check if iterable.
+    if (arg && typeof obj[Symbol.iterator] === 'function') {
         return new Set(arg);
     }
     return new Set([arg]);

@@ -109,6 +109,12 @@ class IObjectStore {
 
     /**
      * @abstract
+     * @returns {Promise}
+     */
+    async truncate() {} // eslint-disable-line no-unused-vars
+
+    /**
+     * @abstract
      * @param {string} indexName
      * @param {string|Array.<string>} [keyPath]
      * @param {boolean} [multiEntry]

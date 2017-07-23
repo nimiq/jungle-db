@@ -109,7 +109,7 @@ class IDBBackend {
             const getRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
                 .getAllKeys(query);
-            getRequest.onsuccess = () => resolve(Set.setify(getRequest.result));
+            getRequest.onsuccess = () => resolve(Set.from(getRequest.result));
             getRequest.onerror = () => reject(getRequest.error);
         });
     }
@@ -238,6 +238,9 @@ class IDBBackend {
             const tx = db.transaction([this._tableName], 'readwrite');
             const objSt = tx.objectStore(this._tableName);
 
+            if (tx._truncated) {
+                objSt.clear();
+            }
             for (const key of tx._removed) {
                 objSt.delete(key);
             }
@@ -247,6 +250,20 @@ class IDBBackend {
 
             tx.onsuccess = event => resolve(event.target.result);
             tx.onerror = error;
+        });
+    }
+
+    /**
+     * @returns {Promise}
+     */
+    async truncate() {
+        const db = await this._db.backend;
+        return new Promise((resolve, reject) => {
+            const getRequest = db.transaction([this._tableName], 'readonly')
+                .objectStore(this._tableName)
+                .clear();
+            getRequest.onsuccess = resolve;
+            getRequest.onerror = () => reject(getRequest.error);
         });
     }
 

@@ -195,7 +195,7 @@ class ObjectStore {
         // If there is a tx argument, merge it with the current state.
         if (tx && (tx instanceof Transaction)) {
             // TODO maybe get around calling a private method here
-            this._currentState._apply(tx);
+            await this._currentState._apply(tx);
         }
         // Try collapsing the states as far as possible.
         if (this._openTransactions[this._currentState.id] > 0) {
@@ -213,7 +213,7 @@ class ObjectStore {
             }
             this._txBaseStates.delete(currentState.id);
             this._stateStack.pop(); // Remove the current state from the stack.
-            this._currentState._apply(currentState); // And apply it to the underlying layer.
+            await this._currentState._apply(currentState); // And apply it to the underlying layer.
         }
     }
 
@@ -251,6 +251,15 @@ class ObjectStore {
      */
     async _apply(tx) {
         throw 'Unsupported operation';
+    }
+
+    /**
+     * @returns {Promise}
+     */
+    async truncate() {
+        const tx = this.transaction();
+        await tx.truncate();
+        return tx.commit();
     }
 }
 ObjectStore.MAX_STACK_SIZE = 10;

@@ -145,6 +145,9 @@ class CachedBackend {
      */
     async _apply(tx) {
         // Update local state and push to backend for batch transaction.
+        if (tx._truncated) {
+            this._cache.clear();
+        }
         for (const key of tx._removed) {
             this._cache.delete(key);
         }
@@ -152,6 +155,14 @@ class CachedBackend {
             this._cache.set(key, value);
         }
         this._backend._apply(tx);
+    }
+
+    /**
+     * @returns {Promise}
+     */
+    async truncate() {
+        this._cache.clear();
+        return this._backend.truncate();
     }
 
     /**
