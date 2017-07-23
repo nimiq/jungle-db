@@ -36,12 +36,12 @@ class IDBBackend {
      */
     async get(key) {
         const db = await this._db.backend;
-        return new Promise((resolve, error) => {
+        return new Promise((resolve, reject) => {
             const getTx = db.transaction([this._tableName])
                 .objectStore(this._tableName)
                 .get(key);
             getTx.onsuccess = event => resolve(event.target.result);
-            getTx.onerror = error;
+            getTx.onerror = reject;
         });
     }
 
@@ -52,12 +52,12 @@ class IDBBackend {
      */
     async put(key, value) {
         const db = await this._db.backend;
-        return new Promise((resolve, error) => {
+        return new Promise((resolve, reject) => {
             const putTx = db.transaction([this._tableName], 'readwrite')
                 .objectStore(this._tableName)
                 .put(value, key);
             putTx.onsuccess = event => resolve(event.target.result);
-            putTx.onerror = error;
+            putTx.onerror = reject;
         });
     }
 
@@ -67,12 +67,12 @@ class IDBBackend {
      */
     async remove(key) {
         const db = await this._db.backend;
-        return new Promise((resolve, error) => {
+        return new Promise((resolve, reject) => {
             const deleteTx = db.transaction([this._tableName], 'readwrite')
                 .objectStore(this._tableName)
                 .delete(key);
             deleteTx.onsuccess = event => resolve(event.target.result);
-            deleteTx.onerror = error;
+            deleteTx.onerror = reject;
         });
     }
 
@@ -234,7 +234,7 @@ class IDBBackend {
      */
     async _apply(tx) {
         const db = await this._db.backend;
-        return new Promise((resolve, error) => {
+        return new Promise((resolve, reject) => {
             const tx = db.transaction([this._tableName], 'readwrite');
             const objSt = tx.objectStore(this._tableName);
 
@@ -249,7 +249,7 @@ class IDBBackend {
             }
 
             tx.onsuccess = event => resolve(event.target.result);
-            tx.onerror = error;
+            tx.onerror = reject;
         });
     }
 

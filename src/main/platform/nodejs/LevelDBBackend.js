@@ -23,12 +23,20 @@ class LevelDBBackend {
         this._indexVersion = 0;
 
         this._tableName = tableName;
-        /** @type {Map.<string,IIndex>} */
+        /** @type {Map.<string,PersistentIndex>} */
         this._indices = new Map();
     }
 
+    /**
+     * @returns {Promise}
+     */
     async init() {
         this._indexVersion = (await this.get('_indexVersion')) || this._indexVersion;
+        const indexPromises = [];
+        for (const index of this._indices.values()) {
+            indexPromises.push(index.init());
+        }
+        return Promise.all(indexPromises);
     }
 
     /**
@@ -60,7 +68,7 @@ class LevelDBBackend {
      * @returns {Promise}
      */
     async put(key, value) {
-        const oldObj = await this.get(key);
+        const oldValue = await this.get(key);
         return new Promise((resolve, error) => {
             const batch = this._dbBackend.batch();
 
@@ -76,7 +84,7 @@ class LevelDBBackend {
                 // Remove from all indices.
                 const indexPromises = [];
                 for (const index of this._indices.values()) {
-                    indexPromises.push(index.put(key, oldObj, value));
+                    indexPromises.push(index.put(key, value, oldValue));
                 }
                 Promise.all(indexPromises).then(() => {
                     resolve();
@@ -90,7 +98,11 @@ class LevelDBBackend {
      * @returns {Promise}
      */
     async remove(key) {
-        const obj = await this.get(key);
+        const oldValue = await this.get(key);
+        // Only update if there was a value with that key.
+        if (oldValue === undefined) {
+            return;
+        }
         return new Promise((resolve, error) => {
             const batch = this._dbBackend.batch();
 
@@ -106,7 +118,7 @@ class LevelDBBackend {
                 // Remove from all indices.
                 const indexPromises = [];
                 for (const index of this._indices.values()) {
-                    indexPromises.push(index.remove(key, obj));
+                    indexPromises.push(index.remove(key, oldValue));
                 }
                 Promise.all(indexPromises).then(() => {
                     resolve();
@@ -306,11 +318,10 @@ class LevelDBBackend {
                     return;
                 }
 
-                // TODO do this efficient
                 // Update all indices.
                 const indexPromises = [];
                 for (const index of this._indices.values()) {
-                    indexPromises.push(index._apply(key, oldObj, value));
+                    indexPromises.push(index._apply(tx));
                 }
                 Promise.all(indexPromises).then(() => {
                     resolve();
@@ -324,26 +335,32 @@ class LevelDBBackend {
      */
     async truncate() {
         await this._close();
+        await LevelDBBackend.destroy(this._databaseDirectory);
+        this._dbBackend = levelup(this._databaseDirectory, {
+            keyEncoding: 'ascii',
+            valueEncoding: this._valueEncoding
+        });
+
+        // Truncate all indices.
+        const indexPromises = [];
+        for (const index of this._indices.values()) {
+            indexPromises.push(index.truncate());
+        }
+        return Promise.all(indexPromises);
+    }
+
+    /**
+     * @returns {Promise}
+     */
+    static async destroy(databaseDirectory) {
         return new Promise((resolve, error) => {
-            require('leveldown').destroy(this._databaseDirectory, err => {
+            require('leveldown').destroy(databaseDirectory, err => {
                 if (err) {
                     error(err);
                     return;
                 }
-                this._dbBackend = levelup(this._databaseDirectory, {
-                    keyEncoding: 'ascii',
-                    valueEncoding: this._valueEncoding
-                });
-
-                // Truncate all indices.
-                const indexPromises = [];
-                for (const index of this._indices.values()) {
-                    indexPromises.push(index.truncate());
-                }
-                Promise.all(indexPromises).then(() => {
-                    resolve();
-                }).catch(error);
-            })
+                resolve();
+            });
         });
     }
 
@@ -389,7 +406,7 @@ class LevelDBBackend {
     async createIndex(indexName, keyPath, multiEntry=false) {
         if (this._db.connected) throw 'Cannot create index while connected';
         keyPath = keyPath || indexName;
-        const index = await (new PersistentIndex(this, indexName, keyPath, multiEntry));
+        const index = new PersistentIndex(this, indexName, keyPath, multiEntry);
         this._indices.set(indexName, index);
     }
 }

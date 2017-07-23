@@ -72,14 +72,14 @@ class InMemoryIndex extends Observable {
 
     /**
      * @param {string} key
-     * @param {*} oldObj
-     * @param {*} newObj
+     * @param {*} value
+     * @param {*} oldValue
      * @returns {TreeTransaction}
      */
-    put(key, oldObj, newObj) {
+    put(key, value, oldValue) {
         const treeTx = this._tree.transaction();
-        const oldIKey = this._indexKey(key, oldObj);
-        const newIKey = this._indexKey(key, newObj);
+        const oldIKey = this._indexKey(key, oldValue);
+        const newIKey = this._indexKey(key, value);
         if (oldIKey === newIKey) return treeTx;
 
         if (oldIKey !== undefined) {
@@ -91,13 +91,13 @@ class InMemoryIndex extends Observable {
 
     /**
      * @param {string} key
-     * @param {*} obj
+     * @param {*} oldValue
      * @returns {TreeTransaction}
      */
-    remove(key, obj) {
+    remove(key, oldValue) {
         const treeTx = this._tree.transaction();
-        if (obj !== undefined) {
-            const iKey = this._indexKey(key, obj);
+        if (oldValue !== undefined) {
+            const iKey = this._indexKey(key, oldValue);
             this._remove(key, iKey, treeTx);
         }
         return treeTx;

@@ -19,8 +19,6 @@ class PersistentIndex extends InMemoryIndex {
 
         this._persistanceSynchronizer = new Synchronizer();
         this._version = 0;
-
-        return this._init();
     }
 
     /**
@@ -54,7 +52,7 @@ class PersistentIndex extends InMemoryIndex {
         return result;
     }
 
-    async _init() {
+    async init() {
         this._version = (await this._get('_version')) || this._version;
         const root = await this._get('_root');
 
@@ -69,7 +67,7 @@ class PersistentIndex extends InMemoryIndex {
             // Build index for whole database.
             // TODO Make this operation more efficient.
             await this._objectStore.map((key, value) => {
-                this.put(key, undefined, value);
+                this.put(key, value, undefined);
             });
             await this._dbBackend.put('_version', this._objectStore.indexVersion);
         }
@@ -79,11 +77,11 @@ class PersistentIndex extends InMemoryIndex {
 
     /**
      * @param {string} key
-     * @param {*} oldObj
-     * @param {*} newObj
+     * @param {*} value
+     * @param {*} oldValue
      */
-    put(key, oldObj, newObj) {
-        const treeTx = super.put(key, oldObj, newObj);
+    put(key, value, oldValue) {
+        const treeTx = super.put(key, value, oldValue);
         this._version = (this._version + 1) % LevelDBBackend.MAX_INDEX_VERSION;
         return this._persist(treeTx, this._version);
     }
@@ -132,30 +130,28 @@ class PersistentIndex extends InMemoryIndex {
     }
 
     /**
-     * @param {boolean} truncated
-     * @param {Map.<string,Array.<*>>} modified
-     * @param {Map.<string,*>} removed
+     * @param {Transaction} tx
      * @returns {Promise.<boolean>}
      * @protected
      */
-    async _apply(truncated, modified, removed) {
+    async _apply(tx) {
         // TODO do this efficient
-        if (truncated) {
+        if (tx._truncated) {
             await this.truncate();
         }
-        return new Promise((resolve, error) => {
-            this._version = (this._version + 1) % LevelDBBackend.MAX_INDEX_VERSION;
-            let treeTx = null;
+        this._version = (this._version + 1) % LevelDBBackend.MAX_INDEX_VERSION;
+        let treeTx = null;
 
-            for (const [key, oldObj] of removed) {
-                treeTx = super.remove(key, oldObj).merge(treeTx);
-            }
-            for (const [key, [oldObj, newObj]] of modified) {
-                treeTx = super.put(key, oldObj, newObj).merge(treeTx);
-            }
+        for (const key of tx._removed) {
+            const oldValue = tx._originalValues.get(key);
+            treeTx = super.remove(key, oldValue).merge(treeTx);
+        }
+        for (const [key, value] of tx._modified) {
+            const oldValue = tx._originalValues.get(key);
+            treeTx = super.put(key, value, oldValue).merge(treeTx);
+        }
 
-            return this._persist(treeTx, this._version);
-        });
+        return this._persist(treeTx, this._version);
     }
 
     /**

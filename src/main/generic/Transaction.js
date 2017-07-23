@@ -13,7 +13,7 @@ class Transaction {
         this._commitBackend = commitBackend || backend;
         this._modified = new Map();
         this._removed = new Set();
-        this._oldValues = new Map();
+        this._originalValues = new Map();
         this._truncated = false;
         this._indices = TransactionIndex.derive(this, backend);
 
@@ -55,10 +55,30 @@ class Transaction {
             await this.truncate();
         }
         for (const [key, value] of tx._modified) {
-            this._put(key, value);
+            // If this transaction has key in its originalValues, we use it.
+            // Otherwise, the original value has to coincide with the transaction's stored original value.
+            let oldValue;
+            if (this._originalValues.has(key)) {
+                oldValue = this._originalValues.get(key);
+            } else {
+                oldValue = tx._originalValues.get(key);
+                this._originalValues.set(key, oldValue);
+            }
+
+            this._put(key, value, oldValue);
         }
         for (const key of tx._removed) {
-            this._remove(key);
+            // If this transaction has key in its originalValues, we use it.
+            // Otherwise, the original value has to coincide with the transaction's stored original value.
+            let oldValue;
+            if (this._originalValues.has(key)) {
+                oldValue = this._originalValues.get(key);
+            } else {
+                oldValue = tx._originalValues.get(key);
+                this._originalValues.set(key, oldValue);
+            }
+
+            this._remove(key, oldValue);
         }
     }
 
@@ -69,7 +89,7 @@ class Transaction {
         this._truncated = true;
         this._modified.clear();
         this._removed.clear();
-        this._oldValues.clear();
+        this._originalValues.clear();
 
         // Update indices.
         for (const index of this._indices) {
@@ -160,26 +180,29 @@ class Transaction {
         if (this._state !== Transaction.STATE.OPEN) {
             throw 'Transaction already closed';
         }
-        this._put(key, value);
+
+        const oldValue = this.get(key);
+
+        // Save for indices.
+        if (!this._originalValues.has(key)) {
+            this._originalValues.set(key, oldValue);
+        }
+
+        this._put(key, value, oldValue);
     }
 
     /**
      * @param {string} key
      * @param {*} value
+     * @param {*} [oldValue]
      */
-    _put(key, value) {
-        const oldValue = this.get(key);
+    _put(key, value, oldValue) {
         this._removed.delete(key);
         this._modified.set(key, value);
 
-        // Save for indices.
-        if (!this._oldValues.has(key)) {
-            this._oldValues.set(key, oldValue);
-        }
-
         // Update indices.
         for (const index of this._indices) {
-            index.put(key, oldValue, value);
+            index.put(key, value, oldValue);
         }
     }
 
@@ -190,21 +213,26 @@ class Transaction {
         if (this._state !== Transaction.STATE.OPEN) {
             throw 'Transaction already closed';
         }
-        this._remove(key);
+
+        const oldValue = this.get(key);
+        // Only remove if it exists.
+        if (oldValue !== undefined) {
+            // Save for indices.
+            if (!this._originalValues.has(key)) {
+                this._originalValues.set(key, oldValue);
+            }
+
+            this._remove(key, oldValue);
+        }
     }
 
     /**
      * @param {string} key
+     * @param {*} oldValue
      */
-    _remove(key) {
-        const oldValue = this.get(key);
+    _remove(key, oldValue) {
         this._removed.add(key);
         this._modified.delete(key);
-
-        // Save for indices.
-        if (!this._oldValues.has(key)) {
-            this._oldValues.set(key, oldValue);
-        }
 
         // Update indices.
         for (const index of this._indices) {

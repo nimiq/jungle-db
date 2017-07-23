@@ -14,7 +14,7 @@ class TransactionIndex extends InMemoryIndex {
 
     /** @type {IIndex} */
     get _index() {
-        return this._backend.index(this._name);
+        return this._backend.index(this._databaseDir);
     }
 
     /**
@@ -26,7 +26,7 @@ class TransactionIndex extends InMemoryIndex {
     constructor(objectStore, backend, name, keyPath, multiEntry=false) {
         super(objectStore, keyPath, multiEntry);
         this._backend = backend;
-        this._name = name;
+        this._databaseDir = name;
     }
 
     /**

@@ -5,11 +5,11 @@ class JungleDB {
      * @param {function()} onUpgradeNeeded
      */
     constructor(name, dbVersion, onUpgradeNeeded) {
-        this._name = name;
+        this._databaseDir = name;
         this._dbVersion = dbVersion;
         this._onUpgradeNeeded = onUpgradeNeeded;
         this._connected = false;
-        this._objectStores = {};
+        this._objectStores = new Map();
         this._objectStoresToDelete = [];
     }
 
@@ -17,7 +17,7 @@ class JungleDB {
         if (this._db) return Promise.resolve(this._db);
 
         const indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.OIndexedDB || window.msIndexedDB;
-        const request = indexedDB.open(this._name, this._dbVersion);
+        const request = indexedDB.open(this._databaseDir, this._dbVersion);
         const that = this;
 
         return new Promise((resolve, reject) => {
@@ -31,7 +31,7 @@ class JungleDB {
         });
     }
 
-    _initDB(event) {
+    async _initDB(event) {
         const db = event.target.result;
 
         // Delete existing ObjectStores.
@@ -41,15 +41,15 @@ class JungleDB {
         delete this._objectStoresToDelete;
 
         // Create new ObjectStores.
-        for (const tableName in this._objectStores) {
-            const objStore = db.createObjectStore(tableName);
+        for (const [tableName, backend] of this._objectStores) {
+            const IDBobjStore = db.createObjectStore(tableName);
             // Create indices.
-            this._objectStores[tableName].init(objStore);
+            backend.init(IDBobjStore);
         }
 
         // Call user defined function if requested.
         if (this._onUpgradeNeeded) {
-            this._onUpgradeNeeded();
+            await this._onUpgradeNeeded();
         }
     }
 
@@ -68,19 +68,18 @@ class JungleDB {
      * @returns {ObjectStore}
      */
     getObjectStore(tableName) {
-        return this._objectStores[tableName];
+        if (!this._connected) throw 'JungleDB is not connected';
+        return this._objectStores.get(tableName);
     }
 
     /**
      * @param {string} tableName
-     * @returns {ObjectStore}
      */
     createObjectStore(tableName) {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
         const cachedBackend = new CachedBackend(new IDBBackend(this, tableName));
         const objStore = new ObjectStore(cachedBackend);
-        this._objectStores[tableName] = objStore;
-        return objStore;
+        this._objectStores.set(tableName, objStore);
     }
 
     /**
