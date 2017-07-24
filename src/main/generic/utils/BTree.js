@@ -145,7 +145,7 @@ class LeafNode extends Node {
      * @returns {number}
      */
     addKey(key, record) {
-        let insertPos = this._keys._length;
+        let insertPos = this._keys.length;
         // Find position to insert.
         for (let i=0, len=insertPos; i<len; ++i) {
             // Key already exists.
@@ -809,7 +809,7 @@ class BTree {
     }
 
     goToLowerBound(lower, lowerOpen=false) {
-        if (lower === undefined) {
+        if (lower !== undefined) {
             let success = this.seek(lower, BTree.NEAR_MODE.GE);
             if (success && lowerOpen) {
                 success = this.skip();
@@ -820,7 +820,7 @@ class BTree {
     }
 
     goToUpperBound(upper, upperOpen=false) {
-        if (upper === undefined) {
+        if (upper !== undefined) {
             let success = this.seek(upper, BTree.NEAR_MODE.LE);
             if (success && upperOpen) {
                 success = this.skip(-1);

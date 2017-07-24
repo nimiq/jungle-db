@@ -38,6 +38,7 @@ const sources = {
     ],
     test: {
         generic: [
+            './src/test/generic/DummyBackend.js',
             './src/test/generic/**/*.spec.js'
         ],
         browser: [

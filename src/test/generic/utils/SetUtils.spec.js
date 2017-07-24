@@ -29,5 +29,6 @@ describe('SetUtils', () => {
         const map = new Map();
         map.set(354, 124);
         expect(Set.from(map)).toEqual(new Set([[354, 124]]));
+        expect(Set.from('test')).toEqual(new Set(['test']));
     });
 });

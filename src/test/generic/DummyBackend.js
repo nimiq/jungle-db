@@ -218,7 +218,7 @@ class DummyBackend {
      */
     async createIndex(indexName, keyPath, multiEntry=false) {
         keyPath = keyPath || indexName;
-        const index = new InMemoryIndex(this, keyPath, keyPath, multiEntry);
+        const index = new InMemoryIndex(this, keyPath, multiEntry);
         this._indices.set(indexName, index);
     }
 }

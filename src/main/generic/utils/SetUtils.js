@@ -25,8 +25,8 @@ Set.prototype.difference = function(setB) {
 };
 
 Set.from = function(arg) {
-    // Check if iterable.
-    if (arg && typeof arg[Symbol.iterator] === 'function') {
+    // Check if iterable and not string.
+    if (arg && typeof arg[Symbol.iterator] === 'function' && typeof arg !== 'string') {
         return new Set(arg);
     }
     return new Set([arg]);
