@@ -21,6 +21,16 @@ describe('SetUtils', () => {
         expect(union).toEqual(new Set([1, 2]));
     });
 
+    it('correctly calculates set equality', () => {
+        const setA = new Set([1, 2, 3]);
+        const setB = new Set([1, 2, 3]);
+        const setC = new Set([1, 2, 3, 4]);
+        expect(setA.equals(setB)).toBe(true);
+        expect(setB.equals(setA)).toBe(true);
+        expect(setA.equals(setC)).toBe(false);
+        expect(setC.equals(setA)).toBe(false);
+    });
+
     it('constructs a set from various types', () => {
         expect(Set.from(152)).toEqual(new Set([152]));
         expect(Set.from([1, 2, 3])).toEqual(new Set([1, 2, 3]));

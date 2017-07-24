@@ -24,6 +24,16 @@ Set.prototype.difference = function(setB) {
     return difference;
 };
 
+Set.prototype.equals = function(setB) {
+    if (this.size !== setB.size) return false;
+    for (const elem of setB) {
+        if (!this.has(elem)) {
+            return false;
+        }
+    }
+    return true;
+};
+
 Set.from = function(arg) {
     // Check if iterable and not string.
     if (arg && typeof arg[Symbol.iterator] === 'function' && typeof arg !== 'string') {

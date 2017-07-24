@@ -170,7 +170,7 @@ class ObjectStore {
         // If this is the last transaction, we push our changes to the underlying layer.
         if (numOpenTransactions === 0) {
             // The underlying layer *has to be* the last one in our stack.
-            return this._flattenState(tx);
+            await this._flattenState(tx);
         } else {
             // Otherwise, create new layer on stack.
             if (this._stateStack.length >= ObjectStore.MAX_STACK_SIZE) {

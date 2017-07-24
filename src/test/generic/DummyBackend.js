@@ -7,6 +7,8 @@ class DummyBackend {
 
         /** @type {Map.<string,PersistentIndex>} */
         this._indices = new Map();
+
+        this.connected = true;
     }
 
     /**
@@ -30,7 +32,7 @@ class DummyBackend {
      * @returns {Promise}
      */
     async put(key, value) {
-        const oldValue = this.get(key);
+        const oldValue = await this.get(key);
         this._cache.set(key, value);
         const indexPromises = [];
         for (const index of this._indices.values()) {
@@ -44,7 +46,7 @@ class DummyBackend {
      * @returns {Promise}
      */
     async remove(key) {
-        const oldValue = this.get(key);
+        const oldValue = await this.get(key);
         this._cache.delete(key);
         const indexPromises = [];
         for (const index of this._indices.values()) {
@@ -163,7 +165,7 @@ class DummyBackend {
     }
 
     /**
-     * @param {Transaction|IndexTransaction} tx
+     * @param {Transaction} tx
      * @returns {Promise.<boolean>}
      * @protected
      */
@@ -182,9 +184,28 @@ class DummyBackend {
         // Update all indices.
         const indexPromises = [];
         for (const index of this._indices.values()) {
-            indexPromises.push(index._apply(tx));
+            indexPromises.push(DummyBackend._indexApply(index, tx));
         }
         return Promise.all(indexPromises);
+    }
+
+    /**
+     * @param {InMemoryIndex} index
+     * @param {Transaction} tx
+     * @returns {Promise}
+     * @private
+     */
+    static async _indexApply(index, tx) {
+        if (tx._truncated) {
+            await index.truncate();
+        }
+
+        for (const key of tx._removed) {
+            await index.remove(key, tx._originalValues.get(key));
+        }
+        for (const [key, value] of tx._modified) {
+            await index.put(key, value, tx._originalValues.get(key));
+        }
     }
 
     /**

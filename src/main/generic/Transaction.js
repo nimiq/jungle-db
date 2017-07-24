@@ -92,7 +92,7 @@ class Transaction {
         this._originalValues.clear();
 
         // Update indices.
-        for (const index of this._indices) {
+        for (const index of this._indices.values()) {
             index.truncate();
         }
     }
@@ -148,6 +148,7 @@ class Transaction {
         }
         await this._commitBackend.abort(this);
         this._state = Transaction.STATE.ABORTED;
+        return true;
     }
 
     /**
@@ -176,12 +177,12 @@ class Transaction {
      * @param {string} key
      * @param {*} value
      */
-    put(key, value) {
+    async put(key, value) {
         if (this._state !== Transaction.STATE.OPEN) {
             throw 'Transaction already closed';
         }
 
-        const oldValue = this.get(key);
+        const oldValue = await this.get(key);
 
         // Save for indices.
         if (!this._originalValues.has(key)) {
@@ -201,7 +202,7 @@ class Transaction {
         this._modified.set(key, value);
 
         // Update indices.
-        for (const index of this._indices) {
+        for (const index of this._indices.values()) {
             index.put(key, value, oldValue);
         }
     }
@@ -209,12 +210,12 @@ class Transaction {
     /**
      * @param {string} key
      */
-    remove(key) {
+    async remove(key) {
         if (this._state !== Transaction.STATE.OPEN) {
             throw 'Transaction already closed';
         }
 
-        const oldValue = this.get(key);
+        const oldValue = await this.get(key);
         // Only remove if it exists.
         if (oldValue !== undefined) {
             // Save for indices.
@@ -235,7 +236,7 @@ class Transaction {
         this._modified.delete(key);
 
         // Update indices.
-        for (const index of this._indices) {
+        for (const index of this._indices.values()) {
             index.remove(key, oldValue);
         }
     }
