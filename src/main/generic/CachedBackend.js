@@ -181,6 +181,13 @@ class CachedBackend {
     createIndex(indexName, keyPath, multiEntry=false) {
         return this._backend.createIndex(indexName, keyPath, multiEntry);
     }
+
+    /**
+     * @returns {Promise}
+     */
+    close() {
+        return this._backend.close();
+    }
 }
 CachedBackend.MAX_CACHE_SIZE = 5000 /*elements*/;
 Class.register(CachedBackend);

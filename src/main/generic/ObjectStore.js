@@ -279,6 +279,17 @@ class ObjectStore {
         await tx.truncate();
         return tx.commit();
     }
+
+    /**
+     * @returns {Promise}
+     */
+    close() {
+        // TODO perhaps use a different strategy here
+        if (this._stateStack.length > 0) {
+            throw 'Cannot close database while transactions are active';
+        }
+        return this._backend.close();
+    }
 }
 ObjectStore.MAX_STACK_SIZE = 10;
 Class.register(ObjectStore);

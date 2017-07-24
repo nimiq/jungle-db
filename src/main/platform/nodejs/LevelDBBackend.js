@@ -380,7 +380,7 @@ class LevelDBBackend {
     }
 
     /**
-     * @param {function():{key:string, value:*}} func
+     * @param {function(key:string, value:*)} func
      * @returns {Promise}
      */
     map(func) {
@@ -408,6 +408,18 @@ class LevelDBBackend {
         keyPath = keyPath || indexName;
         const index = new PersistentIndex(this, indexName, keyPath, multiEntry);
         this._indices.set(indexName, index);
+    }
+
+    /**
+     * @returns {Promise}
+     */
+    async close() {
+        await this._close();
+        const indexPromises = [];
+        for (const index of this._indices.values()) {
+            indexPromises.close(index.close());
+        }
+        return Promise.all(indexPromises);
     }
 }
 LevelDBBackend.MAX_INDEX_VERSION = 1000;

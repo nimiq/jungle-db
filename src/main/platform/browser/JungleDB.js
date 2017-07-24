@@ -93,5 +93,12 @@ class JungleDB {
         if (this._connected) throw 'Cannot delete ObjectStore while connected';
         this._objectStoresToDelete.push(tableName);
     }
+
+    /**
+     * @returns {Promise}
+     */
+    close() {
+        this.backend.close();
+    }
 }
 Class.register(JungleDB);

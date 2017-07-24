@@ -278,5 +278,13 @@ class IDBBackend {
         const index = new PersistentIndex(this, indexName, keyPath, multiEntry);
         this._indices.set(indexName, index);
     }
+
+    /**
+     * @returns {Promise}
+     */
+    close() {
+        // Nothing to do here, it is all done on the DB level.
+        return this._db.close();
+    }
 }
 Class.register(IDBBackend);

@@ -120,4 +120,9 @@ class IObjectStore {
      * @param {boolean} [multiEntry]
      */
     async createIndex(indexName, keyPath, multiEntry=false) {} // eslint-disable-line no-unused-vars
+
+    /**
+     * @returns {Promise}
+     */
+    async close() {} // eslint-disable-line no-unused-vars
 }

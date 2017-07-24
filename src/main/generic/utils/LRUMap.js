@@ -44,26 +44,32 @@ class LRUMap {
 
     evict(k=1) {
         while (k > 0 && this._accessQueue.length > 0) {
-            const [oldest, accesses] = this._accessQueue.shift();
+            const oldest = this._accessQueue.shift();
+            let accesses = this._numAccesses.get(oldest);
+            --accesses;
+            this._numAccesses.set(oldest, accesses);
             // Check if not used in the meanwhile.
-            if (this._numAccesses.get(oldest) !== accesses) {
+            if (accesses !== 0) {
                 continue;
             }
             // Otherwise delete that.
             this.delete(oldest);
             this._numAccesses.delete(oldest);
-            k--;
+            --k;
         }
     }
 
     access(key) {
+        if (!this._map.has(key)) {
+            return;
+        }
         let accesses = 0;
         if (this._numAccesses.has(key)) {
             accesses = this._numAccesses.get(key);
         }
-        accesses++;
+        ++accesses;
         this._numAccesses.set(key, accesses);
-        this._accessQueue.push([key, accesses]);
+        this._accessQueue.push(key);
     }
 
     set(key, value) {
@@ -79,7 +85,7 @@ class LRUMap {
     }
 
     [Symbol.iterator]() {
-        return this._map[Symbol.iterator];
+        return this._map.entries();
     }
 }
 Class.register(LRUMap);

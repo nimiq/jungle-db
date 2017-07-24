@@ -54,7 +54,20 @@ class JungleDB {
         return this._initDB();
     }
 
+    /**
+     * @returns {Promise}
+     */
+    async close() {
+        for (const objStore of this._objectStores.values()) {
+            await objStore.close();
+        }
+    }
+
     async _initDB() {
+        if (!fs.existsSync(this._databaseDir)){
+            fs.mkdirSync(this._databaseDir);
+        }
+
         const storedVersion = await this._readDBVersion();
         let promises = [];
         // Upgrade database.

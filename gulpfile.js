@@ -47,7 +47,7 @@ const sources = {
 };
 
 gulp.task('build-web', function () {
-    return gulp.src(['./src/loader/prefix.js.template'].concat(sources.generic).concat(sources.platform.browser).concat(['./src/loader/suffix.js.template']))
+    return gulp.src(['./src/loader/browser/prefix.js.template'].concat(sources.generic).concat(sources.platform.browser).concat(['./src/loader/browser/suffix.js.template']))
         .pipe(sourcemaps.init())
         .pipe(concat('web.js'))
         .pipe(sourcemaps.write('.'))
@@ -56,7 +56,7 @@ gulp.task('build-web', function () {
 });
 
 gulp.task('build-node', function () {
-    return gulp.src(['./src/main/platform/nodejs/index.prefix.js'].concat(sources.generic).concat(sources.platform.node).concat(['./src/main/platform/nodejs/index.suffix.js']))
+    return gulp.src(['./src/loader/nodejs/index.prefix.js'].concat(sources.generic).concat(sources.platform.node).concat(['./src/loader/nodejs/index.suffix.js']))
         .pipe(sourcemaps.init())
         .pipe(concat('node.js'))
         .pipe(sourcemaps.write('.'))

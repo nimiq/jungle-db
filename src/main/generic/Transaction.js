@@ -383,6 +383,13 @@ class Transaction {
     async createIndex(indexName, keyPath) {
         throw 'Cannot create index in transaction';
     }
+
+    /**
+     * @returns {Promise}
+     */
+    close() {
+        return this.abort();
+    }
 }
 Transaction.WATCHDOG_TIMER = 10000 /*ms*/;
 Transaction.STATE = {

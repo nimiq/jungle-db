@@ -68,6 +68,7 @@ class Node {
         return undefined;
     }
 }
+Class.register(Node);
 
 class LeafNode extends Node {
     /**
@@ -212,6 +213,7 @@ class LeafNode extends Node {
     }
 
 }
+Class.register(LeafNode);
 
 class InnerNode extends Node {
     /**
@@ -307,6 +309,7 @@ class InnerNode extends Node {
         return del;
     }
 }
+Class.register(InnerNode);
 
 /**
  * @implements {IBTree}
@@ -914,6 +917,7 @@ BTree.NEAR_MODE = {
     LE: 1,
     GE: 2
 };
+Class.register(BTree);
 
 /**
  * @implements {IBTree}
@@ -1025,3 +1029,4 @@ class TreeTransaction {
         return this._tree.goToUpperBound(upper, upperOpen);
     }
 }
+Class.register(TreeTransaction);
