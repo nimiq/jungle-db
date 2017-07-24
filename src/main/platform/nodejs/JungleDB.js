@@ -8,6 +8,7 @@ class JungleDB {
      * @param {{encode:function(), decode:function(), buffer:boolean, type:string}} [valueEncoding]
      */
     constructor(databaseDir, dbVersion, onUpgradeNeeded, valueEncoding=JungleDB.JSON_ENCODING) {
+        if (dbVersion <= 0) throw 'The version provided must not be less or equal to 0.';
         this._databaseDir = databaseDir.endsWith('/') ? databaseDir : `${databaseDir}/`;
         this._dbVersion = dbVersion;
         this._onUpgradeNeeded = onUpgradeNeeded;

@@ -5,6 +5,7 @@ class JungleDB {
      * @param {function()} [onUpgradeNeeded]
      */
     constructor(name, dbVersion, onUpgradeNeeded) {
+        if (dbVersion <= 0) throw 'The version provided must not be less or equal to 0.';
         this._databaseDir = name;
         this._dbVersion = dbVersion;
         this._onUpgradeNeeded = onUpgradeNeeded;
@@ -102,7 +103,7 @@ class JungleDB {
      */
     async close() {
         this._connected = false;
-        this.backend.close();
+        (await this.backend).close();
     }
 
     async destroy() {

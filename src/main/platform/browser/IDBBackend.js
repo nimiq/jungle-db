@@ -235,8 +235,8 @@ class IDBBackend {
     async _apply(tx) {
         const db = await this._db.backend;
         return new Promise((resolve, reject) => {
-            const tx = db.transaction([this._tableName], 'readwrite');
-            const objSt = tx.objectStore(this._tableName);
+            const idbTx = db.transaction([this._tableName], 'readwrite');
+            const objSt = idbTx.objectStore(this._tableName);
 
             if (tx._truncated) {
                 objSt.clear();

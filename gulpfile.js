@@ -36,9 +36,14 @@ const sources = {
         './src/main/generic/TransactionIndex.js',
         './src/main/generic/Transaction.js'
     ],
-    test: [
-        './src/test/specs/**/*.spec.js'
-    ],
+    test: {
+        generic: [
+            './src/test/generic/**/*.spec.js'
+        ],
+        browser: [
+            './src/test/platform/browser/**/*.spec.js'
+        ]
+    },
     all: [
         './src/main/**/*.js',
         './src/test/**/*.js',
@@ -47,7 +52,7 @@ const sources = {
 };
 
 gulp.task('build-web', function () {
-    return gulp.src(['./src/loader/browser/prefix.js.template'].concat(sources.generic).concat(sources.platform.browser).concat(['./src/loader/browser/suffix.js.template']))
+    return gulp.src(['./src/loader/browser/prefix.js.template'].concat(sources.platform.browser).concat(sources.generic).concat(['./src/loader/browser/suffix.js.template']))
         .pipe(sourcemaps.init())
         .pipe(concat('web.js'))
         .pipe(sourcemaps.write('.'))
@@ -65,7 +70,7 @@ gulp.task('build-node', function () {
 
 gulp.task('test', ['watch'], function () {
     gulp.run(jasmine({
-        files: ['dist/web.js'].concat(sources.test)
+        files: ['dist/web.js'].concat(sources.test.generic).concat(sources.test.browser)
     }));
 });
 

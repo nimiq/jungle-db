@@ -92,7 +92,8 @@ describe('LRUMap', () => {
 
         // Check contents.
         for (const [key, value] of lru) {
-            expect(true).toEqual(false);
+            expect(true).toBe(false);
         }
+        expect(true).toBe(true);
     });
 });
