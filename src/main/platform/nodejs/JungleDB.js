@@ -4,8 +4,8 @@ class JungleDB {
     /**
      * @param {string} databaseDir
      * @param {number} dbVersion
-     * @param {function()} onUpgradeNeeded
-     * @param {{encode:function(), decode:function(), buffer:boolean, type:string}} valueEncoding
+     * @param {function()} [onUpgradeNeeded]
+     * @param {{encode:function(), decode:function(), buffer:boolean, type:string}} [valueEncoding]
      */
     constructor(databaseDir, dbVersion, onUpgradeNeeded, valueEncoding=JungleDB.JSON_ENCODING) {
         this._databaseDir = databaseDir.endsWith('/') ? databaseDir : `${databaseDir}/`;
@@ -57,10 +57,23 @@ class JungleDB {
     /**
      * @returns {Promise}
      */
-    async close() {
+    close() {
+        this._connected = false;
+        const promises = [];
         for (const objStore of this._objectStores.values()) {
-            await objStore.close();
+            promises.push(objStore.close());
         }
+        return Promise.all(promises);
+    }
+
+    async destroy() {
+        fs.unlinkSync(`${this._databaseDir}.dbVersion`);
+        const promises = [];
+        // Create new ObjectStores.
+        for (const objStore of this._objectStoreBackends) {
+            promises.push(objStore.destroy());
+        }
+        return Promise.all(promises);
     }
 
     async _initDB() {
@@ -88,7 +101,6 @@ class JungleDB {
         for (const objStore of this._objectStoreBackends) {
             promises.push(objStore.init());
         }
-        delete this._objectStoreBackends;
 
         // The order of the above promises does not matter.
         await Promise.all(promises);

@@ -352,6 +352,20 @@ class LevelDBBackend {
     /**
      * @returns {Promise}
      */
+    async destroy() {
+        await this._close();
+        await LevelDBBackend.destroy(this._databaseDirectory);
+
+        // Truncate all indices.
+        const indexPromises = [];
+        for (const index of this._indices.values()) {
+            indexPromises.push(index.destroy());
+        }
+    }
+
+    /**
+     * @returns {Promise}
+     */
     static async destroy(databaseDirectory) {
         return new Promise((resolve, error) => {
             require('leveldown').destroy(databaseDirectory, err => {

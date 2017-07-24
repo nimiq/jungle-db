@@ -2,7 +2,7 @@ class JungleDB {
     /**
      * @param {string} name
      * @param {number} dbVersion
-     * @param {function()} onUpgradeNeeded
+     * @param {function()} [onUpgradeNeeded]
      */
     constructor(name, dbVersion, onUpgradeNeeded) {
         this._databaseDir = name;
@@ -14,11 +14,14 @@ class JungleDB {
         this._objectStoresToDelete = [];
     }
 
+    get _indexedDB() {
+        return window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.OIndexedDB || window.msIndexedDB;
+    }
+
     connect() {
         if (this._db) return Promise.resolve(this._db);
 
-        const indexedDB = window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.OIndexedDB || window.msIndexedDB;
-        const request = indexedDB.open(this._databaseDir, this._dbVersion);
+        const request = this._indexedDB.open(this._databaseDir, this._dbVersion);
         const that = this;
 
         return new Promise((resolve, reject) => {
@@ -97,8 +100,18 @@ class JungleDB {
     /**
      * @returns {Promise}
      */
-    close() {
+    async close() {
+        this._connected = false;
         this.backend.close();
+    }
+
+    async destroy() {
+        await this.close();
+        return new Promise((resolve, reject) => {
+            const req = this._indexedDB.deleteDatabase(this._databaseDir);
+            req.onsuccess = resolve;
+            req.onerror = reject;
+        });
     }
 }
 Class.register(JungleDB);

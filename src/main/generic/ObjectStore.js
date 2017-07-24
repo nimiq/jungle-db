@@ -257,7 +257,7 @@ class ObjectStore {
         if (!this._db.connected) throw 'JungleDB is not connected';
         const tx = new Transaction(this._currentState, this);
         this._txBaseStates.set(tx.id, this._currentStateId);
-        this._openTransactions[this._currentStateId]++;
+        this._openTransactions[this._currentStateId] = this._openTransactions[this._currentStateId] ? this._openTransactions[this._currentStateId] + 1 : 1;
         return tx;
     }
 

@@ -37,6 +37,13 @@ class PersistentIndex extends InMemoryIndex {
     }
 
     /**
+     * @returns {Promise}
+     */
+    destroy() {
+        return this._dbBackend.destroy();
+    }
+
+    /**
      * @param {string} key
      * @returns {Promise.<*>}
      */
