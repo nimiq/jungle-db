@@ -11,16 +11,9 @@ describe('Query', () => {
         objectStore = new ObjectStore(backend, backend);
 
         (async function () {
-            await backend.createIndex('test', 'test', false);
-            await backend.createIndex('multi', 'multi', true);
-
             // Add 10 objects.
             for (let i=0; i<10; ++i) {
-                const obj = {
-                    test: i,
-                    multi: [i%2, i]
-                };
-                await backend.put(`key${i}`, obj);
+                await backend.put(`key${i}`, `value${i}`);
             }
         })().then(done, done.fail);
 
@@ -48,7 +41,7 @@ describe('Query', () => {
             await tx1.remove('key0');
             // Ensure read isolation.
             expect(await tx1.get('key0')).toBe(undefined);
-            expect(await tx2.get('key0')).not.toBe(undefined);
+            expect(await tx2.get('key0')).toBe('value0');
 
             // Commit one transaction.
             expect(await tx1.commit()).toBe(true);
@@ -56,17 +49,17 @@ describe('Query', () => {
 
             // Still ensure read isolation.
             expect(await tx1.get('key0')).toBe(undefined);
-            expect(await tx2.get('key0')).not.toBe(undefined);
+            expect(await tx2.get('key0')).toBe('value0');
 
             // Create a third transaction, which should be based on tx1.
             const tx3 = objectStore.transaction();
             expect(await tx3.get('key0')).toBe(undefined);
-            expect(await backend.get('key0')).not.toBe(undefined); // not yet written
+            expect(await backend.get('key0')).toBe('value0'); // not yet written
 
             // Should not be able to commit tx2.
             expect(await tx2.commit()).toBe(false);
             expect(tx2.state).toBe(Transaction.STATE.CONFLICTED);
-            expect(await backend.get('key0')).not.toBe(undefined); // not yet written
+            expect(await backend.get('key0')).toBe('value0'); // not yet written
 
             // Abort third transaction.
             expect(await tx3.abort()).toBe(true);
@@ -74,6 +67,11 @@ describe('Query', () => {
             // Now tx1 should be in the backend.
             expect(await backend.get('key0')).toBe(undefined);
             expect(await objectStore.get('key0')).toBe(undefined);
+
+            // Create a third transaction, which should be based on the new state.
+            const tx4 = objectStore.transaction();
+            expect(await tx4.get('key0')).toBe(undefined);
+            await tx4.abort();
         })().then(done, done.fail);
     });
 });

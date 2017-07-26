@@ -270,7 +270,7 @@ class Transaction {
         if (query !== null && query instanceof Query) {
             return query.values(this);
         }
-        const keys = this.keys(query);
+        const keys = await this.keys(query);
         const values = [];
         for (const key of keys) {
             values.push(await this.get(key));
@@ -352,7 +352,7 @@ class Transaction {
 
         for (const key of this._modified.keys()) {
             // Find better maxKey in modified data.
-            if ((query === null || query.includes(key)) && (minKey === undefined || key > minKey)) {
+            if ((query === null || query.includes(key)) && (minKey === undefined || key < minKey)) {
                 minKey = key;
             }
         }

@@ -62,36 +62,67 @@ class TransactionIndex extends InMemoryIndex {
     }
 
     /**
+     * @template T
+     * @param {Set.<T>} s
+     * @returns {T}
+     * @private
+     */
+    static _sampleElement(s) {
+        return s.size > 0 ? s.values().next().value : undefined;
+    }
+
+    /**
      * @param {KeyRange|*} [query]
      * @returns {Promise.<Set.<string>>}
      */
     async maxKeys(query=null) {
-        let keys = await this._index.maxKeys(query);
+        let backendKeys = await this._index.maxKeys(query);
+
         // Remove keys that have been deleted or modified.
-        keys = keys.difference(this._objectStore._removed);
-        keys = keys.difference(this._objectStore._modified.keys());
+        let sampleElement = TransactionIndex._sampleElement(backendKeys);
+        const value = await this._backend.get(sampleElement);
+        let maxIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
+        backendKeys = backendKeys.difference(this._objectStore._removed);
+        backendKeys = backendKeys.difference(this._objectStore._modified.keys());
 
-        const newKeys = await InMemoryIndex.prototype.maxKeys.call(query);
+        while (sampleElement !== undefined && backendKeys.size === 0) {
+            const tmpQuery = KeyRange.upperBound(maxIKey, true);
+            backendKeys = await this._index.maxKeys(tmpQuery);
 
-        if (keys.size === 0) {
+            // Remove keys that have been deleted or modified.
+            sampleElement = TransactionIndex._sampleElement(backendKeys);
+            const value = await this._backend.get(sampleElement);
+            maxIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
+            backendKeys = backendKeys.difference(this._objectStore._removed);
+            backendKeys = backendKeys.difference(this._objectStore._modified.keys());
+
+            // If we get out of the range, stop here.
+            if (maxIKey && query !== null && !query.includes(maxIKey)) {
+                backendKeys = new Set();
+                break;
+            }
+        }
+
+        const newKeys = await InMemoryIndex.prototype.maxKeys.call(this, query);
+
+        if (backendKeys.size === 0) {
             return newKeys;
         } else if (newKeys.size === 0) {
-            return keys;
+            return backendKeys;
         }
 
         // Both contain elements, check which one is larger.
-        const valueBackend = await this._objectStore.get(keys.sampleElement());
-        const valueTx = await this._objectStore.get(newKeys.sampleElement());
+        const valueTx = await this._objectStore.get(TransactionIndex._sampleElement(newKeys));
 
-        const iKeyBackend = ObjectUtils.byKeyPath(valueBackend, this.keyPath);
+        const iKeyBackend = maxIKey;
         const iKeyTx = ObjectUtils.byKeyPath(valueTx, this.keyPath);
 
         if (iKeyBackend > iKeyTx) {
-            return keys;
+            return backendKeys;
         } else if (iKeyBackend < iKeyTx) {
             return newKeys;
         }
-        return keys.union(newKeys);
+        return backendKeys.union(newKeys);
     }
 
     /**
@@ -108,32 +139,53 @@ class TransactionIndex extends InMemoryIndex {
      * @returns {Promise.<Set.<string>>}
      */
     async minKeys(query=null) {
-        let keys = await this._index.minKeys(query);
+        let backendKeys = await this._index.minKeys(query);
+
         // Remove keys that have been deleted or modified.
-        keys = keys.difference(this._objectStore._removed);
-        keys = keys.difference(this._objectStore._modified.keys());
+        let sampleElement = TransactionIndex._sampleElement(backendKeys);
+        const value = await this._backend.get(sampleElement);
+        let minIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
+        backendKeys = backendKeys.difference(this._objectStore._removed);
+        backendKeys = backendKeys.difference(this._objectStore._modified.keys());
 
-        const newKeys = await InMemoryIndex.prototype.minKeys.call(query);
+        while (sampleElement !== undefined && backendKeys.size === 0) {
+            const tmpQuery = KeyRange.lowerBound(minIKey, true);
+            backendKeys = await this._index.minKeys(tmpQuery);
 
-        if (keys.size === 0) {
+            // Remove keys that have been deleted or modified.
+            sampleElement = TransactionIndex._sampleElement(backendKeys);
+            const value = await this._backend.get(sampleElement);
+            minIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
+            backendKeys = backendKeys.difference(this._objectStore._removed);
+            backendKeys = backendKeys.difference(this._objectStore._modified.keys());
+
+            // If we get out of the range, stop here.
+            if (minIKey && query !== null && !query.includes(minIKey)) {
+                backendKeys = new Set();
+                break;
+            }
+        }
+
+        const newKeys = await InMemoryIndex.prototype.minKeys.call(this, query);
+
+        if (backendKeys.size === 0) {
             return newKeys;
         } else if (newKeys.size === 0) {
-            return keys;
+            return backendKeys;
         }
 
         // Both contain elements, check which one is larger.
-        const valueBackend = await this._objectStore.get(keys.sampleElement());
-        const valueTx = await this._objectStore.get(newKeys.sampleElement());
+        const valueTx = await this._objectStore.get(TransactionIndex._sampleElement(newKeys));
 
-        const iKeyBackend = ObjectUtils.byKeyPath(valueBackend, this.keyPath);
+        const iKeyBackend = minIKey;
         const iKeyTx = ObjectUtils.byKeyPath(valueTx, this.keyPath);
 
         if (iKeyBackend < iKeyTx) {
-            return keys;
+            return backendKeys;
         } else if (iKeyBackend > iKeyTx) {
             return newKeys;
         }
-        return keys.union(newKeys);
+        return backendKeys.union(newKeys);
     }
 
     /**

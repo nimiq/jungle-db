@@ -9,6 +9,21 @@ class DummyBackend {
         this._indices = new Map();
 
         this.connected = true;
+
+        this._committed = false;
+        this._aborted = false;
+    }
+
+    get committed() {
+        const state = this._committed;
+        this._committed = false;
+        return state;
+    }
+
+    get aborted() {
+        const state = this._aborted;
+        this._aborted = false;
+        return state;
     }
 
     /**
@@ -148,12 +163,14 @@ class DummyBackend {
      * @returns {Promise.<boolean>}
      */
     async commit(tx) {
+        this._committed = true;
     }
 
     /**
      * @param {Transaction} [tx]
      */
     async abort(tx) {
+        this._aborted = true;
     }
 
     /**

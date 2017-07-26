@@ -79,7 +79,6 @@ class InMemoryIndex {
         const treeTx = this._tree.transaction();
         const oldIKey = this._indexKey(key, oldValue);
         const newIKey = this._indexKey(key, value);
-        if (oldIKey === newIKey) return treeTx;
 
         if (oldIKey !== undefined) {
             this._remove(key, oldIKey, treeTx);
@@ -192,7 +191,9 @@ class InMemoryIndex {
      */
     async maxKeys(query=null) {
         const isRange = query instanceof KeyRange;
-        this._tree.goToUpperBound(isRange ? query.upper : undefined, isRange ? query.upperOpen : false);
+        if (!this._tree.goToUpperBound(isRange ? query.upper : undefined, isRange ? query.upperOpen : false)) {
+            return new Set();
+        }
         return Set.from(this._tree.currentRecord);
     }
 
@@ -211,7 +212,9 @@ class InMemoryIndex {
      */
     async minKeys(query=null) {
         const isRange = query instanceof KeyRange;
-        this._tree.goToLowerBound(isRange ? query.lower : undefined, isRange ? query.lowerOpen : false);
+        if (!this._tree.goToLowerBound(isRange ? query.lower : undefined, isRange ? query.lowerOpen : false)) {
+            return new Set();
+        }
         return Set.from(this._tree.currentRecord);
     }
 
