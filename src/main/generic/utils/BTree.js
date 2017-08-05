@@ -324,8 +324,8 @@ class BTree {
         this._leaf = null;
         this._item = -1;
 
-        this._key = '';
-        this._record = -1;
+        this._key = null;
+        this._record = null;
         this._length = 0;
         this._eof = true;
         this._found = false;
@@ -353,6 +353,9 @@ class BTree {
         return new TreeTransaction(this);
     }
 
+    /**
+     * @inheritDoc
+     */
     insert(key, rec, modified=null) {
         const stack = [];
         this._leaf = this._root;
@@ -423,10 +426,10 @@ class BTree {
         if (!this._found) {
             this._item = -1;
             this._eof = true;
-            this._key = '';
-            this._record = -1;
+            this._key = null;
+            this._record = null;
         } else {
-            this.seek(key,true);
+            this.seek(key, BTree.NEAR_MODE.GE);
             this._found = true;
         }
         return (this._found);
@@ -449,9 +452,9 @@ class BTree {
         }
         if (this._item === -1) {
             this._eof = true;
-            this._key = '';
+            this._key = null;
             this._found = false;
-            this._record = -1;
+            this._record = null;
         } else {
             this._eof = false;
             this._found = (this._leaf.keys[this._item] === key);
@@ -493,8 +496,8 @@ class BTree {
         if (this._eof) {
             this._item = -1;
             this._found = false;
-            this._key = '';
-            this._record = -1;
+            this._key = null;
+            this._record = null;
         } else {
             this._found = true;
             this._key = this._leaf.keys[this._item];
@@ -534,8 +537,8 @@ class BTree {
             this._item = -1;
             this._eof = true;
             this._found = false;
-            this._key = '';
-            this._record = -1;
+            this._key = null;
+            this._record = null;
         } else {
             this._item = 0;
             this._eof = false;
@@ -555,8 +558,8 @@ class BTree {
             this._item = -1;
             this._eof = true;
             this._found = false;
-            this._key = '';
-            this._record = -1;
+            this._key = null;
+            this._record = null;
         } else {
             this._item = this._leaf.keys.length-1;
             this._eof = false;
@@ -809,6 +812,7 @@ class BTree {
     }
 
     goToLowerBound(lower, lowerOpen=false) {
+        // TODO: it might be that there is no exact key match, then we do not need to skip!
         if (lower !== undefined) {
             let success = this.seek(lower, BTree.NEAR_MODE.GE);
             if (success && lowerOpen) {
@@ -820,6 +824,7 @@ class BTree {
     }
 
     goToUpperBound(upper, upperOpen=false) {
+        // TODO: it might be that there is no exact key match, then we do not need to skip!
         if (upper !== undefined) {
             let success = this.seek(upper, BTree.NEAR_MODE.LE);
             if (success && upperOpen) {
@@ -912,6 +917,9 @@ class BTree {
         return this._root.id;
     }
 }
+/**
+ * @enum {number}
+ */
 BTree.NEAR_MODE = {
     NONE: 0,
     LE: 1,
