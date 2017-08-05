@@ -59,12 +59,14 @@ class JungleDB {
      * @returns {Promise}
      */
     close() {
-        this._connected = false;
-        const promises = [];
-        for (const objStore of this._objectStores.values()) {
-            promises.push(objStore.close());
+        if (this._connected) {
+            this._connected = false;
+            const promises = [];
+            for (const objStore of this._objectStores.values()) {
+                promises.push(objStore.close());
+            }
+            return Promise.all(promises);
         }
-        return Promise.all(promises);
     }
 
     async destroy() {

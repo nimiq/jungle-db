@@ -102,8 +102,10 @@ class JungleDB {
      * @returns {Promise}
      */
     async close() {
-        this._connected = false;
-        (await this.backend).close();
+        if (this._connected) {
+            this._connected = false;
+            (await this.backend).close();
+        }
     }
 
     async destroy() {
