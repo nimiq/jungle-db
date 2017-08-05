@@ -73,6 +73,42 @@ describe('Transaction', () => {
         })().then(done, done.fail);
     });
 
+    it('does not allow changes after abort', (done) => {
+        (async function () {
+            await tx.abort();
+
+            try {
+                await tx.put('test', 'fail');
+                done.fail('did not throw');
+            } catch (e) {
+            }
+
+            try {
+                await tx.remove('test');
+                done.fail('did not throw');
+            } catch (e) {
+            }
+        })().then(done, done.fail);
+    });
+
+    it('does not allow changes after commit', (done) => {
+        (async function () {
+            await tx.commit();
+
+            try {
+                await tx.put('test', 'fail');
+                done.fail('did not throw');
+            } catch (e) {
+            }
+
+            try {
+                await tx.remove('test');
+                done.fail('did not throw');
+            } catch (e) {
+            }
+        })().then(done, done.fail);
+    });
+
     it('correctly processes min/max index queries', (done) => {
         (async function () {
             const index = tx.index('i');
