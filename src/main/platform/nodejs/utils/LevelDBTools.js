@@ -1,6 +1,8 @@
 class LevelDBTools {
     /**
      * @param {KeyRange} keyRange
+     * @param {Object} options
+     * @returns {Object}
      */
     static convertKeyRange(keyRange, options={}) {
         if (!(keyRange instanceof KeyRange)) return options;

@@ -1,9 +1,5 @@
 {
     "source": "./src",
-    "includes": [
-        "^main/platform/browser/Nimiq.js$",
-        "^main/generic/"
-    ],
     "destination": "./dist/doc",
     "unexportIdentifier": true,
     "plugins": [
