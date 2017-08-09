@@ -81,12 +81,14 @@ describe('Transaction', () => {
                 await tx.put('test', 'fail');
                 done.fail('did not throw');
             } catch (e) {
+                // all ok
             }
 
             try {
                 await tx.remove('test');
                 done.fail('did not throw');
             } catch (e) {
+                // all ok
             }
         })().then(done, done.fail);
     });
@@ -99,12 +101,14 @@ describe('Transaction', () => {
                 await tx.put('test', 'fail');
                 done.fail('did not throw');
             } catch (e) {
+                // all ok
             }
 
             try {
                 await tx.remove('test');
                 done.fail('did not throw');
             } catch (e) {
+                // all ok
             }
         })().then(done, done.fail);
     });
