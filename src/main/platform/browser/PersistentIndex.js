@@ -82,9 +82,9 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
-            const openCursorRequest = this._index(db).openCursor(query, 'prev');
-            openCursorRequest.onsuccess = () => resolve(openCursorRequest.result.value);
-            openCursorRequest.onerror = () => reject(openCursorRequest.error);
+            const request = this._index(db).openCursor(query, 'prev');
+            request.onsuccess = () => resolve(request.result ? request.result.value : []);
+            request.onerror = () => reject(request.error);
         });
     }
 
@@ -96,9 +96,9 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
-            const openCursorRequest = this._index(db).openKeyCursor(query, 'prev');
-            openCursorRequest.onsuccess = () => resolve(Set.from(openCursorRequest.result.primaryKey));
-            openCursorRequest.onerror = () => reject(openCursorRequest.error);
+            const request = this._index(db).openKeyCursor(query, 'prev');
+            request.onsuccess = () => resolve(Set.from(request.result ? request.result.primaryKey : []));
+            request.onerror = () => reject(request.error);
         });
     }
 
@@ -110,9 +110,9 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
-            const openCursorRequest = this._index(db).openCursor(query, 'next');
-            openCursorRequest.onsuccess = () => resolve(openCursorRequest.result.value);
-            openCursorRequest.onerror = () => reject(openCursorRequest.error);
+            const request = this._index(db).openCursor(query, 'next');
+            request.onsuccess = () => resolve(request.result ? request.result.value : []);
+            request.onerror = () => reject(request.error);
         });
     }
 
@@ -124,9 +124,9 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
-            const openCursorRequest = this._index(db).openKeyCursor(query, 'next');
-            openCursorRequest.onsuccess = () => resolve(Set.from(openCursorRequest.result.primaryKey));
-            openCursorRequest.onerror = () => reject(openCursorRequest.error);
+            const request = this._index(db).openKeyCursor(query, 'next');
+            request.onsuccess = () => resolve(Set.from(request.result ? request.result.primaryKey : []));
+            request.onerror = () => reject(request.error);
         });
     }
 
@@ -139,9 +139,9 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
-            const getRequest = this._index(db).count(query);
-            getRequest.onsuccess = () => resolve(getRequest.result);
-            getRequest.onerror = () => reject(getRequest.error);
+            const request = this._index(db).count(query);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
         });
     }
 }
