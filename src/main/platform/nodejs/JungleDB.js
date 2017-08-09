@@ -67,6 +67,7 @@ class JungleDB {
             }
             return Promise.all(promises);
         }
+        return Promise.resolve();
     }
 
     async destroy() {

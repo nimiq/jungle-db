@@ -271,11 +271,11 @@ class Transaction {
             return query.values(this);
         }
         const keys = await this.keys(query);
-        const values = [];
+        const valuePromises = [];
         for (const key of keys) {
-            values.push(await this.get(key));
+            valuePromises.push(this.get(key));
         }
-        return values;
+        return Promise.all(valuePromises);
     }
 
     /**

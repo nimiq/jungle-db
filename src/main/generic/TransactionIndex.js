@@ -34,12 +34,13 @@ class TransactionIndex extends InMemoryIndex {
      * @returns {Promise.<Set.<string>>}
      */
     async keys(query=null) {
-        let keys = await this._index.keys(query);
+        const promises = [];
+        promises.push(this._index.keys(query));
+        promises.push(InMemoryIndex.prototype.keys.call(this, query));
+        let [keys, newKeys] = await Promise.all(promises);
         // Remove keys that have been deleted or modified.
         keys = keys.difference(this._objectStore._removed);
         keys = keys.difference(this._objectStore._modified.keys());
-
-        const newKeys = await InMemoryIndex.prototype.keys.call(this, query);
         return keys.union(newKeys);
     }
 
