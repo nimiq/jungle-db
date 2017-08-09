@@ -1,0 +1,43 @@
+language: node_js
+
+dist: trusty
+
+matrix:
+  include:
+  - os: linux
+    env: TO_TEST=chrome
+    addons:
+      apt:
+        sources:
+        - google-chrome
+        packages:
+        - google-chrome-stable
+  - os: linux
+    env: TO_TEST=firefox
+    addons:
+      firefox: latest
+  - os: linux
+    env: TO_TEST=node
+  - os: linux
+    env: TO_TEST=lint
+  - os: osx
+    env: TO_TEST=safari
+    osx_image: xcode8.3
+
+node_js:
+- node # latest stable node release
+
+cache: yarn # cache yarn
+
+before_install:
+- if [ "$TO_TEST" = "chrome" ]; then export CHROME_BIN=/usr/bin/google-chrome; fi
+- if [ "$TO_TEST" = "chrome" ] || [ "$TO_TEST" = "firefox" ]; then export DISPLAY=:99.0; fi
+- if [ "$TO_TEST" = "chrome" ] || [ "$TO_TEST" = "firefox" ]; then sh -e /etc/init.d/xvfb start; fi
+before_script:
+- node_modules/.bin/gulp build
+script:
+- if [ "$TO_TEST" = "chrome" ]; then node_modules/.bin/karma start --browsers Chrome_travis_ci; fi
+- if [ "$TO_TEST" = "firefox" ]; then node_modules/.bin/karma start --browsers Firefox; fi
+- if [ "$TO_TEST" = "safari" ]; then node_modules/.bin/karma start --browsers Safari; fi
+- if [ "$TO_TEST" = "node" ]; then node_modules/.bin/jasmine; fi
+- if [ "$TO_TEST" = "lint" ]; then node_modules/.bin/eslint src/main src/test *.js; fi
