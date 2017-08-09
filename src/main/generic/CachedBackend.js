@@ -24,11 +24,11 @@ class CachedBackend {
      * @protected
      */
     async _retrieveValues(keys) {
-        const values = [];
+        const valuePromises = [];
         for (const key of keys) {
-            values.push(await this.get(key));
+            valuePromises.push(this.get(key));
         }
-        return values;
+        return Promise.all(valuePromises);
     }
 
     /**

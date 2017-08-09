@@ -167,11 +167,11 @@ class Query {
      */
     async values(objectStore) {
         const keys = await this._execute(objectStore);
-        const results = [];
+        const resultPromises = [];
         for (const key of keys) {
-            results.push(await objectStore.get(key));
+            resultPromises.push(objectStore.get(key));
         }
-        return results;
+        return Promise.all(resultPromises);
     }
 
     /**
@@ -208,10 +208,11 @@ class Query {
      */
     async _executeCombined(objectStore) {
         // Evaluate children.
-        const results = [];
+        const resultPromises = [];
         for (const query of this._queries) {
-            results.push(await query._execute(objectStore));
+            resultPromises.push(query._execute(objectStore));
         }
+        const results = await Promise.all(resultPromises);
 
         if (this._op === Query.OPERATORS.AND) {
             // Provide shortcuts.

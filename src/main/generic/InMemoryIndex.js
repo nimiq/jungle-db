@@ -129,11 +129,11 @@ class InMemoryIndex {
      * @protected
      */
     async _retrieveValues(keys) {
-        const values = [];
+        const valuePromises = [];
         for (const key of keys) {
-            values.push(await this._objectStore.get(key));
+            valuePromises.push(this._objectStore.get(key));
         }
-        return values;
+        return Promise.all(valuePromises);
     }
 
     /**

@@ -67,8 +67,8 @@ class PersistentIndex extends InMemoryIndex {
     }
 
     async init() {
-        this._version = (await this._get('_version')) || this._version;
-        const root = await this._get('_root');
+        const [version, root] = await Promise.all([this._get('_version'), this._get('_root')]);
+        this._version = version || this._version;
 
         // Check whether the stored index is consistent with the main database.
         if (this._version === this._objectStore.indexVersion && (typeof root === 'number')) {
