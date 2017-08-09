@@ -41,8 +41,8 @@ class Stats {
         return this.writeTime / this.writes;
     }
 
-    get averageTimePerByteWritten() {
-        return this.writeTime / this.bytesWritten;
+    get writingSpeed() {
+        return this.bytesWritten / (this.writeTime / 1000); // divided by 1000 to convert ms to s
     }
 
     get reads() {
@@ -73,8 +73,8 @@ class Stats {
         return this.readTime / this.reads;
     }
 
-    get averageTimePerByteRead() {
-        return this.readTime / this.bytesRead;
+    get readingSpeed() {
+        return this.bytesRead / (this.readTime / 1000); // divided by 1000 to convert ms to s
     }
 
     addRun() {
@@ -202,13 +202,13 @@ class Stats {
             result += `Written: ${this.writesPerRun} entries, ${Stats._getByteString(this.bytesWrittenPerRun)}. `
                 + `Total time ${Stats._getTimeString(this.writeTimePerRun)}, `
                 + `time per entry ${Stats._getTimeString(this.averageTimePerWrite)}, `
-                + `time per byte ${Stats._getTimeString(this.averageTimePerByteWritten)}.`;
+                + `${Stats._getByteString(this.writingSpeed)}/s.`;
         }
         if (this.reads > 0) {
             result += (result? '\n' : '') + `Read: ${this.readsPerRun} entries, ${Stats._getByteString(this.bytesReadPerRun)}. `
                 + `Total time ${Stats._getTimeString(this.readTimePerRun)}, `
                 + `time per entry ${Stats._getTimeString(this.averageTimePerRead)}, `
-                + `time per byte ${Stats._getTimeString(this.averageTimePerByteRead)}.`;
+                + `${Stats._getByteString(this.readingSpeed)}/s.`;
         }
         return (this._runs>1? `Average over ${this._runs} runs:\n` : '') + (result || 'No statistics collected');
     }

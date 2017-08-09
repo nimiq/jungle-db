@@ -27,6 +27,20 @@ node index.js
 ### API
 We're currently annotating all classes and methods to get a complete API documentation.
 
+### Benchmarks
+
+#### Run Browser Benchmarks
+Open `benchmark/browser/index.html` in your browser
+
+#### Run NodeJs Benchmarks
+
+Start the example by running `benchmark/nodejs/index.js`.
+
+```bash
+cd benchmark/nodejs/
+node index.js
+```
+
 
 ## Developers
 Developers are free to choose between npm and yarn for managing the dependencies.
