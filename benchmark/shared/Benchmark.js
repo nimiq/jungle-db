@@ -12,12 +12,11 @@ class Benchmark {
      */
     constructor(name, benchmarkVersion = 1, tableNames = ['default']) {
         this.name = name;
-        this._databaseName = `benchmark-${name}`;
+        this._databaseName = `db-${name}`;
         this._tableNames = tableNames;
         this._objectStores = [];
         this._benchmarkVersion = benchmarkVersion;
         this._db = null;
-        this.stats = new Stats();
     }
 
     async _init() {
@@ -75,7 +74,6 @@ class Benchmark {
         }
         await this._finalCleanup();
         const averageStats = Stats.averageStats(stats);
-        console.log('Average stats:');
         BenchmarkUtils.logColored(averageStats.toString());
         return averageStats;
     }

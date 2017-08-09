@@ -1,5 +1,5 @@
 if (typeof(require) !== 'undefined') {
-    BenchmarkFill = require('./RandomGenerator.js');
+    RandomGenerator = require('./RandomGenerator.js');
     Timer = require('./Timer.js');
 }
 

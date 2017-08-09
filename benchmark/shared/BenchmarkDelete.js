@@ -34,7 +34,7 @@ class BenchmarkDelete extends Benchmark {
     async _init() {
         await super._init();
         // fill up the database
-        const objectStore = this._db.getObjectStore(BenchmarkFill.TABLE_NAME);
+        const objectStore = this._db.getObjectStore(BenchmarkDelete.TABLE_NAME);
         await BenchmarkUtils.fillObjectStore(objectStore, this._databaseEntryCount, this._entrySize, 1000, false,
             this._entryKeys);
     }

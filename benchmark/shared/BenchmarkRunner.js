@@ -117,7 +117,7 @@ BenchmarkRunner.BenchmarkDescriptions = [
         databaseEntryCount: [100, 500, 1000],
         readCount: [10, 100, 1000],
         entrySize: [100, 1000],
-        batchSize: [1, 10, 100], // one at a time
+        batchSize: [1, 10, 100],
         sync: [true, false]
     },
     {
