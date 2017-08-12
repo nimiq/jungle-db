@@ -57,43 +57,59 @@ class IIndex {
     async values(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
+     * Returns a promise of an array of objects whose secondary key is maximal for the given range.
+     * If the optional query is not given, it returns the objects whose secondary key is maximal within the index.
+     * If the query is of type KeyRange, it returns the objects whose secondary key is maximal for the given range.
      * @abstract
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<Array.<*>>}
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async maxValues(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
+     * Returns a promise of a set of primary keys, whose associated secondary keys are maximal for the given range.
+     * If the optional query is not given, it returns the set of primary keys, whose associated secondary key is maximal within the index.
+     * If the query is of type KeyRange, it returns the set of primary keys, whose associated secondary key is maximal for the given range.
      * @abstract
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<Set.<string>>}
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async maxKeys(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
+     * Returns a promise of an array of objects whose secondary key is minimal for the given range.
+     * If the optional query is not given, it returns the objects whose secondary key is minimal within the index.
+     * If the query is of type KeyRange, it returns the objects whose secondary key is minimal for the given range.
      * @abstract
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<Array.<*>>}
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async minValues(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
+     * Returns a promise of a set of primary keys, whose associated secondary keys are minimal for the given range.
+     * If the optional query is not given, it returns the set of primary keys, whose associated secondary key is minimal within the index.
+     * If the query is of type KeyRange, it returns the set of primary keys, whose associated secondary key is minimal for the given range.
      * @abstract
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<Set.<string>>}
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async minKeys(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
+     * Returns the count of entries, whose secondary key is in the given range.
+     * If the optional query is not given, it returns the count of entries in the index.
+     * If the query is of type KeyRange, it returns the count of entries, whose secondary key is within the given range.
      * @abstract
-     * @param {KeyRange|*} [query]
+     * @param {KeyRange} [query]
      * @returns {Promise.<number>}
      */
     async count(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
+     * Reinitialises the index.
      * @abstract
-     * @returns {Promise}
+     * @returns {Promise} The promise resolves after emptying the index.
      */
     async truncate() {} // eslint-disable-line no-unused-vars
 }

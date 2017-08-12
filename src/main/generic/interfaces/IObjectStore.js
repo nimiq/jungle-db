@@ -104,7 +104,7 @@ class IObjectStore {
     /**
      * Returns the count of entries in the given range.
      * If the optional query is not given, it returns the count of entries in the object store.
-     * If the query is of tyoe KeyRange, it returns the count of entries within the given range.
+     * If the query is of type KeyRange, it returns the count of entries within the given range.
      * @abstract
      * @param {KeyRange} [query]
      * @returns {Promise.<number>}
