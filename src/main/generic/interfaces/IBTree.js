@@ -92,6 +92,7 @@ class IBTree {
 
     /**
      * Jumps to the smallest key's entry (i.e., leftmost leaf, first entry).
+     * False will only be returned if the tree is completely empty.
      * @abstract
      * @returns {boolean} True if there is such an entry, false otherwise.
      */
@@ -99,6 +100,7 @@ class IBTree {
 
     /**
      * Jumps to the largest key's entry (i.e., rightmost leaf, last entry).
+     * False will only be returned if the tree is completely empty.
      * @abstract
      * @returns {boolean} True if there is such an entry, false otherwise.
      */
@@ -106,7 +108,12 @@ class IBTree {
 
     /**
      * Rebuilds/balances the whole tree.
-     * @returns {boolean}
+     * Inserting and deleting keys into a tree will result
+     * in some leaves and nodes having the minimum number of keys allowed.
+     * This routine will ensure that each leaf and node has as many keys as possible,
+     * resulting in a denser, flatter tree.
+     * False is only returned if the tree is completely empty.
+     * @returns {boolean} True if the tree is not completely empty.
      */
     pack() {}
 

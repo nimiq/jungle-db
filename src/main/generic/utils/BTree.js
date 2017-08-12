@@ -30,24 +30,39 @@
 
  */
 
+/**
+ * This abstract class describes a general Node within a B+Tree.
+ * Each node owns an array of keys and has an id.
+ */
 class Node {
     /**
-     * @param id
-     * @param [keys]
+     * Creates a new node.
+     * @param {number} id The node's id.
+     * @param {Array.<*>} [keys] Optional array of keys (default is empty).
      */
     constructor(id, keys=[]) {
         this._keys = keys;
         this._id = id;
     }
 
+    /**
+     * @type {number} The id of the node.
+     */
     get id() {
         return this._id;
     }
 
+    /**
+     * @type {Array.<*>} The array of keys.
+     */
     get keys() {
         return this._keys;
     }
 
+    /**
+     * Converts a node to JSON, which is necessary to persist the B+Tree.
+     * @returns {{_id: number, _keys: Array.<*>}} The JSON representation.
+     */
     toJSON() {
         return {
             _id: this._id,
@@ -56,8 +71,9 @@ class Node {
     }
 
     /**
-     * @param {Object} o
-     * @returns {Node}
+     * Constructs a node from a JSON object.
+     * @param {{isLeaf: boolean, _id: number, _keys: Array.<*>}} o The JSON object to build the node from.
+     * @returns {Node} The constructed node.
      */
     static fromJSON(o) {
         if (o.isLeaf === true) {
@@ -70,11 +86,21 @@ class Node {
 }
 Class.register(Node);
 
+/**
+ * A Leaf Node in the B+Tree.
+ * @extends Node
+ */
 class LeafNode extends Node {
     /**
-     * @param id
-     * @param [keys]
-     * @param [records]
+     * Creates a new leaf node.
+     * Leaf nodes store key value pairs,
+     * hence the keys and records arrays are required to have the same length.
+     * In an index, the keys array usually stores the secondary key,
+     * while the records array stores the corresponding primary key.
+     * The B+Tree ensures that the items in the keys array are ordered ascending.
+     * @param {number} id The node's id.
+     * @param {Array.<*>} [keys] Optional array of keys (default is empty).
+     * @param {Array.<*>} [records] Optional array of records (default is empty).
      */
     constructor(id, keys=[], records=[]) {
         if (keys.length !== records.length) {
@@ -86,14 +112,25 @@ class LeafNode extends Node {
         this.nextLeaf = null;
     }
 
+    /**
+     * @type {Array.<*>} The list of records associated with the keys.
+     */
     get records() {
         return this._records;
     }
 
+    /**
+     * Returns whether this is a leaf node.
+     * @returns {boolean} True, since it is a leaf node.
+     */
     isLeaf() {
         return true;
     }
 
+    /**
+     * Converts a node to JSON, which is necessary to persist the B+Tree.
+     * @returns {{_id: number, _keys: Array.<*>, _records: Array.<*>, isLeaf: boolean, prevLeaf: number, nextLeaf: number}} The JSON representation.
+     */
     toJSON() {
         const o = super.toJSON();
         o.isLeaf = true;
@@ -104,8 +141,9 @@ class LeafNode extends Node {
     }
 
     /**
-     * @param {Object} o
-     * @returns {Node}
+     * Constructs a node from a JSON object.
+     * @param {{_id: number, _keys: Array.<*>, _records: Array.<*>, isLeaf: boolean, prevLeaf: number, nextLeaf: number}} o The JSON object to build the node from.
+     * @returns {Node} The constructed node.
      */
     static fromJSON(o) {
         const leaf = new LeafNode(o._id, o._keys, o._records);
@@ -115,10 +153,15 @@ class LeafNode extends Node {
     }
 
     /**
-     * complexity O([order/2, order-1])
-     * @param key
-     * @param near
-     * @returns {number}
+     * Searches the node for a specific key and returns its position if found.
+     * The near parameter allows to find either an exact match or the first key
+     * greater/less or equal than the specified key.
+     *
+     * Since the B+tree limits the number of records per leaf node,
+     * the complexity of this method is in O([order/2, order-1]).
+     * @param {*} key The key to look for.
+     * @param {BTree.NEAR_MODE} near
+     * @returns {number} The index of the match if found, -1 otherwise.
      */
     getItem(key, near) {
         const keys = this._keys;
@@ -140,9 +183,12 @@ class LeafNode extends Node {
     }
 
     /**
-     * @param key
-     * @param record
-     * @returns {number}
+     * Adds a key, record pair to this leaf node.
+     * By definition, the key is inserted into the keys of this leaf node,
+     * such that the ascending order of the keys is maintained.
+     * @param {*} key The key to insert.
+     * @param {*} record The corresponding record to insert.
+     * @returns {number} The position it was inserted at.
      */
     addKey(key, record) {
         let insertPos = this._keys.length;
@@ -165,8 +211,11 @@ class LeafNode extends Node {
     }
 
     /**
-     * @param {number} newId
-     * @returns {LeafNode}
+     * Splits the leaf node into two nodes (this + one new node).
+     * The resulting nodes should have almost equal sizes.
+     * The new node will return the upper half of the previous entries.
+     * @param {number} newId The id to be assigned the new node.
+     * @returns {LeafNode} The new leaf node containing the upper half of entries.
      */
     split(newId) {
         const mov = Math.floor(this._keys.length/2);
@@ -184,9 +233,11 @@ class LeafNode extends Node {
     }
 
     /**
-     * @param {LeafNode} frNod
-     * @param {InnerNode} paNod
-     * @param frKey
+     * Merges two leaf nodes together (this + frNod).
+     * The given node frNod is no longer connected afterwards.
+     * @param {LeafNode} frNod The node to merge with.
+     * @param {InnerNode} paNod The parent node that needs to be updated.
+     * @param {*} frKey The key of the old leaf in the parent.
      */
     merge(frNod, paNod, frKey) {
         // Append keys/records.
@@ -215,25 +266,44 @@ class LeafNode extends Node {
 }
 Class.register(LeafNode);
 
+/**
+ * An Inner Node in the B+Tree.
+ * @extends Node
+ */
 class InnerNode extends Node {
     /**
-     * @param id
-     * @param [keys]
-     * @param [nodePointers]
+     * Creates a new inner node.
+     * The only key values that appear in the internal nodes are the first key values from each leaf,
+     * with the exception of the key from the very first leaf which isn't included.
+     * Each key value that appears in the internal nodes only appears once.
+     * @param {number} id The node's id.
+     * @param {Array.<*>} [keys] The first key of each child node (except for the first one).
+     * @param {Array.<Node>} [nodePointers] The pointers to the child nodes.
      */
     constructor(id, keys=[], nodePointers=[]) {
         super(id, keys);
         this._nodePointers = nodePointers;
     }
 
+    /**
+     * Returns whether this is a leaf node.
+     * @returns {boolean} False, since it is an inner node.
+     */
     isLeaf() {
         return false;
     }
 
+    /**
+     * @type {Array.<Node>} The pointers to the children.
+     */
     get nodePointers() {
         return this._nodePointers;
     }
 
+    /**
+     * Converts a node to JSON, which is necessary to persist the B+Tree.
+     * @returns {{_id: number, _keys: Array.<*>, isLeaf: boolean, _nodePointers: Array.<number>}} The JSON representation.
+     */
     toJSON() {
         const o = super.toJSON();
         const nodePointers = [];
@@ -246,13 +316,22 @@ class InnerNode extends Node {
     }
 
     /**
-     * @param {Object} o
-     * @returns {Node}
+     * Constructs a node from a JSON object.
+     * @param {{_id: number, _keys: Array.<*>, isLeaf: boolean, _nodePointers: Array.<number>}} o The JSON object to build the node from.
+     * @returns {Node} The constructed node.
      */
     static fromJSON(o) {
         return new InnerNode(o._id, o._keys, o._nodePointers);
     }
 
+    /**
+     * Searches the node for a specific key and returns the matching child's position.
+     *
+     * Since the B+tree limits the number of records per leaf node,
+     * the complexity of this method is in O([(order-1)/2, order-1]).
+     * @param {*} key The key to look for.
+     * @returns {number} The index of the match.
+     */
     getItem(key) {
         const len = this._keys.length;
         for (let i=0; i<len; ++i) {
@@ -261,6 +340,7 @@ class InnerNode extends Node {
         return this._keys.length;
     }
 
+    
     addKey(key, ptrL, ptrR) {
         const len = this._keys.length;
         let insertPos = len;
