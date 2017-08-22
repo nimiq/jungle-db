@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JungleDB Browser Benchmark</title>
+    <script src="../../dist/web.js"></script>
+    <script src="../shared/Timer.js"></script>
+    <script src="../shared/Stats.js"></script>
+    <script src="../shared/RandomGenerator.js"></script>
+    <script src="../shared/BenchmarkUtils.js"></script>
+    <script src="../shared/Benchmark.js"></script>
+    <script src="../shared/BenchmarkFill.js"></script>
+    <script src="../shared/BenchmarkOverwrite.js"></script>
+    <script src="../shared/BenchmarkRead.js"></script>
+    <script src="../shared/BenchmarkDelete.js"></script>
+    <script src="../shared/BenchmarkRunner.js"></script>
+
+    <script src="UiComponent.js"></script>
+    <script src="SelectorBar.js"></script>
+    <script src="BenchmarkView.js"></script>
+    <script src="BenchmarkUi.js"></script>
+</head>
+<body>
+    <script>
+        window.addEventListener("unhandledrejection", function(err, promise) {
+            console.error('unhandled exception in promise', err);
+        });
+
+        const ui = new BenchmarkUi();
+        document.body.appendChild(ui.el);
+        BenchmarkRunner.runBenchmarks(ui).then(() => console.log('Benchmarks finished.'));
+    </script>
+</body>
+</html>
