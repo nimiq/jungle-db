@@ -12,7 +12,7 @@ class IBTree {
      * @abstract
      * @type {number}
      */
-    get length() {}
+    get length() {} // eslint-disable-line no-unused-vars
 
     /**
      * The current key as returned by any operation.
@@ -20,7 +20,7 @@ class IBTree {
      * @abstract
      * @type {*}
      */
-    get currentKey() {}
+    get currentKey() {} // eslint-disable-line no-unused-vars
 
     /**
      * The current record as returned by any operation.
@@ -28,7 +28,7 @@ class IBTree {
      * @abstract
      * @type {*}
      */
-    get currentRecord() {}
+    get currentRecord() {} // eslint-disable-line no-unused-vars
 
     /**
      * Inserts a new key-record pair into the BTree, if there is no entry for that key.
@@ -39,7 +39,7 @@ class IBTree {
      * @param {*} rec The record associated with the key.
      * @returns {boolean} True if the record was inserted, false if there was already a record with that key.
      */
-    insert(key, rec) {}
+    insert(key, rec) {} // eslint-disable-line no-unused-vars
 
     /**
      * Removes a key-record pair from the BTree.
@@ -49,7 +49,7 @@ class IBTree {
      * @param {*} key The unique key for the record.
      * @returns {boolean} True if the record was deleted, false if there is no such record.
      */
-    remove(key) {}
+    remove(key) {} // eslint-disable-line no-unused-vars
 
     /**
      * Searches the tree for a specific key and advances the current key/record pointers if found.
@@ -60,7 +60,7 @@ class IBTree {
      * @param {BTree.NEAR_MODE} [near] Optional parameter, specifies to look for a key k' =/≤/≥ key.
      * @returns {boolean} True if such a key was found, false otherwise.
      */
-    seek(key, near=BTree.NEAR_MODE.NONE) {}
+    seek(key, near=BTree.NEAR_MODE.NONE) {} // eslint-disable-line no-unused-vars
 
     /**
      * Advances the current key/record pointers by a given number of steps.
@@ -70,7 +70,7 @@ class IBTree {
      * @param {number} [cnt] The number of records to advance (may be negative).
      * @returns {boolean} True if there is a record to advance to, false otherwise.
      */
-    skip(cnt = 1) {}
+    skip(cnt = 1) {} // eslint-disable-line no-unused-vars
 
     /**
      * Jumps to the cnt entry starting from the smallest key (i.e., leftmost leaf, first entry) if cnt > 0.
@@ -79,7 +79,7 @@ class IBTree {
      * @param {number} [cnt] The record to jump to (may be negative).
      * @returns {boolean} True if there is a record to jump to, false otherwise.
      */
-    goto(cnt) {}
+    goto(cnt) {} // eslint-disable-line no-unused-vars
 
     /**
      * Returns the index of the current entry (key/record) in a sorted list of all entries.
@@ -88,7 +88,7 @@ class IBTree {
      * @abstract
      * @returns {number} The entry position.
      */
-    keynum() {}
+    keynum() {} // eslint-disable-line no-unused-vars
 
     /**
      * Jumps to the smallest key's entry (i.e., leftmost leaf, first entry).
@@ -96,7 +96,7 @@ class IBTree {
      * @abstract
      * @returns {boolean} True if there is such an entry, false otherwise.
      */
-    goTop() {}
+    goTop() {} // eslint-disable-line no-unused-vars
 
     /**
      * Jumps to the largest key's entry (i.e., rightmost leaf, last entry).
@@ -104,7 +104,7 @@ class IBTree {
      * @abstract
      * @returns {boolean} True if there is such an entry, false otherwise.
      */
-    goBottom() {}
+    goBottom() {} // eslint-disable-line no-unused-vars
 
     /**
      * Rebuilds/balances the whole tree.
@@ -113,9 +113,10 @@ class IBTree {
      * This routine will ensure that each leaf and node has as many keys as possible,
      * resulting in a denser, flatter tree.
      * False is only returned if the tree is completely empty.
+     * @abstract
      * @returns {boolean} True if the tree is not completely empty.
      */
-    pack() {}
+    pack() {} // eslint-disable-line no-unused-vars
 
     /**
      * Advances to the smallest key k', such that either k' > lower (if lowerOpen) or k' ≥ lower (if !lowerOpen).
@@ -125,7 +126,7 @@ class IBTree {
      * @param {boolean} [lowerOpen] Whether lower may be included or not.
      * @returns {boolean} True if there is such an entry, false otherwise.
      */
-    goToLowerBound(lower, lowerOpen=false) {}
+    goToLowerBound(lower, lowerOpen=false) {} // eslint-disable-line no-unused-vars
 
     /**
      * Advances to the largest key k', such that either k' < upper (if upperOpen) or k' ≤ upper (if !upperOpen).
@@ -135,5 +136,5 @@ class IBTree {
      * @param {boolean} [upperOpen] Whether upper may be included or not.
      * @returns {boolean} True if there is such an entry, false otherwise.
      */
-    goToUpperBound(upper, upperOpen=false) {}
+    goToUpperBound(upper, upperOpen=false) {} // eslint-disable-line no-unused-vars
 }

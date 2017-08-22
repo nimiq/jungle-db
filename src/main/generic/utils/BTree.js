@@ -340,7 +340,15 @@ class InnerNode extends Node {
         return this._keys.length;
     }
 
-    
+    /**
+     * Adds a key corresponding to a new child node to this inner node.
+     * By definition, the key is inserted into the keys of this leaf node,
+     * such that the ascending order of the keys is maintained.
+     * @param {*} key The key to insert.
+     * @param {Node} ptrL The pointer to the corresponding child node.
+     * @param {Node} ptrR The pointer to the node right of the child node.
+     * @returns {number} The position it was inserted at.
+     */
     addKey(key, ptrL, ptrR) {
         const len = this._keys.length;
         let insertPos = len;
@@ -357,6 +365,13 @@ class InnerNode extends Node {
         this._nodePointers[insertPos+1] = ptrR;
     }
 
+    /**
+     * Splits the node into two nodes (this + one new node).
+     * The resulting nodes should have almost equal sizes.
+     * The new node will return the upper half of the previous entries.
+     * @param {number} newId The id to be assigned the new node.
+     * @returns {InnerNode} The new inner node containing the upper half of entries.
+     */
     split(newId) {
         const mov = Math.ceil(this._keys.length/2) - 1;
         const newNodePointers = [this._nodePointers.pop()];
@@ -369,9 +384,11 @@ class InnerNode extends Node {
     }
 
     /**
-     * @param {InnerNode} frNod
-     * @param {InnerNode} paNod
-     * @param {number} paItm
+     * Merges two inner nodes together (this + frNod).
+     * The given node frNod is no longer connected afterwards.
+     * @param {InnerNode} frNod The node to merge with.
+     * @param {InnerNode} paNod The parent node that needs to be updated.
+     * @param {number} paItm The position in the parent.
      */
     merge(frNod, paNod, paItm) {
         const del = paNod.keys[paItm];
@@ -392,9 +409,17 @@ class InnerNode extends Node {
 Class.register(InnerNode);
 
 /**
+ * The actual BTree implementation.
  * @implements {IBTree}
  */
 class BTree {
+    /**
+     * Creates a new BTree of a given order.
+     * The order specifies how many entries a single node can contain.
+     * A leaf node generally contains [order/2, order-1] entries,
+     * while an inner node contains [(order-1)/2, order-1] entries.
+     * @param {number} order The order of the tree.
+     */
     constructor(order=7) {
         this._nodeId = 0; // Needed for persistence.
         this._root = new LeafNode(this._nodeId++);
@@ -411,22 +436,37 @@ class BTree {
         this._found = false;
     }
 
-    /** @type {number} */
+    /**
+     * The total number of records.
+     * Note that if the record is a list/set of records, these are not counted.
+     * @type {number}
+     */
     get length() {
         return this._length;
     }
 
-    /** @type {*} */
+    /**
+     * The current key as returned by any operation.
+     * It is null if there is no matching record.
+     * @type {*}
+     */
     get currentKey() {
         return this._key;
     }
 
-    /** @type {*} */
+    /**
+     * The current record as returned by any operation.
+     * It is null if there is no matching record.
+     * @type {*}
+     */
     get currentRecord() {
         return this._record;
     }
 
     /**
+     * Creates a new TreeTransaction object on this tree.
+     * A tree transaction keeps track of the changed nodes and entries,
+     * so that these can be updated in a permanent storage.
      * @returns {TreeTransaction}
      */
     transaction() {
@@ -434,7 +474,12 @@ class BTree {
     }
 
     /**
-     * @inheritDoc
+     * Inserts a new key-record pair into the BTree, if there is no entry for that key.
+     * The current record and current key are set to the new entry in case of success
+     * or the existing entry if present.
+     * @param {*} key The unique key for the record.
+     * @param {*} rec The record associated with the key.
+     * @returns {boolean} True if the record was inserted, false if there was already a record with that key.
      */
     insert(key, rec, modified=null) {
         const stack = [];
@@ -452,7 +497,7 @@ class BTree {
             this._item = this._leaf.getItem(key, false);
             this._record = this._leaf.records[this._item];
         } else {
-            BTree.modifyNode(modified, this._leaf);
+            BTree._modifyNode(modified, this._leaf);
 
             this._found = false;
             this._record = rec;
@@ -460,8 +505,8 @@ class BTree {
             if (this._leaf.keys.length > this._maxkey) {
                 let pL = this._leaf;
                 let pR = this._leaf.split(this._nodeId++);
-                BTree.modifyNode(modified, pL); // we splitted nodes
-                BTree.modifyNode(modified, pR);
+                BTree._modifyNode(modified, pL); // we splitted nodes
+                BTree._modifyNode(modified, pR);
                 let ky = pR.keys[0];
                 this._item = this._leaf.getItem(key, false);
                 if (this._item === -1) {
@@ -474,18 +519,18 @@ class BTree {
                         newN.keys[0] = ky;
                         newN.nodePointers[0] = pL;
                         newN.nodePointers[1] = pR;
-                        BTree.modifyNode(modified, newN);
+                        BTree._modifyNode(modified, newN);
                         this._root = newN;
                         break;
                     }
                     const nod = stack.pop();
                     nod.addKey(ky, pL, pR);
-                    BTree.modifyNode(modified, nod);
+                    BTree._modifyNode(modified, nod);
                     if (nod.keys.length <= this._maxkey) break;
                     pL = nod;
                     pR = nod.split(this._nodeId++);
-                    BTree.modifyNode(modified, pL);
-                    BTree.modifyNode(modified, pR);
+                    BTree._modifyNode(modified, pL);
+                    BTree._modifyNode(modified, pR);
                     ky = nod.keys.pop();
                 }
             }
@@ -493,6 +538,13 @@ class BTree {
         return (!this._found);
     }
 
+    /**
+     * Removes a key-record pair from the BTree.
+     * In case of successful deletion, the current record and key will be set to the next entry greater or equal.
+     * If no record was found, they will be reset to null.
+     * @param {*} key The unique key for the record.
+     * @returns {boolean} True if the record was deleted, false if there is no such record.
+     */
     remove(key, modified=null, removed=null) {
         if (typeof key === 'undefined') {
             if (this._item === -1) {
@@ -515,6 +567,14 @@ class BTree {
         return (this._found);
     }
 
+    /**
+     * Searches the tree for a specific key and advances the current key/record pointers if found.
+     * By default only an exact key match is found, but the near parameter also allows to advance to the next entry
+     * greater/less or equal than the specified key.
+     * @param {*} key The key to look for.
+     * @param {BTree.NEAR_MODE} [near] Optional parameter, specifies to look for a key k' =/≤/≥ key.
+     * @returns {boolean} True if such a key was found, false otherwise.
+     */
     seek(key, near=BTree.NEAR_MODE.NONE) {
         this._leaf = this._root;
         while (!this._leaf.isLeaf()) {
@@ -544,6 +604,13 @@ class BTree {
         return (!this._eof);
     }
 
+    /**
+     * Advances the current key/record pointers by a given number of steps.
+     * Default is advancing by 1, which means the next record (the new key will thus be the next larger key).
+     * -1 means the previous record (the new key will thus be the next smaller key).
+     * @param {number} [cnt] The number of records to advance (may be negative).
+     * @returns {boolean} True if there is a record to advance to, false otherwise.
+     */
     skip(cnt = 1) {
         if (typeof cnt !== 'number') cnt = 1;
         if (this._item === -1 || this._leaf === null) this._eof = true;
@@ -586,6 +653,12 @@ class BTree {
         return (this._found);
     }
 
+    /**
+     * Jumps to the cnt entry starting from the smallest key (i.e., leftmost leaf, first entry) if cnt > 0.
+     * If cnt < 0, it jumps to the cnt entry starting from the largest key (i.e., rightmost leaf, last entry).
+     * @param {number} [cnt] The record to jump to (may be negative).
+     * @returns {boolean} True if there is a record to jump to, false otherwise.
+     */
     goto(cnt) {
         if (cnt < 0) {
             this.goBottom();
@@ -597,6 +670,12 @@ class BTree {
         return (this._found);
     }
 
+    /**
+     * Returns the index of the current entry (key/record) in a sorted list of all entries.
+     * For the B+ Tree, this is done by traversing the leafs from the leftmost leaf, first entry
+     * until the respective key is found.
+     * @returns {number} The entry position.
+     */
     keynum() {
         if (this._leaf === null || this._item === -1) return -1;
         let cnt = this._item + 1;
@@ -608,6 +687,11 @@ class BTree {
         return cnt;
     }
 
+    /**
+     * Jumps to the smallest key's entry (i.e., leftmost leaf, first entry).
+     * False will only be returned if the tree is completely empty.
+     * @returns {boolean} True if there is such an entry, false otherwise.
+     */
     goTop() {
         this._leaf = this._root;
         while (!this._leaf.isLeaf()) {
@@ -629,6 +713,11 @@ class BTree {
         return (this._found);
     }
 
+    /**
+     * Jumps to the largest key's entry (i.e., rightmost leaf, last entry).
+     * False will only be returned if the tree is completely empty.
+     * @returns {boolean} True if there is such an entry, false otherwise.
+     */
     goBottom() {
         this._leaf = this._root;
         while (!this._leaf.isLeaf()) {
@@ -650,6 +739,15 @@ class BTree {
         return (this._found);
     }
 
+    /**
+     * Rebuilds/balances the whole tree.
+     * Inserting and deleting keys into a tree will result
+     * in some leaves and nodes having the minimum number of keys allowed.
+     * This routine will ensure that each leaf and node has as many keys as possible,
+     * resulting in a denser, flatter tree.
+     * False is only returned if the tree is completely empty.
+     * @returns {boolean} True if the tree is not completely empty.
+     */
     pack(modified=null) {
         let len;
         let i;
@@ -664,8 +762,8 @@ class BTree {
         let parKey = [];
         let parNod = [];
         while (true) { // eslint-disable-line no-constant-condition
-            BTree.modifyNode(modified, toN);
-            BTree.modifyNode(modified, frN);
+            BTree._modifyNode(modified, toN);
+            BTree._modifyNode(modified, frN);
             toN.keys[toI] = frN.keys[frI];
             toN.records[toI] = frN.records[frI];
             if (toI === 0) parNod.push(toN);
@@ -689,7 +787,7 @@ class BTree {
         let mov = this._minkyl - toN.keys.length;
         frN = toN.prevLeaf;
         if (mov > 0 && frN !== null) {
-            BTree.modifyNode(modified, frN);
+            BTree._modifyNode(modified, frN);
             // Insert new keys/records.
             for (i = mov-1; i>=0; --i) {
                 toN.keys.unshift(frN.keys.pop());
@@ -720,12 +818,12 @@ class BTree {
                 toN.keys[toI] = kidKey[i];
                 toN.nodePointers[toI] = kidNod[i];
                 toI++;
-                BTree.modifyNode(modified, toN);
+                BTree._modifyNode(modified, toN);
             }
             mov = this._minkyn - toN.keys.length + 1;
             if (mov > 0 && parNod.length > 1) {
                 frN = parNod[parNod.length-2];
-                BTree.modifyNode(modified, frN);
+                BTree._modifyNode(modified, frN);
                 for (i = mov-1; i>=0; --i) {
                     toN.keys.unshift(frN.keys.pop());
                     toN.nodePointers.unshift(frN.nodePointers.pop());
@@ -742,7 +840,13 @@ class BTree {
         return (this._found);
     }
 
-
+    /**
+     * Internal helper method to delete a key from the tree.
+     * @param {*} key The unique key for the record.
+     * @param [modified] The optional set of modified nodes (will be updated by the method).
+     * @param [removed] The optional set of removed nodes (will be updated by the method).
+     * @private
+     */
     _del(key, modified=null, removed=null) {
         const stack = [];
         let parNod = null;
@@ -766,7 +870,7 @@ class BTree {
         // Delete key from leaf
         this._leaf.keys.splice(this._item, 1);
         this._leaf.records.splice(this._item, 1);
-        BTree.modifyNode(modified, this._leaf);
+        BTree._modifyNode(modified, this._leaf);
         this._length--;
 
         // Leaf still valid: done
@@ -786,7 +890,7 @@ class BTree {
             this._leaf.keys.unshift(sibL.keys.pop());
             this._leaf.records.unshift(sibL.records.pop());
             BTree._fixNodes(stack, delKey, this._leaf.keys[0], modified);
-            BTree.modifyNode(modified, sibL);
+            BTree._modifyNode(modified, sibL);
             return;
         }
 
@@ -797,7 +901,7 @@ class BTree {
             this._leaf.records.push(sibR.records.shift());
             if (this._item === 0) BTree._fixNodes(stack, key, this._leaf.keys[0], modified);
             BTree._fixNodes(stack, this._leaf.keys[this._leaf.keys.length-1], sibR.keys[0], modified);
-            BTree.modifyNode(modified, sibR);
+            BTree._modifyNode(modified, sibR);
             return;
         }
 
@@ -805,14 +909,14 @@ class BTree {
         if (sibL !== null) {
             delKey = (this._item === 0) ? key : this._leaf.keys[0];
             sibL.merge(this._leaf, parNod, delKey);
-            BTree.modifyNode(modified, sibL);
-            BTree.modifyNode(removed, this._leaf);
+            BTree._modifyNode(modified, sibL);
+            BTree._modifyNode(removed, this._leaf);
             this._leaf = sibL;
         } else {
             delKey = sibR.keys[0];
             this._leaf.merge(sibR, parNod, delKey);
-            BTree.modifyNode(modified, this._leaf);
-            BTree.modifyNode(removed, sibR);
+            BTree._modifyNode(modified, this._leaf);
+            BTree._modifyNode(removed, sibR);
             if (this._item === 0) BTree._fixNodes(stack, key, this._leaf.keys[0], modified);
         }
 
@@ -836,9 +940,9 @@ class BTree {
                 curNod.keys.push(parNod.keys[parItm]);
                 parNod.keys[parItm] = sibR.keys.shift();
                 curNod.nodePointers.push(sibR.nodePointers.shift());
-                BTree.modifyNode(modified, curNod);
-                BTree.modifyNode(modified, sibR);
-                BTree.modifyNode(modified, parNod);
+                BTree._modifyNode(modified, curNod);
+                BTree._modifyNode(modified, sibR);
+                BTree._modifyNode(modified, parNod);
                 break;
             }
 
@@ -848,22 +952,22 @@ class BTree {
                 curNod.keys.unshift(parNod.keys[parItm-1]);
                 parNod.keys[parItm-1] = sibL.keys.pop();
                 curNod.nodePointers.unshift(sibL.nodePointers.pop());
-                BTree.modifyNode(modified, curNod);
-                BTree.modifyNode(modified, sibL);
-                BTree.modifyNode(modified, parNod);
+                BTree._modifyNode(modified, curNod);
+                BTree._modifyNode(modified, sibL);
+                BTree._modifyNode(modified, parNod);
                 break;
             }
 
             // Merge left to make one node
             if (sibL !== null) {
                 delKey = sibL.merge(curNod, parNod, parItm-1);
-                BTree.modifyNode(removed, curNod);
-                BTree.modifyNode(modified, sibL);
+                BTree._modifyNode(removed, curNod);
+                BTree._modifyNode(modified, sibL);
                 curNod = sibL;
             } else if (sibR !== null) {
                 delKey = curNod.merge(sibR, parNod, parItm);
-                BTree.modifyNode(removed, sibR);
-                BTree.modifyNode(modified, curNod);
+                BTree._modifyNode(removed, sibR);
+                BTree._modifyNode(modified, curNod);
             }
 
             // Next level
@@ -875,6 +979,14 @@ class BTree {
         }
     }
 
+    /**
+     * Internal helper method to replace a key within the whole stack.
+     * @param {Array.<Node>} stk The stack of nodes to examine.
+     * @param {*} frKey The key to replace.
+     * @param {*} toKey The new key to put in place.
+     * @param {*} [modified] The optional set of modified nodes (will be updated by the method).
+     * @private
+     */
     static _fixNodes(stk, frKey, toKey, modified) {
         let keys, lvl = stk.length, mor = true;
         do {
@@ -883,7 +995,7 @@ class BTree {
             for (let i=keys.length-1; i>=0; --i) {
                 if (keys[i] === frKey) {
                     keys[i] = toKey;
-                    BTree.modifyNode(modified, stk[lvl]);
+                    BTree._modifyNode(modified, stk[lvl]);
                     mor = false;
                     break;
                 }
@@ -891,6 +1003,13 @@ class BTree {
         } while (mor && lvl>0);
     }
 
+    /**
+     * Advances to the smallest key k', such that either k' > lower (if lowerOpen) or k' ≥ lower (if !lowerOpen).
+     * If lower is undefined, jump to the smallest key's entry.
+     * @param {*} lower A lower bound on the key or undefined.
+     * @param {boolean} [lowerOpen] Whether lower may be included or not.
+     * @returns {boolean} True if there is such an entry, false otherwise.
+     */
     goToLowerBound(lower, lowerOpen=false) {
         // TODO: it might be that there is no exact key match, then we do not need to skip!
         if (lower !== undefined) {
@@ -903,6 +1022,13 @@ class BTree {
         return this.goTop();
     }
 
+    /**
+     * Advances to the largest key k', such that either k' < upper (if upperOpen) or k' ≤ upper (if !upperOpen).
+     * If upper is undefined, jump to the largest key's entry.
+     * @param {*} upper An upper bound on the key or undefined.
+     * @param {boolean} [upperOpen] Whether upper may be included or not.
+     * @returns {boolean} True if there is such an entry, false otherwise.
+     */
     goToUpperBound(upper, upperOpen=false) {
         // TODO: it might be that there is no exact key match, then we do not need to skip!
         if (upper !== undefined) {
@@ -916,19 +1042,25 @@ class BTree {
     }
 
     /**
-     * @param {Set|*} s
-     * @param {Node} node
+     * An internal helper method used to add a node to a set.
+     * If the given s is not a set, it does not do anything.
+     * @param {Set|*} s The set to add the node to.
+     * @param {Node} node The node to add to the set.
+     * @private
      */
-    static modifyNode(s, node) {
+    static _modifyNode(s, node) {
         if (s instanceof Set) {
             s.add(node);
         }
     }
 
     /**
-     * @param {number} rootId
-     * @param {Map.<number,Object>} nodes
-     * @param {number} [order]
+     * Load a BTree from JSON objects.
+     * This method can be used to load a BTree from a JSON database.
+     * @param {number} rootId The id of the root node.
+     * @param {Map.<number,Object>} nodes A map mapping node ids to JSON objects.
+     * @param {number} [order] The order of the tree the nodes will be added to.
+     * This is required to be the same as when storing the tree.
      */
     static loadFromJSON(rootId, nodes, order) {
         const tree = new BTree(order);
@@ -967,8 +1099,10 @@ class BTree {
     }
 
     /**
-     * @param {Map.<number,Object>} nodes
-     * @returns {number} root
+     * Dumps the current state of the tree into a map mapping node ids to JSON objects.
+     * This method can be used to store the state of the tree into a JSON key value store.
+     * @param {Map.<number,Object>} nodes This should be a reference to an empty map.
+     * @returns {number} root The id of the root node.
      */
     dump(nodes) {
         nodes.clear();
@@ -998,6 +1132,7 @@ class BTree {
     }
 }
 /**
+ * Allows to specify the seek method of a BTree.
  * @enum {number}
  */
 BTree.NEAR_MODE = {
@@ -1008,11 +1143,14 @@ BTree.NEAR_MODE = {
 Class.register(BTree);
 
 /**
+ * A TreeTransaction keeps track of the set of modified and removed nodes
+ * during one or multiple operations on an underlying BTree.
  * @implements {IBTree}
  */
 class TreeTransaction {
     /**
-     * @param {BTree} tree
+     * Create a TreeTransaction from a BTree.
+     * @param {BTree} tree The underlying BTree.
      */
     constructor(tree) {
         this._tree = tree;
@@ -1025,7 +1163,9 @@ class TreeTransaction {
     }
 
     /**
-     * @param {TreeTransaction} treeTx
+     * This method allows to merge the set of modified and removed nodes
+     * from two TreeTransactions.
+     * @param {TreeTransaction} treeTx The other TreeTransaction to be merged.
      */
     merge(treeTx) {
         if (!(treeTx instanceof TreeTransaction)) {
@@ -1036,6 +1176,7 @@ class TreeTransaction {
     }
 
     /**
+     * The set of modified nodes during the transaction.
      * @type {Set.<Node>}
      */
     get modified() {
@@ -1043,6 +1184,7 @@ class TreeTransaction {
     }
 
     /**
+     * The set of removed nodes during the transaction.
      * @type {Set.<Node>}
      */
     get removed() {
@@ -1050,69 +1192,159 @@ class TreeTransaction {
     }
 
     /**
+     * The root node of the underlying tree.
      * @type {Node}
      */
     get root() {
         return this._tree._root;
     }
 
-    /** @type {number} */
+    /**
+     * The total number of records.
+     * Note that if the record is a list/set of records, these are not counted.
+     * @type {number}
+     */
     get length() {
         return this._tree.length;
     }
 
-    /** @type {*} */
+    /**
+     * The current key as returned by any operation.
+     * It is null if there is no matching record.
+     * @type {*}
+     */
     get currentKey() {
         return this._tree.currentKey;
     }
 
-    /** @type {*} */
+    /**
+     * The current record as returned by any operation.
+     * It is null if there is no matching record.
+     * This getter also adds the node to the set of modified nodes
+     * as we cannot keep track whether something will be modified.
+     * @type {*}
+     */
     get currentRecord() {
         // Potentially untracked modification.
         this._modified.add(this._tree.currentLeaf);
         return this._tree.currentRecord;
     }
 
+    /**
+     * Inserts a new key-record pair into the BTree, if there is no entry for that key.
+     * The current record and current key are set to the new entry in case of success
+     * or the existing entry if present.
+     * @param {*} key The unique key for the record.
+     * @param {*} rec The record associated with the key.
+     * @returns {boolean} True if the record was inserted, false if there was already a record with that key.
+     */
     insert(key, rec) {
         return this._tree.insert(key, rec, this._modified);
     }
 
+    /**
+     * Removes a key-record pair from the BTree.
+     * In case of successful deletion, the current record and key will be set to the next entry greater or equal.
+     * If no record was found, they will be reset to null.
+     * @param {*} key The unique key for the record.
+     * @returns {boolean} True if the record was deleted, false if there is no such record.
+     */
     remove(key) {
         return this._tree.remove(key, this._modified, this._removed);
     }
 
+    /**
+     * Searches the tree for a specific key and advances the current key/record pointers if found.
+     * By default only an exact key match is found, but the near parameter also allows to advance to the next entry
+     * greater/less or equal than the specified key.
+     * @param {*} key The key to look for.
+     * @param {BTree.NEAR_MODE} [near] Optional parameter, specifies to look for a key k' =/≤/≥ key.
+     * @returns {boolean} True if such a key was found, false otherwise.
+     */
     seek(key, near=BTree.NEAR_MODE.NONE) {
         return this._tree.seek(key, near);
     }
 
+    /**
+     * Advances the current key/record pointers by a given number of steps.
+     * Default is advancing by 1, which means the next record (the new key will thus be the next larger key).
+     * -1 means the previous record (the new key will thus be the next smaller key).
+     * @param {number} [cnt] The number of records to advance (may be negative).
+     * @returns {boolean} True if there is a record to advance to, false otherwise.
+     */
     skip(cnt = 1) {
         return this._tree.skip(cnt);
     }
 
+    /**
+     * Jumps to the cnt entry starting from the smallest key (i.e., leftmost leaf, first entry) if cnt > 0.
+     * If cnt < 0, it jumps to the cnt entry starting from the largest key (i.e., rightmost leaf, last entry).
+     * @param {number} [cnt] The record to jump to (may be negative).
+     * @returns {boolean} True if there is a record to jump to, false otherwise.
+     */
     goto(cnt) {
         return this._tree.goto(cnt);
     }
 
+    /**
+     * Returns the index of the current entry (key/record) in a sorted list of all entries.
+     * For the B+ Tree, this is done by traversing the leafs from the leftmost leaf, first entry
+     * until the respective key is found.
+     * @returns {number} The entry position.
+     */
     keynum() {
         return this._tree.keynum();
     }
 
+    /**
+     * Jumps to the smallest key's entry (i.e., leftmost leaf, first entry).
+     * False will only be returned if the tree is completely empty.
+     * @returns {boolean} True if there is such an entry, false otherwise.
+     */
     goTop() {
         return this._tree.goTop();
     }
 
+    /**
+     * Jumps to the largest key's entry (i.e., rightmost leaf, last entry).
+     * False will only be returned if the tree is completely empty.
+     * @returns {boolean} True if there is such an entry, false otherwise.
+     */
     goBottom() {
         return this._tree.goBottom();
     }
 
+    /**
+     * Rebuilds/balances the whole tree.
+     * Inserting and deleting keys into a tree will result
+     * in some leaves and nodes having the minimum number of keys allowed.
+     * This routine will ensure that each leaf and node has as many keys as possible,
+     * resulting in a denser, flatter tree.
+     * False is only returned if the tree is completely empty.
+     * @returns {boolean} True if the tree is not completely empty.
+     */
     pack() {
         return this._tree.pack();
     }
 
+    /**
+     * Advances to the smallest key k', such that either k' > lower (if lowerOpen) or k' ≥ lower (if !lowerOpen).
+     * If lower is undefined, jump to the smallest key's entry.
+     * @param {*} lower A lower bound on the key or undefined.
+     * @param {boolean} [lowerOpen] Whether lower may be included or not.
+     * @returns {boolean} True if there is such an entry, false otherwise.
+     */
     goToLowerBound(lower, lowerOpen=false) {
         return this._tree.goToLowerBound(lower, lowerOpen);
     }
 
+    /**
+     * Advances to the largest key k', such that either k' < upper (if upperOpen) or k' ≤ upper (if !upperOpen).
+     * If upper is undefined, jump to the largest key's entry.
+     * @param {*} upper An upper bound on the key or undefined.
+     * @param {boolean} [upperOpen] Whether upper may be included or not.
+     * @returns {boolean} True if there is such an entry, false otherwise.
+     */
     goToUpperBound(upper, upperOpen=false) {
         return this._tree.goToUpperBound(upper, upperOpen);
     }
