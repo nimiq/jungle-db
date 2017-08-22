@@ -26,19 +26,19 @@ class Query {
     }
 
     /**
-     * @param {...Query} arguments
+     * @param {...Query} var_args
      * @returns {Query}
      */
-    static and() {
+    static and(var_args) {
         const args = Array.from(arguments);
         return new Query(args, Query.OPERATORS.AND);
     }
 
     /**
-     * @param {...Query} arguments
+     * @param {...Query} var_args
      * @returns {Query}
      */
-    static or() {
+    static or(var_args) {
         const args = Array.from(arguments);
         return new Query(args, Query.OPERATORS.OR);
     }
