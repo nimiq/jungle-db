@@ -24,7 +24,7 @@ class IIndex {
      * For example, ['a', 'b'] could be used to use 'key' as the key in the following object:
      * { 'a': { 'b': 'key' } }
      * @abstract
-     * @type {string}
+     * @type {string|Array.<string>}
      */
     get keyPath() {} // eslint-disable-line no-unused-vars
 

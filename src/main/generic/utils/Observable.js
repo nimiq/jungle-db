@@ -1,6 +1,11 @@
+/**
+ * A class, which inherits from Observable, can notify interested parties
+ * on occurrence of specified events.
+ */
 class Observable {
     /**
-     * @returns {string}
+     * A special event matching every other event.
+     * @type {string}
      * @constant
      */
     static get WILDCARD() {
@@ -13,9 +18,10 @@ class Observable {
     }
 
     /**
-     * @param {string} type
-     * @param {Function} callback
-     * @return {number}
+     * Registers a handler for a given event.
+     * @param {string} type The event to observe.
+     * @param {Function} callback The handler to be called on occurrence of the event.
+     * @return {number} The handle for this handler. Can be used to unregister it again.
      */
     on(type, callback) {
         if (!this._listeners.has(type)) {
@@ -27,8 +33,9 @@ class Observable {
     }
 
     /**
-     * @param {string} type
-     * @param {number} id
+     * Unregisters a handler for a given event.
+     * @param {string} type The event to unregister from.
+     * @param {number} id The handle received upon calling the on function.
      */
     off(type, id) {
         if (!this._listeners.has(type) || !this._listeners.get(type)[id]) return;
@@ -36,8 +43,9 @@ class Observable {
     }
 
     /**
-     * @param {string} type
-     * @param {...*} args
+     * Fires an event and notifies all observers.
+     * @param {string} type The type of event.
+     * @param {...*} args Arguments to pass to the observers.
      */
     fire(type, ...args) {
         // Notify listeners for this event type.
@@ -58,8 +66,9 @@ class Observable {
     }
 
     /**
-     * @param {Observable} observable
-     * @param {...string} types
+     * Registers handlers on another observable, bubbling its events up to the own observers.
+     * @param {Observable} observable The observable, whose events should bubble up.
+     * @param {...string} types The events to bubble up.
      */
     bubble(observable, ...types) {
         for (const type of types) {
