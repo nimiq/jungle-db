@@ -119,7 +119,7 @@ class CachedBackend {
      * If the optional query is not given, it returns the maximal key.
      * If the query is of type KeyRange, it returns the key being maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @returns {Promise.<*>} A promise of the key relevant to the query.
+     * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     maxKey(query=null) {
         return this._backend.maxKey(query);
@@ -130,7 +130,7 @@ class CachedBackend {
      * If the optional query is not given, it returns the minimal key.
      * If the query is of type KeyRange, it returns the key being minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @returns {Promise.<*>} A promise of the key relevant to the query.
+     * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     minKey(query=null) {
         return this._backend.minKey(query);

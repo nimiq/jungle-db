@@ -77,7 +77,7 @@ class IObjectStore {
      * If the query is of type KeyRange, it returns the key being maximal for the given range.
      * @abstract
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @returns {Promise.<*>} A promise of the key relevant to the query.
+     * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     async maxKey(query=null) {} // eslint-disable-line no-unused-vars
 
@@ -87,7 +87,7 @@ class IObjectStore {
      * If the query is of type KeyRange, it returns the key being minimal for the given range.
      * @abstract
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @returns {Promise.<*>} A promise of the key relevant to the query.
+     * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     async minKey(query=null) {} // eslint-disable-line no-unused-vars
 

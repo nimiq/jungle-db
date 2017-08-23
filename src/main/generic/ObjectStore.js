@@ -1,10 +1,17 @@
 /**
+ * This is the main implementation of an object store.
+ * It uses a specified backend (which itself implements the very same interface)
+ * and builds upon this backend to answer queries.
+ * The main task of this object store is to manage transactions
+ * and ensure read isolation on these transactions.
  * @implements {IObjectStore}
  */
 class ObjectStore {
     /**
-     * @param {IObjectStore} backend
-     * @param {{connected:boolean}} db
+     * Creates a new object store based on a backend and an underlying database.
+     * The database is only used to determine the connection status.
+     * @param {IObjectStore} backend The backend underlying this object store.
+     * @param {{connected:boolean}} db The database underlying the backend.
      */
     constructor(backend, db) {
         this._backend = backend;
@@ -39,6 +46,8 @@ class ObjectStore {
     }
 
     /**
+     * A map of index names to indices.
+     * The index names can be used to access an index.
      * @type {Map.<string,IIndex>}
      */
     get indices() {
@@ -47,8 +56,10 @@ class ObjectStore {
     }
 
     /**
-     * @param {string} key
-     * @returns {Promise.<*>}
+     * Returns a promise of the object stored under the given primary key.
+     * Resolves to undefined if the key is not present in the object store.
+     * @param {string} key The primary key to look for.
+     * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
     get(key) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -56,9 +67,11 @@ class ObjectStore {
     }
 
     /**
-     * @param {string} key
-     * @param {*} value
-     * @returns {Promise}
+     * Inserts or replaces a key-value pair.
+     * Implicitly creates a transaction for this operation and commits it.
+     * @param {string} key The primary key to associate the value with.
+     * @param {*} value The value to write.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async put(key, value) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -68,8 +81,10 @@ class ObjectStore {
     }
 
     /**
-     * @param {string} key
-     * @returns {Promise}
+     * Removes the key-value pair of the given key from the object store.
+     * Implicitly creates a transaction for this operation and commits it.
+     * @param {string} key The primary key to delete along with the associated object.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async remove(key) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -79,8 +94,12 @@ class ObjectStore {
     }
 
     /**
-     * @param {Query|KeyRange} [query]
-     * @returns {Promise.<Array.<string>>}
+     * Returns a promise of a set of keys fulfilling the given query.
+     * If the optional query is not given, it returns all keys in the object store.
+     * If the query is of type KeyRange, it returns all keys of the object store being within this range.
+     * If the query is of type Query, it returns all keys fulfilling the query.
+     * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to the query.
      */
     keys(query=null) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -91,8 +110,12 @@ class ObjectStore {
     }
 
     /**
-     * @param {Query|KeyRange} [query]
-     * @returns {Promise.<Array.<*>>}
+     * Returns a promise of an array of objects whose primary keys fulfill the given query.
+     * If the optional query is not given, it returns all objects in the object store.
+     * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
+     * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
+     * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
     values(query=null) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -103,9 +126,11 @@ class ObjectStore {
     }
 
     /**
-     * @abstract
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<*>}
+     * Returns a promise of the object whose primary key is maximal for the given range.
+     * If the optional query is not given, it returns the object whose key is maximal.
+     * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
     maxValue(query=null) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -113,8 +138,11 @@ class ObjectStore {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<string>>}
+     * Returns a promise of the key being maximal for the given range.
+     * If the optional query is not given, it returns the maximal key.
+     * If the query is of type KeyRange, it returns the key being maximal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     maxKey(query=null) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -122,8 +150,11 @@ class ObjectStore {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<string>>}
+     * Returns a promise of the key being minimal for the given range.
+     * If the optional query is not given, it returns the minimal key.
+     * If the query is of type KeyRange, it returns the key being minimal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     minKey(query=null) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -131,8 +162,11 @@ class ObjectStore {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<*>}
+     * Returns a promise of the object whose primary key is minimal for the given range.
+     * If the optional query is not given, it returns the object whose key is minimal.
+     * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
     minValue(query=null) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -140,8 +174,11 @@ class ObjectStore {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<Array.<string>>}
+     * Returns the count of entries in the given range.
+     * If the optional query is not given, it returns the count of entries in the object store.
+     * If the query is of type KeyRange, it returns the count of entries within the given range.
+     * @param {KeyRange} [query]
+     * @returns {Promise.<number>}
      */
     count(query=null) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -149,8 +186,14 @@ class ObjectStore {
     }
 
     /**
-     * @param {Transaction} [tx]
-     * @returns {Promise.<boolean>}
+     * This method is only used by transactions internally to commit themselves to the corresponding object store.
+     * Thus, the tx argument is non-optional.
+     * A call to this method checks whether the given transaction can be applied and pushes it to
+     * the stack of applied transactions. When there is no other transaction requiring to enforce
+     * read isolation, the state will be flattened and all transactions will be applied to the backend.
+     * @param {Transaction} tx The transaction to be applied.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     * @protected
      */
     async commit(tx) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -184,7 +227,11 @@ class ObjectStore {
     }
 
     /**
-     * @param {Transaction} [tx]
+     * This method is only used by transactions internally to abort themselves at the corresponding object store.
+     * Thus, the tx argument is non-optional.
+     * @param {Transaction} tx The transaction to be aborted.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     * @protected
      */
     async abort(tx) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -203,7 +250,9 @@ class ObjectStore {
     }
 
     /**
-     * @param {Transaction} [tx]
+     * This internal method applies a transaction to the current state
+     * and tries flattening the stack of transactions.
+     * @param {Transaction} [tx] An optional transaction to apply to the current state.
      * @private
      */
     async _flattenState(tx) {
@@ -233,8 +282,10 @@ class ObjectStore {
     }
 
     /**
-     * @param {string} indexName
-     * @returns {IIndex}
+     * Returns the index of the given name.
+     * If the index does not exist, it returns undefined.
+     * @param {string} indexName The name of the requested index.
+     * @returns {IIndex} The index associated with the given name.
      */
     index(indexName) {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -242,8 +293,19 @@ class ObjectStore {
     }
 
     /**
-     * @param {string} indexName
-     * @param {string|Array.<string>} [keyPath]
+     * Creates a new secondary index on the object store.
+     * Currently, all secondary indices are non-unique.
+     * They are defined by a key within the object or alternatively a path through the object to a specific subkey.
+     * For example, ['a', 'b'] could be used to use 'key' as the key in the following object:
+     * { 'a': { 'b': 'key' } }
+     * Secondary indices may be multiEntry, i.e., if the keyPath resolves to an iterable object, each item within can
+     * be used to find this entry.
+     * If a new object does not possess the key path associated with that index, it is simply ignored.
+     *
+     * This function may only be called before the database is connected.
+     * Moreover, it is only executed on database version updates or on first creation.
+     * @param {string} indexName The name of the index.
+     * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
      */
     createIndex(indexName, keyPath, multiEntry=false) {
@@ -251,7 +313,9 @@ class ObjectStore {
     }
 
     /**
-     * @returns {Transaction}
+     * Creates a new transaction, ensuring read isolation
+     * on the most recently successfully commited state.
+     * @returns {Transaction} The transaction object.
      */
     transaction() {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -262,6 +326,8 @@ class ObjectStore {
     }
 
     /**
+     * An object store is strongly connected to a backend.
+     * Hence, it does not store anything by itself and the _apply method is not supported.
      * @param {Transaction} tx
      * @returns {Promise.<boolean>}
      * @protected
@@ -271,7 +337,8 @@ class ObjectStore {
     }
 
     /**
-     * @returns {Promise}
+     * Empties the object store.
+     * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
         if (!this._db.connected) throw 'JungleDB is not connected';
@@ -281,7 +348,8 @@ class ObjectStore {
     }
 
     /**
-     * @returns {Promise}
+     * Closes the object store and potential connections.
+     * @returns {Promise} The promise resolves after closing the object store.
      */
     close() {
         // TODO perhaps use a different strategy here
@@ -291,5 +359,6 @@ class ObjectStore {
         return this._backend.close();
     }
 }
+/** @type {number} The maximum number of states to stack. */
 ObjectStore.MAX_STACK_SIZE = 10;
 Class.register(ObjectStore);
