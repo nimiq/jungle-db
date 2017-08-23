@@ -180,6 +180,7 @@ class IObjectStore {
 
     /**
      * Closes the object store and potential connections.
+     * @abstract
      * @returns {Promise} The promise resolves after closing the object store.
      */
     async close() {} // eslint-disable-line no-unused-vars
