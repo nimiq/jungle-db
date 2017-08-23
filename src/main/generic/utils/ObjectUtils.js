@@ -17,8 +17,9 @@ class ObjectUtils {
         }
         let tmp = obj;
         for (const component of path) {
-            if (tmp === undefined)
+            if (tmp === undefined) {
                 return undefined;
+            }
             tmp = tmp[component];
         }
         return tmp;

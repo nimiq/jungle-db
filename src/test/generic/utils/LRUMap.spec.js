@@ -96,4 +96,21 @@ describe('LRUMap', () => {
         }
         expect(true).toBe(true);
     });
+
+    it('does not exceed maxSize', () => {
+        const lru = new LRUMap(3);
+
+        lru.access('test');
+
+        // Fill map.
+        for (let i=0; i<4; ++i) {
+            lru.set(`key${i}`, `value${i}`);
+        }
+
+        expect(lru.size).toBe(3);
+        expect(lru.has('test')).toBe(false);
+        for (let i=0; i<4; ++i) {
+            expect(lru.has(`key${i}`)).toBe(i !== 0);
+        }
+    });
 });
