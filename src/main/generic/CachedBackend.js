@@ -184,7 +184,7 @@ class CachedBackend {
      * @returns {Promise} The promise resolves after applying the transaction.
      * @protected
      */
-    async _apply(tx) {
+    _apply(tx) {
         // Update local state and push to backend for batch transaction.
         if (tx._truncated) {
             this._cache.clear();

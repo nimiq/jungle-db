@@ -324,7 +324,7 @@ class LevelDBBackend {
                     indexPromises.push(index._apply(tx));
                 }
                 Promise.all(indexPromises).then(() => {
-                    resolve();
+                    resolve(true);
                 }).catch(error);
             });
         });

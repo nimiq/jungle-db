@@ -248,8 +248,8 @@ class IDBBackend {
                 objSt.put(value, key);
             }
 
-            tx.onsuccess = event => resolve(event.target.result);
-            tx.onerror = reject;
+            idbTx.oncomplete = () => resolve(true);
+            idbTx.onerror = reject;
         });
     }
 
