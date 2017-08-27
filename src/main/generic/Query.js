@@ -1,8 +1,13 @@
+/**
+ * This class represents a Query object.
+ * Queries are constructed using the static helper methods.
+ */
 class Query {
     /**
-     * @param {number} op
-     * @param {*} value
-     * @param {*} [value2]
+     * Internal helper method that translates an operation to a KeyRange object.
+     * @param {Query.OPERATORS} op The operator of the query.
+     * @param {*} value The first operand of the query.
+     * @param {*} [value2] The optional second operand of the query.
      * @private
      */
     static _parseKeyRange(op, value, value2) {
@@ -26,8 +31,9 @@ class Query {
     }
 
     /**
-     * @param {...Query} var_args
-     * @returns {Query}
+     * Returns the conjunction of multiple queries.
+     * @param {...Query} var_args The list of queries, which all have to be fulfilled.
+     * @returns {Query} The conjunction of the queries.
      */
     static and(var_args) {
         const args = Array.from(arguments);
@@ -35,8 +41,9 @@ class Query {
     }
 
     /**
-     * @param {...Query} var_args
-     * @returns {Query}
+     * Returns the disjunction of multiple queries.
+     * @param {...Query} var_args The list of queries, out of which at least one has to be fulfilled.
+     * @returns {Query} The disjunction of the queries.
      */
     static or(var_args) {
         const args = Array.from(arguments);
@@ -44,93 +51,109 @@ class Query {
     }
 
     /**
-     * @param {string} indexName
-     * @returns {Query}
+     * Returns a query for the max key of an index.
+     * @param {string} indexName The name of the index, whose maximal key the query matches.
+     * @returns {Query} The query for the max key of the index.
      */
     static max(indexName) {
         return new Query(indexName, Query.OPERATORS.MAX);
     }
 
     /**
-     * @param {string} indexName
-     * @returns {Query}
+     * Returns a query for the min key of an index.
+     * @param {string} indexName The name of the index, whose minimal key the query matches.
+     * @returns {Query} The query for the min key of the index.
      */
     static min(indexName) {
         return new Query(indexName, Query.OPERATORS.MIN);
     }
 
     /**
-     * @param {string} indexName
-     * @param {*} val
-     * @returns {Query}
+     * Returns a query that matches all keys of an index that are less than a value.
+     * The query matches all keys k, such that k < val.
+     * @param {string} indexName The name of the index.
+     * @param {*} val The upper bound of the query.
+     * @returns {Query} The resulting query object.
      */
     static lt(indexName, val) {
         return new Query(indexName, Query.OPERATORS.LT, val);
     }
 
     /**
-     * @param {string} indexName
-     * @param {*} val
-     * @returns {Query}
+     * Returns a query that matches all keys of an index that are less or equal than a value.
+     * The query matches all keys k, such that k ≤ val.
+     * @param {string} indexName The name of the index.
+     * @param {*} val The upper bound of the query.
+     * @returns {Query} The resulting query object.
      */
     static le(indexName, val) {
         return new Query(indexName, Query.OPERATORS.LE, val);
     }
 
     /**
-     * @param {string} indexName
-     * @param {*} val
-     * @returns {Query}
+     * Returns a query that matches all keys of an index that are greater than a value.
+     * The query matches all keys k, such that k > val.
+     * @param {string} indexName The name of the index.
+     * @param {*} val The lower bound of the query.
+     * @returns {Query} The resulting query object.
      */
     static gt(indexName, val) {
         return new Query(indexName, Query.OPERATORS.GT, val);
     }
 
     /**
-     * @param {string} indexName
-     * @param {*} val
-     * @returns {Query}
+     * Returns a query that matches all keys of an index that are greater or equal than a value.
+     * The query matches all keys k, such that k ≥ val.
+     * @param {string} indexName The name of the index.
+     * @param {*} val The lower bound of the query.
+     * @returns {Query} The resulting query object.
      */
     static ge(indexName, val) {
         return new Query(indexName, Query.OPERATORS.GE, val);
     }
 
     /**
-     * @param {string} indexName
-     * @param {*} val
-     * @returns {Query}
+     * Returns a query that matches all keys of an index that equal to a value.
+     * The query matches all keys k, such that k = val.
+     * @param {string} indexName The name of the index.
+     * @param {*} val The value to look for.
+     * @returns {Query} The resulting query object.
      */
     static eq(indexName, val) {
         return new Query(indexName, Query.OPERATORS.EQ, val);
     }
 
     /**
-     * Excluding boundaries.
-     * @param {string} indexName
-     * @param {*} lower
-     * @param {*} upper
-     * @returns {Query}
+     * Returns a query that matches all keys of an index that are between two values, excluding the boundaries.
+     * The query matches all keys k, such that lower < k < upper.
+     * @param {string} indexName The name of the index.
+     * @param {*} lower The lower bound.
+     * @param {*} upper The upper bound.
+     * @returns {Query} The resulting query object.
      */
     static between(indexName, lower, upper) {
         return new Query(indexName, Query.OPERATORS.BETWEEN, lower, upper);
     }
 
     /**
-     * Including boundaries.
-     * @param {string} indexName
-     * @param {*} lower
-     * @param {*} upper
-     * @returns {Query}
+     * Returns a query that matches all keys of an index that are between two values, including the boundaries.
+     * The query matches all keys k, such that lower ≤ k ≤ upper.
+     * @param {string} indexName The name of the index.
+     * @param {*} lower The lower bound.
+     * @param {*} upper The upper bound.
+     * @returns {Query} The resulting query object.
      */
     static within(indexName, lower, upper) {
         return new Query(indexName, Query.OPERATORS.WITHIN, lower, upper);
     }
 
     /**
-     * @param {string|Array.<Query>} arg
-     * @param {number} op
-     * @param {*} [value]
-     * @param {*} [value2]
+     * Internal constructor for a query.
+     * Should not be called directly.
+     * @param {string|Array.<Query>} arg Either a list of queries or an index name (depending on the operator).
+     * @param {Query.OPERATORS} op The operator to apply.
+     * @param {*} [value] The first operand if applicable.
+     * @param {*} [value2] The second operand if applicable.
      * @private
      */
     constructor(arg, op, value, value2) {
@@ -162,8 +185,9 @@ class Query {
     }
 
     /**
-     * @param {IObjectStore} objectStore
-     * @returns {Promise.<Array.<*>>}
+     * Returns a promise of an array of objects fulfilling this query.
+     * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to this query.
      */
     async values(objectStore) {
         const keys = await this._execute(objectStore);
@@ -175,16 +199,18 @@ class Query {
     }
 
     /**
-     * @param {IObjectStore} objectStore
-     * @returns {Promise.<Set.<string>>}
+     * Returns a promise of a set of keys fulfilling this query.
+     * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to this query.
      */
     keys(objectStore) {
         return this._execute(objectStore);
     }
 
     /**
-     * @param {IObjectStore} objectStore
-     * @returns {Promise.<Set.<string>>}
+     * Internal method to execute a query on an object store.
+     * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to this query.
      * @private
      */
     async _execute(objectStore) {
@@ -202,8 +228,9 @@ class Query {
     }
 
     /**
-     * @param {IObjectStore} objectStore
-     * @returns {Set.<string>}
+     * Internal method for and/or operators.
+     * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to this query.
      * @private
      */
     async _executeCombined(objectStore) {
@@ -243,8 +270,9 @@ class Query {
     }
 
     /**
-     * @param {IObjectStore} objectStore
-     * @returns {Set.<string>}
+     * Internal method for min/max operators.
+     * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to this query.
      * @private
      */
     async _executeAdvanced(objectStore) {
@@ -262,8 +290,9 @@ class Query {
     }
 
     /**
-     * @param {IObjectStore} objectStore
-     * @returns {Promise.<Set.<string>>}
+     * Internal method for range operators.
+     * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to this query.
      * @private
      */
     async _executeRange(objectStore) {
@@ -271,6 +300,10 @@ class Query {
         return new Set(await index.keys(this._keyRange));
     }
 }
+/**
+ * Enum for supported operators.
+ * @enum {number}
+ */
 Query.OPERATORS = {
     GT: 0,
     GE: 1,
@@ -296,6 +329,11 @@ Query.RANGE_OPERATORS = [
 ];
 Query.ADVANCED_OPERATORS = [Query.OPERATORS.MAX, Query.OPERATORS.MIN];
 Query.COMBINED_OPERATORS = [Query.OPERATORS.AND, Query.OPERATORS.OR];
+/**
+ * Enum for query types.
+ * Each operator belongs to one of these types as specified above.
+ * @enum {number}
+ */
 Query.Type = {
     RANGE: 0,
     ADVANCED: 1,

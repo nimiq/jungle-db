@@ -1,6 +1,8 @@
 class IDBTools {
     /**
-     * @param {KeyRange} keyRange
+     * Converts our KeyRange objects into IDBKeyRange objects.
+     * @param {KeyRange} keyRange A KeyRange object.
+     * @returns {IDBKeyRange} The corresponding IDBKeyRange.
      */
     static convertKeyRange(keyRange) {
         if (!(keyRange instanceof KeyRange)) return keyRange;

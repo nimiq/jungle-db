@@ -1,8 +1,14 @@
+/**
+ * This class constitutes an InMemoryIndex for Transactions.
+ * It unifies the results of keys changed during the transaction
+ * with the underlying backend.
+ */
 class TransactionIndex extends InMemoryIndex {
     /**
-     * @param {Transaction} objectStore
-     * @param {IObjectStore} backend
-     * @returns {Object}
+     * Derives the indices from the backend and returns a new map of transactions.
+     * @param {Transaction} objectStore The transaction the index should be based on.
+     * @param {IObjectStore} backend The backend underlying the transaction.
+     * @returns {Map.<string,TransactionIndex>} A map containing all indices for the transaction.
      */
     static derive(objectStore, backend) {
         const indices = new Map();
@@ -12,16 +18,19 @@ class TransactionIndex extends InMemoryIndex {
         return indices;
     }
 
-    /** @type {IIndex} */
+    /** @type {IIndex} The index of the underlying backend. */
     get _index() {
         return this._backend.index(this._databaseDir);
     }
 
     /**
-     * @param {Transaction} objectStore
-     * @param {IObjectStore} backend
-     * @param {string|Array.<string>} keyPath
-     * @param {boolean} multiEntry
+     * Constructs a new TransactionIndex serving the transaction's changes
+     * and unifying the results with the underlying backend.
+     * @param {Transaction} objectStore The transaction the index should be based on.
+     * @param {IObjectStore} backend The backend underlying the transaction.
+     * @param {string|Array.<string>} keyPath The key path of the indexed attribute.
+     * @param {boolean} multiEntry Whether the indexed attribute is considered to be iterable or not.
+     * @protected
      */
     constructor(objectStore, backend, name, keyPath, multiEntry=false) {
         super(objectStore, keyPath, multiEntry);
@@ -30,8 +39,11 @@ class TransactionIndex extends InMemoryIndex {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<Set.<string>>}
+     * Returns a promise of a set of primary keys, whose associated objects' secondary keys are in the given range.
+     * If the optional query is not given, it returns all primary keys in the index.
+     * If the query is of type KeyRange, it returns all primary keys for which the secondary key is within this range.
+     * @param {KeyRange} [query] Optional query to check the secondary keys against.
+     * @returns {Promise.<Set.<string>>} A promise of the set of primary keys relevant to the query.
      */
     async keys(query=null) {
         const promises = [];
@@ -45,8 +57,11 @@ class TransactionIndex extends InMemoryIndex {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<Array.<*>>}
+     * Returns a promise of an array of objects whose secondary keys fulfill the given query.
+     * If the optional query is not given, it returns all objects in the index.
+     * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
+     * @param {KeyRange} [query] Optional query to check secondary keys against.
+     * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
     async values(query=null) {
         const keys = await this.keys(query);
@@ -54,8 +69,11 @@ class TransactionIndex extends InMemoryIndex {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<Array.<*>>}
+     * Returns a promise of an array of objects whose secondary key is maximal for the given range.
+     * If the optional query is not given, it returns the objects whose secondary key is maximal within the index.
+     * If the query is of type KeyRange, it returns the objects whose secondary key is maximal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async maxValues(query=null) {
         const keys = await this.maxKeys(query);
@@ -63,9 +81,10 @@ class TransactionIndex extends InMemoryIndex {
     }
 
     /**
+     * Returns an element of a set.
      * @template T
-     * @param {Set.<T>} s
-     * @returns {T}
+     * @param {Set.<T>} s The set to return an element from.
+     * @returns {T} An element of the set.
      * @private
      */
     static _sampleElement(s) {
@@ -73,8 +92,11 @@ class TransactionIndex extends InMemoryIndex {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<Set.<string>>}
+     * Returns a promise of a set of primary keys, whose associated secondary keys are maximal for the given range.
+     * If the optional query is not given, it returns the set of primary keys, whose associated secondary key is maximal within the index.
+     * If the query is of type KeyRange, it returns the set of primary keys, whose associated secondary key is maximal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async maxKeys(query=null) {
         let backendKeys = await this._index.maxKeys(query);
@@ -127,8 +149,11 @@ class TransactionIndex extends InMemoryIndex {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<Array.<*>>}
+     * Returns a promise of an array of objects whose secondary key is minimal for the given range.
+     * If the optional query is not given, it returns the objects whose secondary key is minimal within the index.
+     * If the query is of type KeyRange, it returns the objects whose secondary key is minimal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async minValues(query=null) {
         const keys = await this.minKeys(query);
@@ -136,8 +161,11 @@ class TransactionIndex extends InMemoryIndex {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<Set.<string>>}
+     * Returns a promise of a set of primary keys, whose associated secondary keys are minimal for the given range.
+     * If the optional query is not given, it returns the set of primary keys, whose associated secondary key is minimal within the index.
+     * If the query is of type KeyRange, it returns the set of primary keys, whose associated secondary key is minimal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async minKeys(query=null) {
         let backendKeys = await this._index.minKeys(query);
@@ -190,7 +218,10 @@ class TransactionIndex extends InMemoryIndex {
     }
 
     /**
-     * @param {KeyRange|*} [query]
+     * Returns the count of entries, whose secondary key is in the given range.
+     * If the optional query is not given, it returns the count of entries in the index.
+     * If the query is of type KeyRange, it returns the count of entries, whose secondary key is within the given range.
+     * @param {KeyRange} [query]
      * @returns {Promise.<number>}
      */
     async count(query=null) {

@@ -1,11 +1,26 @@
 /**
+ * Transactions are created by calling the transaction method on an ObjectStore object.
+ * Transactions ensure read-isolation.
+ * On a given state, only *one* transaction can be committed successfully.
+ * Other transactions based on the same state will end up in a conflicted state if committed.
+ * Transactions opened after the successful commit of another transaction will be based on the
+ * new state and hence can be committed again.
  * @implements {IObjectStore}
  */
 class Transaction {
     /**
-     * @param {IObjectStore} backend
-     * @param {IObjectStore} [commitBackend]
-     * @param {boolean} [enableWatchdog]
+     * This constructor should only be called by an ObjectStore object.
+     * Our transactions have a watchdog enabled by default,
+     * aborting them after a certain time specified by WATCHDOG_TIMER.
+     * This helps to detect unclosed transactions preventing to store the state in
+     * the persistent backend.
+     * @param {IObjectStore} backend The backend on which the transaction is based,
+     * i.e., another transaction or the real database.
+     * @param {IObjectStore} [commitBackend] The object store managing the transactions,
+     * i.e., the ObjectStore object.
+     * @param {boolean} [enableWatchdog] If this is is set to true (default),
+     * transactions will be automatically aborted if left open for longer than WATCHDOG_TIMER.
+     * @protected
      */
     constructor(backend, commitBackend, enableWatchdog=true) {
         this._id = Transaction._instanceCount++;
@@ -28,23 +43,34 @@ class Transaction {
         }
     }
 
-    /** @type {number} */
+    /** @type {number} A unique transaction id. */
     get id() {
         return this._id;
     }
 
-    /** @type {Map.<string,IIndex>} */
+    /**
+     * A map of index names to indices.
+     * The index names can be used to access an index.
+     * @type {Map.<string,IIndex>}
+     */
     get indices() {
         return this._indices;
     }
 
+    /**
+     * The transaction's current state.
+     * @returns {Transaction.STATE}
+     */
     get state() {
         return this._state;
     }
 
     /**
-     * @param {Transaction} tx
-     * @returns {Promise.<boolean>}
+     * Internally applies a transaction to the transaction's state.
+     * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
+     * or no changes are applied.
+     * @param {Transaction} tx The transaction to apply.
+     * @returns {Promise} The promise resolves after applying the transaction.
      * @protected
      */
     async _apply(tx) {
@@ -83,7 +109,8 @@ class Transaction {
     }
 
     /**
-     * @returns {Promise}
+     * Empties the object store.
+     * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
         this._truncated = true;
@@ -98,8 +125,15 @@ class Transaction {
     }
 
     /**
-     * @param {Transaction} [tx]
-     * @returns {Promise.<boolean>}
+     * Commits a transaction to the underlying backend.
+     * The state is only written to the persistent backend if no other transaction is open.
+     * If the commit was successful, new transactions will always be based on the new state.
+     * There are two outcomes for a commit:
+     * If there was no other transaction committed that was based on the same state,
+     * it will be successful and change the transaction's state to COMMITTED (returning true).
+     * Otherwise, the state will be CONFLICTED and the method will return false.
+     * @param {Transaction} [tx] The transaction to be applied, only used internally.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async commit(tx) {
         // Transaction is given, forward to backend.
@@ -127,7 +161,10 @@ class Transaction {
     }
 
     /**
-     * @param {Transaction} [tx]
+     * Aborts a transaction and (if this was the last open transaction) potentially
+     * persists the most recent, committed state.
+     * @param {Transaction} [tx] The transaction to be applied, only used internally.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async abort(tx) {
         // Transaction is given, forward to backend.
@@ -152,8 +189,10 @@ class Transaction {
     }
 
     /**
-     * @param {string} key
-     * @returns {Promise.<*>}
+     * Returns a promise of the object stored under the given primary key.
+     * Resolves to undefined if the key is not present in the object store.
+     * @param {string} key The primary key to look for.
+     * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
     async get(key) {
         // Order is as follows:
@@ -174,8 +213,10 @@ class Transaction {
     }
 
     /**
-     * @param {string} key
-     * @param {*} value
+     * Inserts or replaces a key-value pair.
+     * @param {string} key The primary key to associate the value with.
+     * @param {*} value The value to write.
+     * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
     async put(key, value) {
         if (this._state !== Transaction.STATE.OPEN) {
@@ -193,9 +234,11 @@ class Transaction {
     }
 
     /**
-     * @param {string} key
-     * @param {*} value
-     * @param {*} [oldValue]
+     * Internal method for inserting/replacing a key-value pair.
+     * @param {string} key The primary key to associate the value with.
+     * @param {*} value The value to write.
+     * @param {*} [oldValue] The old value associated with the key to update the indices (if applicable).
+     * @private
      */
     _put(key, value, oldValue) {
         this._removed.delete(key);
@@ -208,7 +251,9 @@ class Transaction {
     }
 
     /**
-     * @param {string} key
+     * Removes the key-value pair of the given key from the object store.
+     * @param {string} key The primary key to delete along with the associated object.
+     * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
     async remove(key) {
         if (this._state !== Transaction.STATE.OPEN) {
@@ -228,8 +273,9 @@ class Transaction {
     }
 
     /**
-     * @param {string} key
-     * @param {*} oldValue
+     * Internal method for removing a key-value pair.
+     * @param {string} key The primary key to delete along with the associated object.
+     * @param {*} oldValue The old value associated with the key to update the indices.
      */
     _remove(key, oldValue) {
         this._removed.add(key);
@@ -242,8 +288,12 @@ class Transaction {
     }
 
     /**
-     * @param {Query|KeyRange} [query]
-     * @returns {Promise.<Set.<string>>}
+     * Returns a promise of a set of keys fulfilling the given query.
+     * If the optional query is not given, it returns all keys in the object store.
+     * If the query is of type KeyRange, it returns all keys of the object store being within this range.
+     * If the query is of type Query, it returns all keys fulfilling the query.
+     * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to the query.
      */
     async keys(query=null) {
         if (query !== null && query instanceof Query) {
@@ -263,8 +313,12 @@ class Transaction {
     }
 
     /**
-     * @param {Query|KeyRange} [query]
-     * @returns {Promise.<Array.<*>>}
+     * Returns a promise of an array of objects whose primary keys fulfill the given query.
+     * If the optional query is not given, it returns all objects in the object store.
+     * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
+     * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
+     * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
     async values(query=null) {
         if (query !== null && query instanceof Query) {
@@ -279,8 +333,11 @@ class Transaction {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<*>}
+     * Returns a promise of the object whose primary key is maximal for the given range.
+     * If the optional query is not given, it returns the object whose key is maximal.
+     * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
     async maxValue(query=null) {
         const maxKey = await this.maxKey(query);
@@ -288,8 +345,11 @@ class Transaction {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<string>>}
+     * Returns a promise of the key being maximal for the given range.
+     * If the optional query is not given, it returns the maximal key.
+     * If the query is of type KeyRange, it returns the key being maximal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     async maxKey(query=null) {
         // Take underlying maxKey.
@@ -318,9 +378,13 @@ class Transaction {
         }
         return maxKey;
     }
+
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<*>}
+     * Returns a promise of the object whose primary key is minimal for the given range.
+     * If the optional query is not given, it returns the object whose key is minimal.
+     * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
     async minValue(query=null) {
         const minKey = await this.minKey(query);
@@ -328,8 +392,11 @@ class Transaction {
     }
 
     /**
-     * @param {KeyRange|*} [query]
-     * @returns {Promise.<string>>}
+     * Returns a promise of the key being minimal for the given range.
+     * If the optional query is not given, it returns the minimal key.
+     * If the query is of type KeyRange, it returns the key being minimal for the given range.
+     * @param {KeyRange} [query] Optional query to check keys against.
+     * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     async minKey(query=null) {
         // Take underlying minKey.
@@ -361,7 +428,10 @@ class Transaction {
 
 
     /**
-     * @param {KeyRange|*} [query]
+     * Returns the count of entries in the given range.
+     * If the optional query is not given, it returns the count of entries in the object store.
+     * If the query is of type KeyRange, it returns the count of entries within the given range.
+     * @param {KeyRange} [query]
      * @returns {Promise.<number>}
      */
     async count(query=null) {
@@ -370,29 +440,41 @@ class Transaction {
     }
 
     /**
-     * @param {string} indexName
-     * @returns {IIndex}
+     * Returns the index of the given name.
+     * If the index does not exist, it returns undefined.
+     * @param {string} indexName The name of the requested index.
+     * @returns {IIndex} The index associated with the given name.
      */
     index(indexName) {
         return this._indices.get(indexName);
     }
 
     /**
-     * @param {string} indexName
-     * @param {string|Array.<string>} [keyPath]
+     * This method is not implemented for transactions.
      */
-    async createIndex(indexName, keyPath) {
+    async createIndex() {
         throw 'Cannot create index in transaction';
     }
 
     /**
-     * @returns {Promise}
+     * Alias for abort.
+     * @returns {Promise} The promise resolves after successful abortion of the transaction.
      */
     close() {
         return this.abort();
     }
 }
+/** @type {number} Milliseconds to wait until automatically aborting transaction. */
 Transaction.WATCHDOG_TIMER = 10000 /*ms*/;
+/**
+ * The states of a transaction.
+ * New transactions are in the state OPEN until they are aborted or committed.
+ * Aborted transactions move to the state ABORTED.
+ * Committed transactions move to the state COMMITTED,
+ * if no other transaction has been applied to the same state.
+ * Otherwise, they change their state to CONFLICTED.
+ * @enum {number}
+ */
 Transaction.STATE = {
     OPEN: 0,
     COMMITTED: 1,

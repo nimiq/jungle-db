@@ -1,8 +1,9 @@
 class LevelDBTools {
     /**
-     * @param {KeyRange} keyRange
-     * @param {Object} options
-     * @returns {Object}
+     * Converts our KeyRange object into an options object for LevelDB readstreams.
+     * @param {KeyRange} keyRange A KeyRange object.
+     * @param {Object} [options] An options object (default empty).
+     * @returns {Object} The options object given extended by the KeyRange.
      */
     static convertKeyRange(keyRange, options={}) {
         if (!(keyRange instanceof KeyRange)) return options;
