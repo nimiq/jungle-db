@@ -1,10 +1,23 @@
+/**
+ * A simple object implementing parts of the Transaction's class.
+ * It is used to keep track of modifications on a persistent index
+ * and to apply them all at once.
+ * This class is to be used only internally.
+ */
 class IndexTransaction {
+    /**
+     * Create a new IndexTransaction.
+     */
     constructor() {
         this._modified = new Map();
         this._removed = new Set();
         this._truncated = false;
     }
 
+    /**
+     * Empty the index transaction.
+     * @returns {Promise.<void>} Promise resolves upon completion.
+     */
     async truncate() {
         this._truncated = true;
         this._modified.clear();
@@ -12,8 +25,9 @@ class IndexTransaction {
     }
 
     /**
-     * @param {string} key
-     * @param {*} value
+     * Put a key-value pair into the transaction.
+     * @param {string} key The key.
+     * @param {*} value The value.
      */
     put(key, value) {
         this._removed.delete(key);
@@ -22,7 +36,8 @@ class IndexTransaction {
     }
 
     /**
-     * @param {string} key
+     * Remove a key-value pair from the transaction.
+     * @param {string} key The key to remove.
      */
     remove(key) {
         this._removed.add(key);

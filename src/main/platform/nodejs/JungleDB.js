@@ -2,10 +2,17 @@ const fs = require('fs');
 
 class JungleDB {
     /**
-     * @param {string} databaseDir
-     * @param {number} dbVersion
-     * @param {function()} [onUpgradeNeeded]
-     * @param {{encode:function(), decode:function(), buffer:boolean, type:string}} [valueEncoding]
+     * Initiates a new database connection. All changes to the database structure
+     * require an increase in the version number.
+     * Whenever new object stores need to be created, old ones deleted,
+     * or indices created/deleted, the dbVersion number has to be increased.
+     * When the version number increases, the given function onUpgradeNeeded is called
+     * after modifying the database structure.
+     * @param {string} databaseDir The name of the database.
+     * @param {number} dbVersion The current version of the database.
+     * @param {function()} [onUpgradeNeeded] A function to be called after upgrades of the structure.
+     * @param {{encode:function(), decode:function(), buffer:boolean, type:string}} [valueEncoding] A levelDB encoding
+     * for the values in the database (by default: a slightly optimized JSON encoding).
      */
     constructor(databaseDir, dbVersion, onUpgradeNeeded, valueEncoding=JungleDB.JSON_ENCODING) {
         if (dbVersion <= 0) throw 'The version provided must not be less or equal to 0.';
@@ -20,7 +27,8 @@ class JungleDB {
     }
 
     /**
-     * @returns {Promise.<number>}
+     * Returns a promise of the current database version.
+     * @returns {Promise.<number>} The promise for the database version.
      * @private
      */
     _readDBVersion() {
@@ -36,7 +44,8 @@ class JungleDB {
     }
 
     /**
-     * @returns {Promise}
+     * Writes a new database version to the db.
+     * @returns {Promise} A promise that resolves after successfully writing the database version.
      * @private
      */
     _writeDBVersion(version) {
@@ -51,12 +60,17 @@ class JungleDB {
         });
     }
 
+    /**
+     * Connects to the indexedDB.
+     * @returns {Promise} A promise resolving on successful connection.
+     */
     connect() {
         return this._initDB();
     }
 
     /**
-     * @returns {Promise}
+     * Closes the database connection.
+     * @returns {Promise} The promise resolves after closing the database.
      */
     close() {
         if (this._connected) {
@@ -70,6 +84,10 @@ class JungleDB {
         return Promise.resolve();
     }
 
+    /**
+     * Fully deletes the database.
+     * @returns {Promise} The promise resolves after deleting the database.
+     */
     async destroy() {
         fs.unlinkSync(`${this._databaseDir}.dbVersion`);
         const promises = [];
@@ -80,6 +98,12 @@ class JungleDB {
         return Promise.all(promises);
     }
 
+    /**
+     * Internal method that is called for opening the database connection.
+     * Also handles the db version upgrade.
+     * @returns {Promise.<void>} A promise that resolves after successful completion.
+     * @private
+     */
     async _initDB() {
         if (!fs.existsSync(this._databaseDir)){
             fs.mkdirSync(this._databaseDir);
@@ -120,21 +144,27 @@ class JungleDB {
         this._connected = true;
     }
 
-    /** @type {boolean} */
+    /** @type {boolean} Whether a connection is established. */
     get connected() {
         return this._connected;
     }
 
     /**
-     * @param {string} tableName
-     * @returns {ObjectStore}
+     * Returns the ObjectStore object for a given table name.
+     * @param {string} tableName The table name to access.
+     * @returns {ObjectStore} The ObjectStore object.
      */
     getObjectStore(tableName) {
         return this._objectStores.get(tableName);
     }
 
     /**
-     * @param {string} tableName
+     * Creates a new object store (and allows to access it).
+     * This method always has to be called before connecting to the database.
+     * If it is not called, the object store will not be accessible afterwards.
+     * If a call is newly introduced, but the database version did not change,
+     * the table does not exist yet.
+     * @param {string} tableName The name of the object store.
      */
     createObjectStore(tableName) {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
@@ -147,6 +177,8 @@ class JungleDB {
     }
 
     /**
+     * Deletes an object store.
+     * This method has to be called before connecting to the database.
      * @param {string} tableName
      */
     async deleteObjectStore(tableName) {
@@ -154,6 +186,10 @@ class JungleDB {
         this._objectStoresToDelete.push(tableName);
     }
 }
+/**
+ * A LevelDB JSON encoding that can handle Uint8Arrays and Sets.
+ * @type {{encode: ((p1?:*)), decode: *, buffer: boolean, type: string}}
+ */
 JungleDB.JSON_ENCODING = {
     encode: val => JSON.stringify(val, (k, v) => {
         if (v instanceof Uint8Array) {

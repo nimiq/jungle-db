@@ -1,8 +1,14 @@
 class JungleDB {
     /**
-     * @param {string} name
-     * @param {number} dbVersion
-     * @param {function()} [onUpgradeNeeded]
+     * Initiates a new database connection. All changes to the database structure
+     * require an increase in the version number.
+     * Whenever new object stores need to be created, old ones deleted,
+     * or indices created/deleted, the dbVersion number has to be increased.
+     * When the version number increases, the given function onUpgradeNeeded is called
+     * after modifying the database structure.
+     * @param {string} name The name of the database.
+     * @param {number} dbVersion The current version of the database.
+     * @param {function()} [onUpgradeNeeded] A function to be called after upgrades of the structure.
      */
     constructor(name, dbVersion, onUpgradeNeeded) {
         if (dbVersion <= 0) throw 'The version provided must not be less or equal to 0.';
@@ -15,10 +21,19 @@ class JungleDB {
         this._objectStoresToDelete = [];
     }
 
+    /**
+     * @type {IDBFactory} The browser's IDB factory.
+     * @private
+     */
     get _indexedDB() {
         return window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.OIndexedDB || window.msIndexedDB;
     }
 
+    /**
+     * Connects to the indexedDB.
+     * @returns {Promise.<IDBDatabase>} A promise resolving on successful connection.
+     * The raw IDBDatabase object should not be used.
+     */
     connect() {
         if (this._db) return Promise.resolve(this._db);
 
@@ -36,6 +51,12 @@ class JungleDB {
         });
     }
 
+    /**
+     * Internal method that is called when a db upgrade is required.
+     * @param {*} event The obupgradeneeded event.
+     * @returns {Promise.<void>} A promise that resolves after successful completion.
+     * @private
+     */
     async _initDB(event) {
         const db = event.target.result;
 
@@ -59,26 +80,32 @@ class JungleDB {
         }
     }
 
-    /** @type {Promise.<IDBDatabase>} */
+    /** @type {Promise.<IDBDatabase>} A promise to the underlying IDBDatabase. */
     get backend() {
         return this.connect();
     }
 
-    /** @type {boolean} */
+    /** @type {boolean} Whether a connection is established. */
     get connected() {
         return this._connected;
     }
 
     /**
-     * @param {string} tableName
-     * @returns {ObjectStore}
+     * Returns the ObjectStore object for a given table name.
+     * @param {string} tableName The table name to access.
+     * @returns {ObjectStore} The ObjectStore object.
      */
     getObjectStore(tableName) {
         return this._objectStores.get(tableName);
     }
 
     /**
-     * @param {string} tableName
+     * Creates a new object store (and allows to access it).
+     * This method always has to be called before connecting to the database.
+     * If it is not called, the object store will not be accessible afterwards.
+     * If a call is newly introduced, but the database version did not change,
+     * the table does not exist yet.
+     * @param {string} tableName The name of the object store.
      */
     createObjectStore(tableName) {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
@@ -91,6 +118,8 @@ class JungleDB {
     }
 
     /**
+     * Deletes an object store.
+     * This method has to be called before connecting to the database.
      * @param {string} tableName
      */
     async deleteObjectStore(tableName) {
@@ -99,7 +128,8 @@ class JungleDB {
     }
 
     /**
-     * @returns {Promise}
+     * Closes the database connection.
+     * @returns {Promise} The promise resolves after closing the database.
      */
     async close() {
         if (this._connected) {
@@ -108,6 +138,10 @@ class JungleDB {
         }
     }
 
+    /**
+     * Fully deletes the database.
+     * @returns {Promise} The promise resolves after deleting the database.
+     */
     async destroy() {
         await this.close();
         return new Promise((resolve, reject) => {
