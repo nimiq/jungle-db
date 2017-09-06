@@ -112,6 +112,9 @@ class JungleDB {
      */
     createObjectStore(tableName) {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
+        if (this._objectStores.has(tableName)) {
+            return this._objectStores.get(tableName);
+        }
         const backend = new IDBBackend(this, tableName);
         const cachedBackend = new CachedBackend(backend);
         const objStore = new ObjectStore(cachedBackend, this);

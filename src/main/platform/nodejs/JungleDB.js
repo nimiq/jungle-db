@@ -171,6 +171,9 @@ class JungleDB {
      */
     createObjectStore(tableName) {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
+        if (this._objectStores.has(tableName)) {
+            return this._objectStores.get(tableName);
+        }
         // LevelDB already implements a LRU cache. so we don't need to cache it.
         const backend = new LevelDBBackend(this, tableName, this._databaseDir, this._valueEncoding);
         const objStore = new ObjectStore(backend, this);
