@@ -491,6 +491,17 @@ class LevelDBBackend {
     }
 
     /**
+     * Deletes a secondary index from the object store.
+     * @param indexName
+     * @returns {Promise} The promise resolves after deleting the index.
+     */
+    deleteIndex(indexName) {
+        if (this._db.connected) throw 'Cannot delete index while connected';
+        const index = new PersistentIndex(this, indexName, '');
+        return index.destroy();
+    }
+
+    /**
      * Closes the object store and potential connections.
      * @returns {Promise} The promise resolves after closing the object store.
      */

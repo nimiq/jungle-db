@@ -238,6 +238,15 @@ class CachedBackend {
     }
 
     /**
+     * Deletes a secondary index from the object store.
+     * @param indexName
+     * @returns {Promise} The promise resolves after deleting the index.
+     */
+    deleteIndex(indexName) {
+        return this._backend.deleteIndex(indexName);
+    }
+
+    /**
      * Closes the object store and potential connections.
      * @returns {Promise} The promise resolves after closing the object store.
      */

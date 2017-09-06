@@ -179,6 +179,13 @@ class IObjectStore {
     async createIndex(indexName, keyPath, multiEntry=false) {} // eslint-disable-line no-unused-vars
 
     /**
+     * Deletes a secondary index from the object store.
+     * @param indexName
+     * @returns {Promise} The promise resolves after deleting the index.
+     */
+    deleteIndex(indexName) {} // eslint-disable-line no-unused-vars
+
+    /**
      * Closes the object store and potential connections.
      * @abstract
      * @returns {Promise} The promise resolves after closing the object store.

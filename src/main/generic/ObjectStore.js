@@ -313,6 +313,15 @@ class ObjectStore {
     }
 
     /**
+     * Deletes a secondary index from the object store.
+     * @param indexName
+     * @returns {Promise} The promise resolves after deleting the index.
+     */
+    deleteIndex(indexName) {
+        return this._backend.deleteIndex(indexName);
+    }
+
+    /**
      * Creates a new transaction, ensuring read isolation
      * on the most recently successfully commited state.
      * @returns {Transaction} The transaction object.

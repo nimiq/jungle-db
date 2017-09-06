@@ -14,6 +14,7 @@ class IDBBackend {
         this._tableName = tableName;
         /** @type {Map.<string,IIndex>} */
         this._indices = new Map();
+        this._indicesToDelete = [];
     }
 
     /**
@@ -31,6 +32,12 @@ class IDBBackend {
      * @protected
      */
     init(objectStore) {
+        // Delete indices.
+        for (const indexName of this._indicesToDelete) {
+            objectStore.deleteIndex(indexName);
+        }
+        delete this._indicesToDelete;
+
         // Create indices.
         for (const [indexName, index] of this._indices) {
             objectStore.createIndex(indexName, index.keyPath, { unique: false, multiEntry: index.multiEntry});
@@ -332,6 +339,16 @@ class IDBBackend {
         keyPath = keyPath || indexName;
         const index = new PersistentIndex(this, indexName, keyPath, multiEntry);
         this._indices.set(indexName, index);
+    }
+
+    /**
+     * Deletes a secondary index from the object store.
+     * @param indexName
+     * @returns {Promise} The promise resolves after deleting the index.
+     */
+    async deleteIndex(indexName) {
+        if (this._db.connected) throw 'Cannot delete index while connected';
+        this._indicesToDelete.push(indexName);
     }
 
     /**

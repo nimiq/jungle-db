@@ -1,5 +1,8 @@
 const fs = require('fs');
 
+/**
+ * @implements {IJungleDB}
+ */
 class JungleDB {
     /**
      * Initiates a new database connection. All changes to the database structure

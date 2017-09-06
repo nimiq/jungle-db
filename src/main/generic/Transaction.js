@@ -457,6 +457,13 @@ class Transaction {
     }
 
     /**
+     * This method is not implemented for transactions.
+     */
+    async deleteIndex() {
+        throw 'Cannot delete index in transaction';
+    }
+
+    /**
      * Alias for abort.
      * @returns {Promise} The promise resolves after successful abortion of the transaction.
      */
