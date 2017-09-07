@@ -109,15 +109,16 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default.
      */
-    createObjectStore(tableName) {
+    createObjectStore(tableName, decoder=null) {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
         }
-        const backend = new IDBBackend(this, tableName);
+        const backend = new IDBBackend(this, tableName, decoder);
         const cachedBackend = new CachedBackend(backend);
-        const objStore = new ObjectStore(cachedBackend, this);
+        const objStore = new ObjectStore(cachedBackend, this, decoder);
         this._objectStores.set(tableName, objStore);
         this._objectStoreBackends.set(tableName, backend);
         return objStore;

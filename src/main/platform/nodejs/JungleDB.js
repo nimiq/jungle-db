@@ -168,15 +168,16 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default.
      */
-    createObjectStore(tableName) {
+    createObjectStore(tableName, decoder=null) {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
         }
         // LevelDB already implements a LRU cache. so we don't need to cache it.
-        const backend = new LevelDBBackend(this, tableName, this._databaseDir, this._valueEncoding);
-        const objStore = new ObjectStore(backend, this);
+        const backend = new LevelDBBackend(this, tableName, this._databaseDir, this._valueEncoding, decoder);
+        const objStore = new ObjectStore(backend, this, decoder);
         this._objectStores.set(tableName, objStore);
         this._objectStoreBackends.push(backend);
         return objStore;

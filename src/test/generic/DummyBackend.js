@@ -2,7 +2,7 @@
  * @implements {IObjectStore}
  */
 class DummyBackend {
-    constructor() {
+    constructor(decoder=null) {
         this._cache = new Map();
 
         /** @type {Map.<string,PersistentIndex>} */
@@ -12,6 +12,8 @@ class DummyBackend {
 
         this._committed = false;
         this._aborted = false;
+
+        this._decoder = decoder;
     }
 
     get committed() {
@@ -35,10 +37,11 @@ class DummyBackend {
 
     /**
      * @param {string} key
+     * @param {function(obj:*):*} [decoder]
      * @returns {Promise.<*>}
      */
-    async get(key) {
-        return this._cache.get(key);
+    async get(key, decoder=undefined) {
+        return this.decode(this._cache.get(key), decoder);
     }
 
     /**
@@ -72,15 +75,16 @@ class DummyBackend {
 
     /**
      * @param {Query|KeyRange} [query]
+     * @param {function(obj:*):*} [decoder]
      * @returns {Promise.<Array.<*>>}
      */
-    async values(query=null) {
+    async values(query=null, decoder=undefined) {
         if (query !== null && query instanceof Query) {
             return query.values(this);
         }
         const values = [];
         for (const key of this.keys(query)) {
-            values.push(await this.get(key));
+            values.push(await this.get(key, decoder));
         }
         return Promise.resolve(values);
     }
@@ -104,11 +108,12 @@ class DummyBackend {
 
     /**
      * @param {KeyRange} [query]
+     * @param {function(obj:*):*} [decoder]
      * @returns {Promise.<*>}
      */
-    async maxValue(query=null) {
+    async maxValue(query=null, decoder=undefined) {
         const maxKey = await this.maxKey(query);
-        return this.get(maxKey);
+        return this.get(maxKey, decoder);
     }
 
     /**
@@ -128,11 +133,12 @@ class DummyBackend {
 
     /**
      * @param {KeyRange} [query]
+     * @param {function(obj:*):*} [decoder]
      * @returns {Promise.<*>}
      */
-    async minValue(query=null) {
+    async minValue(query=null, decoder=undefined) {
         const minKey = await this.minKey(query);
-        return this.get(minKey);
+        return this.get(minKey, decoder);
     }
 
     /**
@@ -258,6 +264,47 @@ class DummyBackend {
         keyPath = keyPath || indexName;
         const index = new InMemoryIndex(this, keyPath, multiEntry);
         this._indices.set(indexName, index);
+    }
+
+    /**
+     * Internal method called to decode a single value.
+     * @param {*} value Value to be decoded.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
+     */
+    decode(value, decoder=undefined) {
+        if (decoder !== undefined) {
+            if (decoder === null) {
+                return value;
+            }
+            return decoder(value);
+        }
+        if (this._decoder !== null && this._decoder !== undefined) {
+            return this._decoder(value);
+        }
+        return value;
+    }
+
+    /**
+     * Internal method called to decode multiple values.
+     * @param {Array.<*>} values Values to be decoded.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
+     */
+    decodeArray(values, decoder=undefined) {
+        if (!Array.isArray(values)) {
+            return this.decode(values, decoder);
+        }
+        if (decoder !== undefined) {
+            if (decoder === null) {
+                return values;
+            }
+            return values.map(decoder);
+        }
+        if (this._decoder !== null && this._decoder !== undefined) {
+            return values.map(this._decoder);
+        }
+        return values;
     }
 }
 Class.register(DummyBackend);

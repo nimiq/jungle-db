@@ -13,8 +13,9 @@ class LevelDBBackend {
      * @param {string} databaseDir The directory of the database. The object store is stored in there as a subfolder.
      * @param {{encode:function(), decode:function(), buffer:boolean, type:string}} valueEncoding A levelDB encoding
      * for the values in the database (by default: a slightly optimized JSON encoding).
+     * @param {function(obj:*):*} [decoder] Optional decoder function for the object store (null is the identity decoder).
      */
-    constructor(db, tableName, databaseDir, valueEncoding) {
+    constructor(db, tableName, databaseDir, valueEncoding, decoder=null) {
         this._db = db;
 
         this._databaseDirectory = databaseDir + tableName;
@@ -29,6 +30,8 @@ class LevelDBBackend {
         this._tableName = tableName;
         /** @type {Map.<string,PersistentIndex>} */
         this._indices = new Map();
+
+        this._decoder = decoder;
     }
 
     /**
@@ -54,19 +57,61 @@ class LevelDBBackend {
     }
 
     /**
+     * Internal method called to decode a single value.
+     * @param {*} value Value to be decoded.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
+     */
+    decode(value, decoder=undefined) {
+        if (decoder !== undefined) {
+            if (decoder === null) {
+                return value;
+            }
+            return decoder(value);
+        }
+        if (this._decoder !== null && this._decoder !== undefined) {
+            return this._decoder(value);
+        }
+        return value;
+    }
+
+    /**
+     * Internal method called to decode multiple values.
+     * @param {Array.<*>} values Values to be decoded.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
+     */
+    decodeArray(values, decoder=undefined) {
+        if (!Array.isArray(values)) {
+            return this.decode(values, decoder);
+        }
+        if (decoder !== undefined) {
+            if (decoder === null) {
+                return values;
+            }
+            return values.map(decoder);
+        }
+        if (this._decoder !== null && this._decoder !== undefined) {
+            return values.map(this._decoder);
+        }
+        return values;
+    }
+
+    /**
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key) {
+    async get(key, decoder=undefined) {
         return new Promise((resolve, error) => {
             this._dbBackend.get(key, (err, value) => {
                 if (err) {
                     resolve(undefined);
                     return;
                 }
-                resolve(value);
+                resolve(this.decode(value, decoder));
             });
         });
     }
@@ -144,9 +189,10 @@ class LevelDBBackend {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    values(query=null) {
+    values(query=null, decoder=undefined) {
         if (query !== null && query instanceof Query) {
             return query.values(this);
         }
@@ -154,7 +200,7 @@ class LevelDBBackend {
             const result = [];
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false }))
                 .on('data', data => {
-                    result.push(data);
+                    result.push(this.decode(data, decoder));
                 })
                 .on('error', err => {
                     error(err);
@@ -200,13 +246,14 @@ class LevelDBBackend {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    maxValue(query=null) {
+    maxValue(query=null, decoder=undefined) {
         return new Promise((resolve, error) => {
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false, 'limit': 1, 'reverse': true }))
                 .on('data', data => {
-                    resolve(data);
+                    resolve(this.decode(data, decoder));
                 })
                 .on('error', err => {
                     error(err);
@@ -238,13 +285,14 @@ class LevelDBBackend {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    minValue(query=null) {
+    minValue(query=null, decoder=undefined) {
         return new Promise((resolve, error) => {
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false, 'limit': 1, 'reverse': false }))
                 .on('data', data => {
-                    resolve(data);
+                    resolve(this.decode(data, decoder));
                 })
                 .on('error', err => {
                     error(err);

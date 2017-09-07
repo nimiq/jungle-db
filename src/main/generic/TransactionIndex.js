@@ -61,11 +61,12 @@ class TransactionIndex extends InMemoryIndex {
      * If the optional query is not given, it returns all objects in the index.
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
      * @param {KeyRange} [query] Optional query to check secondary keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null) {
+    async values(query=null, decoder=undefined) {
         const keys = await this.keys(query);
-        return super._retrieveValues(keys);
+        return super._retrieveValues(keys, decoder);
     }
 
     /**
@@ -73,11 +74,12 @@ class TransactionIndex extends InMemoryIndex {
      * If the optional query is not given, it returns the objects whose secondary key is maximal within the index.
      * If the query is of type KeyRange, it returns the objects whose secondary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
-    async maxValues(query=null) {
+    async maxValues(query=null, decoder=undefined) {
         const keys = await this.maxKeys(query);
-        return super._retrieveValues(keys);
+        return super._retrieveValues(keys, decoder);
     }
 
     /**
@@ -103,7 +105,7 @@ class TransactionIndex extends InMemoryIndex {
 
         // Remove keys that have been deleted or modified.
         let sampleElement = TransactionIndex._sampleElement(backendKeys);
-        const value = await this._backend.get(sampleElement);
+        const value = await this._backend.get(sampleElement, null);
         let maxIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
         backendKeys = backendKeys.difference(this._objectStore._removed);
         backendKeys = backendKeys.difference(this._objectStore._modified.keys());
@@ -114,7 +116,7 @@ class TransactionIndex extends InMemoryIndex {
 
             // Remove keys that have been deleted or modified.
             sampleElement = TransactionIndex._sampleElement(backendKeys);
-            const value = await this._backend.get(sampleElement);
+            const value = await this._backend.get(sampleElement, null);
             maxIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
             backendKeys = backendKeys.difference(this._objectStore._removed);
             backendKeys = backendKeys.difference(this._objectStore._modified.keys());
@@ -135,7 +137,7 @@ class TransactionIndex extends InMemoryIndex {
         }
 
         // Both contain elements, check which one is larger.
-        const valueTx = await this._objectStore.get(TransactionIndex._sampleElement(newKeys));
+        const valueTx = await this._objectStore.get(TransactionIndex._sampleElement(newKeys), null);
 
         const iKeyBackend = maxIKey;
         const iKeyTx = ObjectUtils.byKeyPath(valueTx, this.keyPath);
@@ -153,11 +155,12 @@ class TransactionIndex extends InMemoryIndex {
      * If the optional query is not given, it returns the objects whose secondary key is minimal within the index.
      * If the query is of type KeyRange, it returns the objects whose secondary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
-    async minValues(query=null) {
+    async minValues(query=null, decoder=undefined) {
         const keys = await this.minKeys(query);
-        return super._retrieveValues(keys);
+        return super._retrieveValues(keys, decoder);
     }
 
     /**
@@ -172,7 +175,7 @@ class TransactionIndex extends InMemoryIndex {
 
         // Remove keys that have been deleted or modified.
         let sampleElement = TransactionIndex._sampleElement(backendKeys);
-        const value = await this._backend.get(sampleElement);
+        const value = await this._backend.get(sampleElement, null);
         let minIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
         backendKeys = backendKeys.difference(this._objectStore._removed);
         backendKeys = backendKeys.difference(this._objectStore._modified.keys());
@@ -183,7 +186,7 @@ class TransactionIndex extends InMemoryIndex {
 
             // Remove keys that have been deleted or modified.
             sampleElement = TransactionIndex._sampleElement(backendKeys);
-            const value = await this._backend.get(sampleElement);
+            const value = await this._backend.get(sampleElement, null);
             minIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
             backendKeys = backendKeys.difference(this._objectStore._removed);
             backendKeys = backendKeys.difference(this._objectStore._modified.keys());
@@ -204,7 +207,7 @@ class TransactionIndex extends InMemoryIndex {
         }
 
         // Both contain elements, check which one is larger.
-        const valueTx = await this._objectStore.get(TransactionIndex._sampleElement(newKeys));
+        const valueTx = await this._objectStore.get(TransactionIndex._sampleElement(newKeys), null);
 
         const iKeyBackend = minIKey;
         const iKeyTx = ObjectUtils.byKeyPath(valueTx, this.keyPath);

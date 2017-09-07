@@ -52,9 +52,10 @@ class IIndex {
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
      * @abstract
      * @param {KeyRange} [query] Optional query to check secondary keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null) {} // eslint-disable-line no-unused-vars
+    async values(query=null, decoder=undefined) {} // eslint-disable-line no-unused-vars
 
     /**
      * Returns a promise of an array of objects whose secondary key is maximal for the given range.
@@ -62,9 +63,10 @@ class IIndex {
      * If the query is of type KeyRange, it returns the objects whose secondary key is maximal for the given range.
      * @abstract
      * @param {KeyRange} [query] Optional query to check keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
-    async maxValues(query=null) {} // eslint-disable-line no-unused-vars
+    async maxValues(query=null, decoder=undefined) {} // eslint-disable-line no-unused-vars
 
     /**
      * Returns a promise of a set of primary keys, whose associated secondary keys are maximal for the given range.
@@ -82,9 +84,10 @@ class IIndex {
      * If the query is of type KeyRange, it returns the objects whose secondary key is minimal for the given range.
      * @abstract
      * @param {KeyRange} [query] Optional query to check keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
-    async minValues(query=null) {} // eslint-disable-line no-unused-vars
+    async minValues(query=null, decoder=undefined) {} // eslint-disable-line no-unused-vars
 
     /**
      * Returns a promise of a set of primary keys, whose associated secondary keys are minimal for the given range.

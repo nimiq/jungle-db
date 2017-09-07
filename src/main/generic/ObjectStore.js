@@ -59,11 +59,12 @@ class ObjectStore {
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    get(key) {
+    get(key, decoder=undefined) {
         if (!this._db.connected) throw 'JungleDB is not connected';
-        return this._currentState.get(key);
+        return this._currentState.get(key, decoder);
     }
 
     /**
@@ -115,14 +116,15 @@ class ObjectStore {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    values(query=null) {
+    values(query=null, decoder=undefined) {
         if (!this._db.connected) throw 'JungleDB is not connected';
         if (query !== null && query instanceof Query) {
-            return query.values(this._currentState);
+            return query.values(this._currentState, decoder);
         }
-        return this._currentState.values(query);
+        return this._currentState.values(query, decoder);
     }
 
     /**
@@ -130,11 +132,12 @@ class ObjectStore {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    maxValue(query=null) {
+    maxValue(query=null, decoder=undefined) {
         if (!this._db.connected) throw 'JungleDB is not connected';
-        return this._currentState.maxValue(query);
+        return this._currentState.maxValue(query, decoder);
     }
 
     /**
@@ -166,11 +169,12 @@ class ObjectStore {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    minValue(query=null) {
+    minValue(query=null, decoder=undefined) {
         if (!this._db.connected) throw 'JungleDB is not connected';
-        return this._currentState.minValue(query);
+        return this._currentState.minValue(query, decoder);
     }
 
     /**
@@ -366,6 +370,26 @@ class ObjectStore {
             throw 'Cannot close database while transactions are active';
         }
         return this._backend.close();
+    }
+
+    /**
+     * Internal method called to decode a single value.
+     * @param {*} value Value to be decoded.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
+     */
+    decode(value, decoder=undefined) {
+        return this._backend.decode(value, decoder);
+    }
+
+    /**
+     * Internal method called to decode multiple values.
+     * @param {Array.<*>} values Values to be decoded.
+     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
+     */
+    decodeArray(values, decoder=undefined) {
+        return this._backend.decodeArray(values, decoder);
     }
 }
 /** @type {number} The maximum number of states to stack. */

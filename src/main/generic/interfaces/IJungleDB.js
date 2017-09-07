@@ -43,8 +43,9 @@ class IJungleDB {
      * the table does not exist yet.
      * @abstract
      * @param {string} tableName The name of the object store.
+     * @param {function(obj:*):*} [decoder] A default decoder function for the object store.
      */
-    createObjectStore(tableName) {}  // eslint-disable-line no-unused-vars
+    createObjectStore(tableName, decoder=null) {}  // eslint-disable-line no-unused-vars
 
     /**
      * Deletes an object store.
