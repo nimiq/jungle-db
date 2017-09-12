@@ -1,6 +1,6 @@
 module.exports = {};
 
-global.Class = {
+const Class = {
     register: clazz => {
         module.exports[clazz.prototype.constructor.name] = clazz;
     }
