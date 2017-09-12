@@ -1,5 +1,5 @@
-if (typeof JungleDB === 'undefined') {
-    var JungleDB = typeof window !== 'undefined' ? window : {};
+if (typeof JDB === 'undefined') {
+    var JDB = typeof window !== 'undefined' ? window : {};
 }
 var Proxy; // ensure Proxy exists
 (function (exports) {
