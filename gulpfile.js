@@ -1,8 +1,15 @@
 const gulp = require('gulp');
+const babel = require('gulp-babel');
+const browserify = require('browserify');
+const buffer = require('vinyl-buffer');
 const concat = require('gulp-concat');
 const connect = require('gulp-connect');
 const jasmine = require('gulp-jasmine-livereload-task');
+const merge = require('merge2');
+const source = require('vinyl-source-stream');
 const sourcemaps = require('gulp-sourcemaps');
+const uglify = require('gulp-uglify');
+const util = require('gulp-util');
 
 const sources = {
     platform: {
@@ -52,6 +59,52 @@ const sources = {
     ]
 };
 
+const babel_config = {
+    plugins: ['transform-runtime', 'transform-es2015-modules-commonjs'],
+    presets: ['es2016', 'es2017']
+};
+
+const babel_loader = {
+    plugins: [['transform-runtime', {
+        'polyfill': false
+    }]],
+    presets: ['env']
+};
+
+gulp.task('build-web-babel', function () {
+    return merge(
+        browserify([], {
+            require: [
+                'babel-runtime/core-js/array/from',
+                'babel-runtime/core-js/object/values',
+                'babel-runtime/core-js/object/freeze',
+                'babel-runtime/core-js/object/keys',
+                'babel-runtime/core-js/json/stringify',
+                'babel-runtime/core-js/number/is-integer',
+                'babel-runtime/core-js/number/max-safe-integer',
+                'babel-runtime/core-js/math/clz32',
+                'babel-runtime/core-js/math/fround',
+                'babel-runtime/core-js/math/imul',
+                'babel-runtime/core-js/math/trunc',
+                'babel-runtime/core-js/promise',
+                'babel-runtime/core-js/get-iterator',
+                'babel-runtime/regenerator',
+                'babel-runtime/helpers/asyncToGenerator'
+            ]
+        }).bundle()
+            .pipe(source('babel.js'))
+            .pipe(buffer())
+            .pipe(uglify()),
+        gulp.src(['./src/loader/browser/prefix.js.template'].concat(sources.platform.browser).concat(sources.generic).concat(['./src/loader/browser/suffix.js.template']))
+            .pipe(sourcemaps.init())
+            .pipe(concat('web.js'))
+            .pipe(babel(babel_config)))
+        .pipe(sourcemaps.init())
+        .pipe(concat('web-babel.js'))
+        .pipe(sourcemaps.write('.'))
+        .pipe(gulp.dest('dist'));
+});
+
 gulp.task('build-web', function () {
     return gulp.src(['./src/loader/browser/prefix.js.template'].concat(sources.platform.browser).concat(sources.generic).concat(['./src/loader/browser/suffix.js.template']))
         .pipe(sourcemaps.init())
@@ -87,6 +140,6 @@ gulp.task('watch', ['build-web'], function () {
     return gulp.watch(sources.all, ['build-web']);
 });
 
-gulp.task('build', ['build-web', 'build-node']);
+gulp.task('build', ['build-web', 'build-node', 'build-web-babel']);
 
 gulp.task('default', ['build']);
