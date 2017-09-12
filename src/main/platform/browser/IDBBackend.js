@@ -53,6 +53,9 @@ class IDBBackend {
      * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
      */
     decode(value, decoder=undefined) {
+        if (value === undefined) {
+            return undefined;
+        }
         if (decoder !== undefined) {
             if (decoder === null) {
                 return value;
