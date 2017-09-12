@@ -1,16 +1,17 @@
 {
   "name": "jungle-db",
   "version": "0.2.0",
-  "main": "index.js",
+  "main": "dist/node.js",
   "private": true,
   "scripts": {
-    "prepare": "gulp build-node",
+    "prepare": "gulp build",
     "build": "gulp build",
     "esdoc": "esdoc",
     "test": "jasmine && gulp test",
     "test-node": "jasmine",
     "test-browser": "gulp test",
-    "lint": "gulp eslint"
+    "lint": "gulp eslint",
+    "postinstall": "gulp build"
   },
   "repository": "git@github.com:nimiq-network/jungle-db.git",
   "author": "pb <mail@paberr.net>",
