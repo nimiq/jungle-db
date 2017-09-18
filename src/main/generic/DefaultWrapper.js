@@ -1,17 +1,26 @@
 /**
- * This interface represents an object store (roughly corresponding to a table in a relational database).
- * It stores key-value pairs where the key is generally considered to be a string and the value is any object.
- * The key is the entry's primary key. Other keys within the object may be accessed by indices as offered by the store.
- * @interface
+ * This class represents a default wrapper for object stores.
+ * It wraps all functionality of an object store and also wraps newly created transactions.
+ * Extend this class with your own functionality to enhance your application with more functionality
+ * on the object store.
  */
-class IObjectStore {
+class DefaultWrapper {
+    /**
+     * @param {IObjectStore} store
+     */
+    constructor(store) {
+        this._store = store;
+    }
+
     /**
      * A map of index names to indices.
      * The index names can be used to access an index.
      * @abstract
      * @type {Map.<string,IIndex>}
      */
-    get indices() {} // eslint-disable-line no-unused-vars
+    get indices() {
+        return this._store.indices;
+    }
 
     /**
      * Returns a promise of the object stored under the given primary key.
@@ -21,7 +30,9 @@ class IObjectStore {
      * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    async get(key, decoder=undefined) {
+        return this._store.get(key, decoder);
+    }
 
     /**
      * Inserts or replaces a key-value pair.
@@ -30,7 +41,9 @@ class IObjectStore {
      * @param {*} value The value to write.
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    async put(key, value) {} // eslint-disable-line no-unused-vars
+    async put(key, value) {
+        return this._store.put(key, value);
+    }
 
     /**
      * Removes the key-value pair of the given key from the object store.
@@ -38,7 +51,9 @@ class IObjectStore {
      * @param {string} key The primary key to delete along with the associated object.
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    async remove(key) {} // eslint-disable-line no-unused-vars
+    async remove(key) {
+        return this._store.remove(key);
+    }
 
     /**
      * Returns a promise of a set of keys fulfilling the given query.
@@ -49,7 +64,9 @@ class IObjectStore {
      * @param {Query|KeyRange} [query] Optional query to check keys against.
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to the query.
      */
-    async keys(query=null) {} // eslint-disable-line no-unused-vars
+    async keys(query=null) {
+        return this._store.keys(query);
+    }
 
     /**
      * Returns a promise of an array of objects whose primary keys fulfill the given query.
@@ -61,7 +78,9 @@ class IObjectStore {
      * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    async values(query=null, decoder=undefined) {
+        return this._store.values(query, decoder);
+    }
 
     /**
      * Returns a promise of the object whose primary key is maximal for the given range.
@@ -72,7 +91,9 @@ class IObjectStore {
      * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async maxValue(query=null, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    async maxValue(query=null, decoder=undefined) {
+        return this._store.maxValue(query, decoder);
+    }
 
     /**
      * Returns a promise of the key being maximal for the given range.
@@ -82,7 +103,9 @@ class IObjectStore {
      * @param {KeyRange} [query] Optional query to check keys against.
      * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
-    async maxKey(query=null) {} // eslint-disable-line no-unused-vars
+    async maxKey(query=null) {
+        return this._store.maxKey(query);
+    }
 
     /**
      * Returns a promise of the key being minimal for the given range.
@@ -92,7 +115,9 @@ class IObjectStore {
      * @param {KeyRange} [query] Optional query to check keys against.
      * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
-    async minKey(query=null) {} // eslint-disable-line no-unused-vars
+    async minKey(query=null) {
+        return this._store.minKey(query);
+    }
 
     /**
      * Returns a promise of the object whose primary key is minimal for the given range.
@@ -103,7 +128,9 @@ class IObjectStore {
      * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async minValue(query=null, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    async minValue(query=null, decoder=undefined) {
+        return this._store.minValue(query, decoder);
+    }
 
     /**
      * Returns the count of entries in the given range.
@@ -113,7 +140,9 @@ class IObjectStore {
      * @param {KeyRange} [query]
      * @returns {Promise.<number>}
      */
-    async count(query=null) {} // eslint-disable-line no-unused-vars
+    async count(query=null) {
+        return this._store.count(query);
+    }
 
     /**
      * Is used to commit the state of an open transaction.
@@ -124,7 +153,9 @@ class IObjectStore {
      * @param {Transaction} [tx] The transaction to be applied, only used internally.
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
-    async commit(tx) {} // eslint-disable-line no-unused-vars
+    async commit(tx) {
+        return this._store.commit(tx);
+    }
 
     /**
      * Is used to abort an open transaction.
@@ -134,7 +165,9 @@ class IObjectStore {
      * @param {Transaction} [tx] The transaction to be aborted, only used internally.
      * @returns {Promise} The promise resolves after successful abortion of the transaction.
      */
-    async abort(tx) {} // eslint-disable-line no-unused-vars
+    async abort(tx) {
+        return this._store.abort(tx);
+    }
 
     /**
      * Returns the index of the given name.
@@ -143,7 +176,9 @@ class IObjectStore {
      * @param {string} indexName The name of the requested index.
      * @returns {IIndex} The index associated with the given name.
      */
-    async index(indexName) {} // eslint-disable-line no-unused-vars
+    async index(indexName) {
+        return this._store.index(indexName);
+    }
 
     /**
      * Internally applies a transaction to the store's state.
@@ -154,14 +189,18 @@ class IObjectStore {
      * @returns {Promise} The promise resolves after applying the transaction.
      * @protected
      */
-    async _apply(tx) {} // eslint-disable-line no-unused-vars
+    async _apply(tx) {
+        return this._store._apply(tx);
+    }
 
     /**
      * Empties the object store.
      * @abstract
      * @returns {Promise} The promise resolves after emptying the object store.
      */
-    async truncate() {} // eslint-disable-line no-unused-vars
+    async truncate() {
+        return this._store.truncate();
+    }
 
     /**
      * Creates a new secondary index on the object store.
@@ -180,7 +219,9 @@ class IObjectStore {
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
      */
-    async createIndex(indexName, keyPath, multiEntry=false) {} // eslint-disable-line no-unused-vars
+    async createIndex(indexName, keyPath, multiEntry=false) {
+        return this._store.createIndex(indexName, keyPath, multiEntry);
+    }
 
     /**
      * Deletes a secondary index from the object store.
@@ -188,14 +229,18 @@ class IObjectStore {
      * @param indexName
      * @returns {Promise} The promise resolves after deleting the index.
      */
-    deleteIndex(indexName) {} // eslint-disable-line no-unused-vars
+    deleteIndex(indexName) {
+        return this._store.deleteIndex(indexName);
+    }
 
     /**
      * Closes the object store and potential connections.
      * @abstract
      * @returns {Promise} The promise resolves after closing the object store.
      */
-    async close() {} // eslint-disable-line no-unused-vars
+    async close() {
+        return this._store.close();
+    }
 
     /**
      * Internal method called to decode a single value.
@@ -204,7 +249,9 @@ class IObjectStore {
      * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
      */
-    decode(value, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    decode(value, decoder=undefined) {
+        return this._store.decode(value, decoder);
+    }
 
     /**
      * Internal method called to decode multiple values.
@@ -213,5 +260,19 @@ class IObjectStore {
      * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
      */
-    decodeArray(values, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    decodeArray(values, decoder=undefined) {
+        return this._store.decodeArray(values, decoder);
+    }
+
+    /**
+     * @returns {Transaction}
+     */
+    transaction() {
+        if (!this._store.transaction) {
+            return undefined;
+        }
+        const tx = this._store.transaction();
+        return new this.constructor(tx);
+    }
 }
+Class.register(DefaultWrapper);

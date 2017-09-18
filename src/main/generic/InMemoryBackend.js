@@ -1,31 +1,22 @@
 /**
+ * Transactions are created by calling the transaction method on an ObjectStore object.
+ * Transactions ensure read-isolation.
+ * On a given state, only *one* transaction can be committed successfully.
+ * Other transactions based on the same state will end up in a conflicted state if committed.
+ * Transactions opened after the successful commit of another transaction will be based on the
+ * new state and hence can be committed again.
  * @implements {IObjectStore}
  */
-class DummyBackend {
-    constructor(decoder=null) {
+class InMemoryBackend {
+    constructor(tableName, decoder=null) {
         this._cache = new Map();
 
         /** @type {Map.<string,PersistentIndex>} */
         this._indices = new Map();
 
-        this.connected = true;
-
-        this._committed = false;
-        this._aborted = false;
-
+        this._primaryIndex = new InMemoryIndex(this, undefined, false, true);
+        this._tableName = tableName;
         this._decoder = decoder;
-    }
-
-    get committed() {
-        const state = this._committed;
-        this._committed = false;
-        return state;
-    }
-
-    get aborted() {
-        const state = this._aborted;
-        this._aborted = false;
-        return state;
     }
 
     /**
@@ -52,7 +43,9 @@ class DummyBackend {
     async put(key, value) {
         const oldValue = await this.get(key);
         this._cache.set(key, value);
-        const indexPromises = [];
+        const indexPromises = [
+            this._primaryIndex.put(key, value, oldValue)
+        ];
         for (const index of this._indices.values()) {
             indexPromises.push(index.put(key, value, oldValue));
         }
@@ -66,7 +59,9 @@ class DummyBackend {
     async remove(key) {
         const oldValue = await this.get(key);
         this._cache.delete(key);
-        const indexPromises = [];
+        const indexPromises = [
+            this._primaryIndex.remove(key, oldValue)
+        ];
         for (const index of this._indices.values()) {
             indexPromises.push(index.remove(key, oldValue));
         }
@@ -94,16 +89,10 @@ class DummyBackend {
      * @returns {Promise.<Set.<string>>}
      */
     keys(query=null) {
-        if (query !== null && query instanceof JDB.Query) {
+        if (query !== null && query instanceof Query) {
             return query.keys(this);
         }
-        const keys = new Set();
-        for (const key of this._cache.keys()) {
-            if (query === null || query.includes(key)) {
-                keys.add(key);
-            }
-        }
-        return Promise.resolve(keys);
+        return this._primaryIndex.keys(query);
     }
 
     /**
@@ -120,15 +109,9 @@ class DummyBackend {
      * @param {KeyRange} [query]
      * @returns {Promise.<string>}
      */
-    maxKey(query=null) {
-        let maxKey = null;
-        for (const key of this._cache.keys()) {
-            if ((query === null || query.includes(key))
-                && (maxKey === null || key > maxKey)) {
-                maxKey = key;
-            }
-        }
-        return Promise.resolve(maxKey || undefined);
+    async maxKey(query=null) {
+        const keys = await this._primaryIndex.maxKeys(query);
+        return Set.sampleElement(keys);
     }
 
     /**
@@ -145,15 +128,9 @@ class DummyBackend {
      * @param {KeyRange} [query]
      * @returns {Promise.<string>}
      */
-    minKey(query=null) {
-        let minKey = null;
-        for (const key of this._cache.keys()) {
-            if ((query === null || query.includes(key))
-                && (minKey === null || key < minKey)) {
-                minKey = key;
-            }
-        }
-        return Promise.resolve(minKey || undefined);
+    async minKey(query=null) {
+        const keys = await this._primaryIndex.minKeys(query);
+        return Set.sampleElement(keys);
     }
 
     /**
@@ -169,14 +146,14 @@ class DummyBackend {
      * @returns {Promise.<boolean>}
      */
     async commit(tx) {
-        this._committed = true;
+        throw 'Unsupported operation';
     }
 
     /**
      * @param {Transaction} [tx]
      */
     async abort(tx) {
-        this._aborted = true;
+        throw 'Unsupported operation';
     }
 
     /**
@@ -205,9 +182,11 @@ class DummyBackend {
         }
 
         // Update all indices.
-        const indexPromises = [];
+        const indexPromises = [
+            InMemoryBackend._indexApply(this._primaryIndex, tx)
+        ];
         for (const index of this._indices.values()) {
-            indexPromises.push(DummyBackend._indexApply(index, tx));
+            indexPromises.push(InMemoryBackend._indexApply(index, tx));
         }
         return Promise.all(indexPromises);
     }
@@ -238,7 +217,9 @@ class DummyBackend {
         this._cache.clear();
 
         // Truncate all indices.
-        const indexPromises = [];
+        const indexPromises = [
+            this._primaryIndex.truncate()
+        ];
         for (const index of this._indices.values()) {
             indexPromises.push(index.truncate());
         }
@@ -262,7 +243,7 @@ class DummyBackend {
      */
     async createIndex(indexName, keyPath, multiEntry=false) {
         keyPath = keyPath || indexName;
-        const index = new JDB.InMemoryIndex(this, keyPath, multiEntry);
+        const index = new InMemoryIndex(this, keyPath, multiEntry);
         this._indices.set(indexName, index);
     }
 
@@ -306,5 +287,10 @@ class DummyBackend {
         }
         return values;
     }
+
+    /** @type {string} The own table name. */
+    get tableName() {
+        return this._tableName;
+    }
 }
-Class.register(DummyBackend);
+Class.register(InMemoryBackend);

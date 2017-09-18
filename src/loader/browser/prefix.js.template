@@ -1,5 +1,5 @@
 if (typeof JDB === 'undefined') {
-    var JDB = typeof window !== 'undefined' ? window : {};
+    var JDB = {};
 }
 var Proxy; // ensure Proxy exists
 (function (exports) {

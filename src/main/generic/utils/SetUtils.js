@@ -78,3 +78,15 @@ Set.from = function(arg) {
     }
     return new Set([arg]);
 };
+
+/**
+ * Returns an element of a Set.
+ * Static method of Set.
+ * @memberOf Set
+ * @template T
+ * @param {Set.<T>} s The set to return an element from.
+ * @returns {T} An element of the set.
+ */
+Set.sampleElement = function(s) {
+    return s.size > 0 ? s.values().next().value : undefined;
+};

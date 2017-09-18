@@ -195,7 +195,7 @@ class InMemoryIndex {
         let resultSet = new Set();
 
         // Shortcut for exact match.
-        if (query instanceof  KeyRange && query.exactMatch) {
+        if (query instanceof KeyRange && query.exactMatch) {
             if (this._tree.seek(query.lower)) {
                 resultSet = Set.from(this._tree.currentRecord);
             }
@@ -213,7 +213,9 @@ class InMemoryIndex {
 
         while (!(query instanceof KeyRange) || query.includes(this._tree.currentKey)) {
             resultSet = resultSet.union(Set.from(this._tree.currentRecord));
-            this._tree.skip();
+            if (!this._tree.skip()) {
+                break;
+            }
         }
         return resultSet;
     }

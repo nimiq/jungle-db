@@ -20,7 +20,7 @@ class Benchmark {
     }
 
     async _init() {
-        this._db = new JungleDB(this._databaseName, this._benchmarkVersion);
+        this._db = new JDB.JungleDB(this._databaseName, this._benchmarkVersion);
         for (const tableName of this._tableNames) {
             this._objectStores.push(this._db.createObjectStore(tableName));
         }

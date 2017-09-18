@@ -83,17 +83,6 @@ class TransactionIndex extends InMemoryIndex {
     }
 
     /**
-     * Returns an element of a set.
-     * @template T
-     * @param {Set.<T>} s The set to return an element from.
-     * @returns {T} An element of the set.
-     * @private
-     */
-    static _sampleElement(s) {
-        return s.size > 0 ? s.values().next().value : undefined;
-    }
-
-    /**
      * Returns a promise of a set of primary keys, whose associated secondary keys are maximal for the given range.
      * If the optional query is not given, it returns the set of primary keys, whose associated secondary key is maximal within the index.
      * If the query is of type KeyRange, it returns the set of primary keys, whose associated secondary key is maximal for the given range.
@@ -104,7 +93,7 @@ class TransactionIndex extends InMemoryIndex {
         let backendKeys = await this._index.maxKeys(query);
 
         // Remove keys that have been deleted or modified.
-        let sampleElement = TransactionIndex._sampleElement(backendKeys);
+        let sampleElement = Set.sampleElement(backendKeys);
         const value = await this._backend.get(sampleElement, null);
         let maxIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
         backendKeys = backendKeys.difference(this._objectStore._removed);
@@ -115,7 +104,7 @@ class TransactionIndex extends InMemoryIndex {
             backendKeys = await this._index.maxKeys(tmpQuery);
 
             // Remove keys that have been deleted or modified.
-            sampleElement = TransactionIndex._sampleElement(backendKeys);
+            sampleElement = Set.sampleElement(backendKeys);
             const value = await this._backend.get(sampleElement, null);
             maxIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
             backendKeys = backendKeys.difference(this._objectStore._removed);
@@ -137,7 +126,7 @@ class TransactionIndex extends InMemoryIndex {
         }
 
         // Both contain elements, check which one is larger.
-        const valueTx = await this._objectStore.get(TransactionIndex._sampleElement(newKeys), null);
+        const valueTx = await this._objectStore.get(Set.sampleElement(newKeys), null);
 
         const iKeyBackend = maxIKey;
         const iKeyTx = ObjectUtils.byKeyPath(valueTx, this.keyPath);
@@ -174,7 +163,7 @@ class TransactionIndex extends InMemoryIndex {
         let backendKeys = await this._index.minKeys(query);
 
         // Remove keys that have been deleted or modified.
-        let sampleElement = TransactionIndex._sampleElement(backendKeys);
+        let sampleElement = Set.sampleElement(backendKeys);
         const value = await this._backend.get(sampleElement, null);
         let minIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
         backendKeys = backendKeys.difference(this._objectStore._removed);
@@ -185,7 +174,7 @@ class TransactionIndex extends InMemoryIndex {
             backendKeys = await this._index.minKeys(tmpQuery);
 
             // Remove keys that have been deleted or modified.
-            sampleElement = TransactionIndex._sampleElement(backendKeys);
+            sampleElement = Set.sampleElement(backendKeys);
             const value = await this._backend.get(sampleElement, null);
             minIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
             backendKeys = backendKeys.difference(this._objectStore._removed);
@@ -207,7 +196,7 @@ class TransactionIndex extends InMemoryIndex {
         }
 
         // Both contain elements, check which one is larger.
-        const valueTx = await this._objectStore.get(TransactionIndex._sampleElement(newKeys), null);
+        const valueTx = await this._objectStore.get(Set.sampleElement(newKeys), null);
 
         const iKeyBackend = minIKey;
         const iKeyTx = ObjectUtils.byKeyPath(valueTx, this.keyPath);

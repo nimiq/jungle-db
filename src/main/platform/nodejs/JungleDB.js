@@ -162,6 +162,16 @@ class JungleDB {
     }
 
     /**
+     * Creates a volatile object store (non-persistent).
+     * @abstract
+     * @param {function(obj:*):*} [decoder] A default decoder function for the object store.
+     * @returns {IObjectStore}
+     */
+    static createVolatileObjectStore(decoder=null) {
+        return new ObjectStore(new InMemoryBackend('', decoder));
+    }
+
+    /**
      * Creates a new object store (and allows to access it).
      * This method always has to be called before connecting to the database.
      * If it is not called, the object store will not be accessible afterwards.
@@ -169,14 +179,18 @@ class JungleDB {
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
      * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default.
+     * @param {boolean} [persistent] If set to false, this object store is not persistent.
+     * @returns {IObjectStore}
      */
-    createObjectStore(tableName, decoder=null) {
+    createObjectStore(tableName, decoder=null, persistent=true) {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
         }
         // LevelDB already implements a LRU cache. so we don't need to cache it.
-        const backend = new LevelDBBackend(this, tableName, this._databaseDir, this._valueEncoding, decoder);
+        const backend = persistent
+            ? new LevelDBBackend(this, tableName, this._databaseDir, this._valueEncoding, decoder)
+            : new InMemoryBackend(tableName, decoder);
         const objStore = new ObjectStore(backend, this, decoder);
         this._objectStores.set(tableName, objStore);
         this._objectStoreBackends.push(backend);

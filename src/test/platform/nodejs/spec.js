@@ -1,5 +1,8 @@
+global.JDB = {};
+
 global.Class = {
     register: clazz => {
+        global.JDB[clazz.prototype.constructor.name] = clazz;
         global[clazz.prototype.constructor.name] = clazz;
     }
 };

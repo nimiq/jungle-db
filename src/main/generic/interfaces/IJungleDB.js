@@ -44,8 +44,10 @@ class IJungleDB {
      * @abstract
      * @param {string} tableName The name of the object store.
      * @param {function(obj:*):*} [decoder] A default decoder function for the object store.
+     * @param {boolean} [persistent] If set to false, this object store is not persistent.
+     * @returns {IObjectStore}
      */
-    createObjectStore(tableName, decoder=null) {}  // eslint-disable-line no-unused-vars
+    createObjectStore(tableName, decoder=null, persistent=true) {}  // eslint-disable-line no-unused-vars
 
     /**
      * Deletes an object store.
@@ -54,4 +56,12 @@ class IJungleDB {
      * @param {string} tableName
      */
     async deleteObjectStore(tableName) {}  // eslint-disable-line no-unused-vars
+
+    /**
+     * Creates a volatile object store (non-persistent).
+     * @abstract
+     * @param {function(obj:*):*} [decoder] A default decoder function for the object store.
+     * @returns {IObjectStore}
+     */
+    static createVolatileObjectStore(decoder=null) {}  // eslint-disable-line no-unused-vars
 }

@@ -8,7 +8,7 @@ describe('Query', () => {
     beforeEach((done) => {
         backend = new DummyBackend();
 
-        objectStore = new ObjectStore(backend, backend);
+        objectStore = new JDB.ObjectStore(backend, backend);
 
         (async function () {
             // Add 10 objects.
@@ -26,7 +26,7 @@ describe('Query', () => {
             await tx.remove('key0');
             await tx.put('newKey', 'test');
             expect(await tx.commit()).toBe(true);
-            expect(tx.state).toBe(Transaction.STATE.COMMITTED);
+            expect(tx.state).toBe(JDB.Transaction.STATE.COMMITTED);
             expect(await objectStore.get('key0')).toBe(undefined);
             expect(await objectStore.get('newKey')).toBe('test');
         })().then(done, done.fail);
@@ -52,7 +52,7 @@ describe('Query', () => {
 
             // Commit one transaction.
             expect(await tx1.commit()).toBe(true);
-            expect(tx1.state).toBe(Transaction.STATE.COMMITTED);
+            expect(tx1.state).toBe(JDB.Transaction.STATE.COMMITTED);
 
             // Still ensure read isolation.
             expect(await tx1.get('key0')).toBe(undefined);
@@ -88,7 +88,7 @@ describe('Query', () => {
 
             // Commit third transaction.
             expect(await tx3.commit()).toBe(true);
-            expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
+            expect(tx3.state).toBe(JDB.Transaction.STATE.COMMITTED);
 
             // Create a fourth transaction, which should be based on tx3.
             const tx4 = objectStore.transaction();
@@ -104,7 +104,7 @@ describe('Query', () => {
             // Abort second transaction and commit empty fourth transaction.
             expect(await tx2.abort()).toBe(true);
             expect(await tx4.commit()).toBe(true);
-            expect(tx4.state).toBe(Transaction.STATE.COMMITTED);
+            expect(tx4.state).toBe(JDB.Transaction.STATE.COMMITTED);
 
             // Now everything should be in the backend.
             expect(await backend.get('key0')).toBe('someval');
@@ -139,7 +139,7 @@ describe('Query', () => {
 
             // Commit one transaction.
             expect(await tx1.commit()).toBe(true);
-            expect(tx1.state).toBe(Transaction.STATE.COMMITTED);
+            expect(tx1.state).toBe(JDB.Transaction.STATE.COMMITTED);
 
             // Still ensure read isolation.
             expect(await tx1.get('key0')).toBe(undefined);
@@ -152,7 +152,7 @@ describe('Query', () => {
 
             // Should not be able to commit tx2.
             expect(await tx2.commit()).toBe(false);
-            expect(tx2.state).toBe(Transaction.STATE.CONFLICTED);
+            expect(tx2.state).toBe(JDB.Transaction.STATE.CONFLICTED);
             expect(await backend.get('key0')).toBe('value0'); // not yet written
 
             // Abort third transaction.
