@@ -1,5 +1,5 @@
 if (typeof(require) !== 'undefined') {
-    JungleDB = require('../../dist/node.js').JungleDB;
+    JDB = require('../../dist/node.js');
     Stats = require('./Stats.js');
     BenchmarkUtils = require('./BenchmarkUtils.js');
 }

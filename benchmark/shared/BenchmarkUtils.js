@@ -84,6 +84,65 @@ class BenchmarkUtils {
         };
     }
 
+    /**
+     * @param {Array.<ObjectStore>} objectStores
+     * @param {number} totalCount
+     * @param {number} batchSize
+     * @param {boolean} sync
+     * @param {function} operation
+     * @returns {Promise.<{results: Array, totalTime: number}>}
+     */
+    static async performBatchOperations(objectStores, totalCount, batchSize, sync, operation) {
+        let startTime = 0;
+        let totalTime = 0;
+        let index = 0;
+        let results = [];
+        while (index < totalCount) {
+            const transactions = [];
+            for (const objectStore of objectStores) {
+                startTime = Timer.currentTimeMillis();
+                transactions.push(objectStore.transaction());
+                totalTime += Timer.elapsedMillis(startTime);
+            }
+            const asyncPromises = [];
+            const currentBatchSize = Math.min(batchSize, totalCount-index);
+            if (!sync) {
+                startTime = Timer.currentTimeMillis();
+            }
+            for (let i = 0; i < currentBatchSize; ++i) {
+                if (sync) {
+                    startTime = Timer.currentTimeMillis();
+                    results.push(await operation(transactions, index)); // eslint-disable-line no-await-in-loop
+                    totalTime += Timer.elapsedMillis(startTime);
+                } else {
+                    asyncPromises.push(operation(transactions, index));
+                }
+                index++;
+            }
+            let success = true;
+            if (sync) {
+                for (const transaction of transactions) {
+                    startTime = Timer.currentTimeMillis();
+                    success = await transaction.commit() && success; // eslint-disable-line no-await-in-loop
+                    totalTime += Timer.elapsedMillis(startTime);
+                }
+            } else {
+                for (const transaction of transactions) {
+                    results = await Promise.all(asyncPromises); // eslint-disable-line no-await-in-loop
+                    success = await transaction.commit() && success; // eslint-disable-line no-await-in-loop
+                    totalTime += Timer.elapsedMillis(startTime);
+                }
+            }
+            if (!success) {
+                console.warn('Transaction couldn\'t be committed.');
+            }
+        }
+        return {
+            results: results,
+            totalTime: totalTime
+        };
+    }
+
 
     /**
      * @param count

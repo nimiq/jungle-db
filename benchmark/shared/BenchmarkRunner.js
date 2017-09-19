@@ -3,6 +3,7 @@ if (typeof(require) !== 'undefined') {
     BenchmarkOverwrite = require('./BenchmarkOverwrite.js');
     BenchmarkRead = require('./BenchmarkRead.js');
     BenchmarkDelete = require('./BenchmarkDelete.js');
+    BenchmarkReadFromMultiple = require('./BenchmarkReadFromMultiple.js');
 }
 
 class BenchmarkRunner {
@@ -116,7 +117,7 @@ BenchmarkRunner.BenchmarkDescriptions = [
         benchmark: BenchmarkRead,
         databaseEntryCount: [100, 500, 1000],
         readCount: [10, 100, 1000],
-        entrySize: [100, 1000],
+        entrySize: [100, 1000, 1000000],
         batchSize: [1, 10, 100],
         sync: [true, false]
     },
@@ -125,6 +126,15 @@ BenchmarkRunner.BenchmarkDescriptions = [
         databaseEntryCount: [100, 500, 1000],
         deleteCount: [10, 100, 1000],
         entrySize: [100, 1000],
+        batchSize: [1, 10, 100],
+        sync: [true, false]
+    },
+    {
+        benchmark: BenchmarkReadFromMultiple,
+        databaseEntryCount: [100, 500, 1000],
+        readCount: [10, 100, 1000],
+        totalEntrySize: [100, 1000],
+        numberTables: [1, 2, 3],
         batchSize: [1, 10, 100],
         sync: [true, false]
     }
