@@ -104,7 +104,6 @@ class JungleDB {
 
     /**
      * Creates a volatile object store (non-persistent).
-     * @abstract
      * @param {function(obj:*):*} [decoder] A default decoder function for the object store.
      * @returns {IObjectStore}
      */
