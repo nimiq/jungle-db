@@ -307,4 +307,4 @@ class DummyBackend {
         return values;
     }
 }
-Class.register(DummyBackend);
+JDB.Class.register(DummyBackend);

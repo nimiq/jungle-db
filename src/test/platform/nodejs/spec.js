@@ -7,6 +7,8 @@ global.Class = {
     }
 };
 
+global.JDB.Class = global.Class;
+
 require('../../generic/DummyBackend.js');
 
 require('../../../main/generic/utils/BTree.js');
