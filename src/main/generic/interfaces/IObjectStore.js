@@ -18,27 +18,29 @@ class IObjectStore {
      * Resolves to undefined if the key is not present in the object store.
      * @abstract
      * @param {string} key The primary key to look for.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    async get(key, codec=undefined) {} // eslint-disable-line no-unused-vars
 
     /**
      * Inserts or replaces a key-value pair.
      * @abstract
      * @param {string} key The primary key to associate the value with.
      * @param {*} value The value to write.
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    async put(key, value) {} // eslint-disable-line no-unused-vars
+    async put(key, value, codec=undefined) {} // eslint-disable-line no-unused-vars
 
     /**
      * Removes the key-value pair of the given key from the object store.
      * @abstract
      * @param {string} key The primary key to delete along with the associated object.
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    async remove(key) {} // eslint-disable-line no-unused-vars
+    async remove(key, codec=undefined) {} // eslint-disable-line no-unused-vars
 
     /**
      * Returns a promise of a set of keys fulfilling the given query.
@@ -58,10 +60,10 @@ class IObjectStore {
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @abstract
      * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    async values(query=null, codec=undefined) {} // eslint-disable-line no-unused-vars
 
     /**
      * Returns a promise of the object whose primary key is maximal for the given range.
@@ -69,10 +71,10 @@ class IObjectStore {
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @abstract
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async maxValue(query=null, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    async maxValue(query=null, codec=undefined) {} // eslint-disable-line no-unused-vars
 
     /**
      * Returns a promise of the key being maximal for the given range.
@@ -100,10 +102,10 @@ class IObjectStore {
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @abstract
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async minValue(query=null, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    async minValue(query=null, codec=undefined) {} // eslint-disable-line no-unused-vars
 
     /**
      * Returns the count of entries in the given range.
@@ -201,17 +203,17 @@ class IObjectStore {
      * Internal method called to decode a single value.
      * @abstract
      * @param {*} value Value to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
      */
-    decode(value, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    decode(value, codec=undefined) {} // eslint-disable-line no-unused-vars
 
     /**
-     * Internal method called to decode multiple values.
+     * Internal method called to encode a single value.
      * @abstract
-     * @param {Array.<*>} values Values to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
+     * @param {*} value Value to be encoded.
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
+     * @returns {*} The encoded value, either by the object store's default or the overriding decoder if given.
      */
-    decodeArray(values, decoder=undefined) {} // eslint-disable-line no-unused-vars
+    encode(value, codec=undefined) {} // eslint-disable-line no-unused-vars
 }

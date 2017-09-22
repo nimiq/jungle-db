@@ -14,15 +14,12 @@ class JungleDB {
      * @param {string} databaseDir The name of the database.
      * @param {number} dbVersion The current version of the database.
      * @param {function()} [onUpgradeNeeded] A function to be called after upgrades of the structure.
-     * @param {{encode:function(), decode:function(), buffer:boolean, type:string}} [valueEncoding] A levelDB encoding
-     * for the values in the database (by default: a slightly optimized JSON encoding).
      */
-    constructor(databaseDir, dbVersion, onUpgradeNeeded, valueEncoding=JungleDB.JSON_ENCODING) {
+    constructor(databaseDir, dbVersion, onUpgradeNeeded) {
         if (dbVersion <= 0) throw 'The version provided must not be less or equal to 0.';
         this._databaseDir = databaseDir.endsWith('/') ? databaseDir : `${databaseDir}/`;
         this._dbVersion = dbVersion;
         this._onUpgradeNeeded = onUpgradeNeeded;
-        this._valueEncoding = valueEncoding;
         this._connected = false;
         this._objectStores = new Map();
         this._objectStoreBackends = [];
@@ -163,11 +160,11 @@ class JungleDB {
 
     /**
      * Creates a volatile object store (non-persistent).
-     * @param {function(obj:*):*} [decoder] A default decoder function for the object store.
+     * @param {ICodec} [codec] A default codec for the object store.
      * @returns {IObjectStore}
      */
-    static createVolatileObjectStore(decoder=null) {
-        return new ObjectStore(new InMemoryBackend('', decoder));
+    static createVolatileObjectStore(codec=null) {
+        return new ObjectStore(new InMemoryBackend('', codec));
     }
 
     /**
@@ -177,20 +174,21 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default.
+     * @param {ICodec} [codec] A codec for the object store (by default, it is the identity codec with JSON encoding).
      * @param {boolean} [persistent] If set to false, this object store is not persistent.
      * @returns {IObjectStore}
      */
-    createObjectStore(tableName, decoder=null, persistent=true) {
+    createObjectStore(tableName, codec=null, persistent=true) {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
         }
+
         // LevelDB already implements a LRU cache. so we don't need to cache it.
         const backend = persistent
-            ? new LevelDBBackend(this, tableName, this._databaseDir, this._valueEncoding, decoder)
-            : new InMemoryBackend(tableName, decoder);
-        const objStore = new ObjectStore(backend, this, decoder);
+            ? new LevelDBBackend(this, tableName, this._databaseDir, codec)
+            : new InMemoryBackend(tableName, codec);
+        const objStore = new ObjectStore(backend, this);
         this._objectStores.set(tableName, objStore);
         this._objectStoreBackends.push(backend);
         return objStore;
@@ -208,7 +206,7 @@ class JungleDB {
 }
 /**
  * A LevelDB JSON encoding that can handle Uint8Arrays and Sets.
- * @type {{encode: ((p1?:*)), decode: *, buffer: boolean, type: string}}
+ * @type {{encode: function(val:*):*, decode: function(val:*):*, buffer: boolean, type: string}}
  */
 JungleDB.JSON_ENCODING = {
     encode: val => JSON.stringify(val, (k, v) => {

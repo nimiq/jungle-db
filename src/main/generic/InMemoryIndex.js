@@ -159,7 +159,7 @@ class InMemoryIndex {
     /**
      * A helper method to retrieve the values corresponding to a set of keys.
      * @param {Set.<string>} keys The set of keys to get the corresponding values for.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of values.
      * @protected
      */
@@ -176,7 +176,7 @@ class InMemoryIndex {
      * If the optional query is not given, it returns all objects in the index.
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
      * @param {KeyRange} [query] Optional query to check secondary keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
     async values(query=null, decoder=undefined) {
@@ -225,7 +225,7 @@ class InMemoryIndex {
      * If the optional query is not given, it returns the objects whose secondary key is maximal within the index.
      * If the query is of type KeyRange, it returns the objects whose secondary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async maxValues(query=null, decoder=undefined) {
@@ -253,7 +253,7 @@ class InMemoryIndex {
      * If the optional query is not given, it returns the objects whose secondary key is minimal within the index.
      * If the query is of type KeyRange, it returns the objects whose secondary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async minValues(query=null, decoder=undefined) {

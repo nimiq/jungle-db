@@ -27,14 +27,14 @@ class CachedBackend {
     /**
      * A helper method to retrieve the values corresponding to a set of keys.
      * @param {Set.<string>} keys The set of keys to get the corresponding values for.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of values.
      * @protected
      */
-    async _retrieveValues(keys, decoder=undefined) {
+    async _retrieveValues(keys, codec=undefined) {
         const valuePromises = [];
         for (const key of keys) {
-            valuePromises.push(this.get(key, decoder));
+            valuePromises.push(this.get(key, codec));
         }
         return Promise.all(valuePromises);
     }
@@ -42,21 +42,21 @@ class CachedBackend {
     /**
      * Internal method called to decode a single value.
      * @param {*} value Value to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
      */
-    decode(value, decoder=undefined) {
-        return this._backend.decode(value, decoder);
+    decode(value, codec=undefined) {
+        return this._backend.decode(value, codec);
     }
 
     /**
-     * Internal method called to decode multiple values.
-     * @param {Array.<*>} values Values to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
+     * Internal method called to encode a single value.
+     * @param {*} value Value to be encoded.
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
+     * @returns {*} The encoded value, either by the object store's default or the overriding decoder if given.
      */
-    decodeArray(values, decoder=undefined) {
-        return this._backend.decodeArray(values, decoder);
+    encode(value, codec=undefined) {
+        return this._backend.encode(value, codec);
     }
 
     /**
@@ -65,16 +65,16 @@ class CachedBackend {
      * Otherwise, the value will be fetched from the backend object store..
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key, decoder=undefined) {
+    async get(key, codec=undefined) {
         if (this._cache.has(key)) {
-            return this.decode(this._cache.get(key), decoder);
+            return this.decode(this._cache.get(key), codec);
         }
         const value = await this._backend.get(key, null);
         this._cache.set(key, value);
-        return this.decode(value, decoder);
+        return this.decode(value, codec);
     }
 
     /**
@@ -82,21 +82,24 @@ class CachedBackend {
      * Stores the new key-value pair in both the cache and the backend.
      * @param {string} key The primary key to associate the value with.
      * @param {*} value The value to write.
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    put(key, value) {
+    put(key, value, codec=undefined) {
+        value = this.encode(value, codec);
         this._cache.set(key, value);
-        return this._backend.put(key, value);
+        return this._backend.put(key, value, null);
     }
 
     /**
      * Removes the key-value pair of the given key from the cache and the backend.
      * @param {string} key The primary key to delete along with the associated object.
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    remove(key) {
+    remove(key, codec=undefined) {
         this._cache.delete(key);
-        return this._backend.remove(key);
+        return this._backend.remove(key, codec);
     }
 
     /**
@@ -117,12 +120,12 @@ class CachedBackend {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null, decoder=undefined) {
+    async values(query=null, codec=undefined) {
         const keys = await this.keys(query);
-        return this._retrieveValues(keys, decoder);
+        return this._retrieveValues(keys, codec);
     }
 
     /**
@@ -130,12 +133,11 @@ class CachedBackend {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async maxValue(query=null, decoder=undefined) {
-        const key = await this.maxKey(query);
-        return this.get(key, decoder);
+    maxValue(query=null, codec=undefined) {
+        return this._backend.maxValue(query, codec);
     }
 
     /**
@@ -165,12 +167,11 @@ class CachedBackend {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async minValue(query=null, decoder=undefined) {
-        const key = await this.minKey(query);
-        return this.get(key, decoder);
+    minValue(query=null, codec=undefined) {
+        return this._backend.minValue(query, codec);
     }
 
     /**
