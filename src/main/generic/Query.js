@@ -187,14 +187,13 @@ class Query {
     /**
      * Returns a promise of an array of objects fulfilling this query.
      * @param {IObjectStore} objectStore The object store to execute the query on.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to this query.
      */
-    async values(objectStore, codec=undefined) {
+    async values(objectStore) {
         const keys = await this._execute(objectStore);
         const resultPromises = [];
         for (const key of keys) {
-            resultPromises.push(objectStore.get(key, codec));
+            resultPromises.push(objectStore.get(key));
         }
         return Promise.all(resultPromises);
     }

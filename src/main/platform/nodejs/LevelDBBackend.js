@@ -61,18 +61,11 @@ class LevelDBBackend {
     /**
      * Internal method called to decode a single value.
      * @param {*} value Value to be decoded.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
      */
-    decode(value, codec=undefined) {
+    decode(value) {
         if (value === undefined) {
             return undefined;
-        }
-        if (codec !== undefined) {
-            if (codec === null) {
-                return value;
-            }
-            return codec.decode(value);
         }
         if (this._codec !== null && this._codec !== undefined) {
             return this._codec.decode(value);
@@ -83,18 +76,11 @@ class LevelDBBackend {
     /**
      * Internal method called to encode a single value.
      * @param {*} value Value to be encoded.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {*} The encoded value, either by the object store's default or the overriding decoder if given.
      */
-    encode(value, codec=undefined) {
+    encode(value) {
         if (value === undefined) {
             return undefined;
-        }
-        if (codec !== undefined) {
-            if (codec === null) {
-                return value;
-            }
-            return codec.encode(value);
         }
         if (this._codec !== null && this._codec !== undefined) {
             return this._codec.encode(value);
@@ -106,17 +92,16 @@ class LevelDBBackend {
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key, codec=undefined) {
+    async get(key) {
         return new Promise((resolve, error) => {
             this._dbBackend.get(key, (err, value) => {
                 if (err) {
                     resolve(undefined);
                     return;
                 }
-                resolve(this.decode(value, codec));
+                resolve(this.decode(value));
             });
         });
     }
@@ -125,16 +110,15 @@ class LevelDBBackend {
      * Inserts or replaces a key-value pair.
      * @param {string} key The primary key to associate the value with.
      * @param {*} value The value to write.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    async put(key, value, codec=undefined) {
-        const oldValue = await this.get(key, codec);
+    async put(key, value) {
+        const oldValue = await this.get(key);
         return new Promise((resolve, error) => {
             const batch = this._dbBackend.batch();
 
             this._indexVersion = (this._indexVersion + 1) % LevelDBBackend.MAX_INDEX_VERSION;
-            batch.put(key, this.encode(value, codec));
+            batch.put(key, this.encode(value));
             batch.put('_indexVersion', this._indexVersion);
             batch.write(err => {
                 if (err) {
@@ -157,11 +141,10 @@ class LevelDBBackend {
     /**
      * Removes the key-value pair of the given key from the object store.
      * @param {string} key The primary key to delete along with the associated object.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    async remove(key, codec=undefined) {
-        const oldValue = await this.get(key, codec);
+    async remove(key) {
+        const oldValue = await this.get(key);
         // Only update if there was a value with that key.
         if (oldValue === undefined) {
             return Promise.resolve();
@@ -196,18 +179,17 @@ class LevelDBBackend {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    values(query=null, codec=undefined) {
+    values(query=null) {
         if (query !== null && query instanceof Query) {
-            return query.values(this, codec);
+            return query.values(this);
         }
         return new Promise((resolve, error) => {
             const result = [];
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false }))
                 .on('data', data => {
-                    result.push(this.decode(data.value, codec));
+                    result.push(this.decode(data.value));
                 })
                 .on('error', err => {
                     error(err);
@@ -253,14 +235,13 @@ class LevelDBBackend {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    maxValue(query=null, codec=undefined) {
+    maxValue(query=null) {
         return new Promise((resolve, error) => {
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false, 'limit': 1, 'reverse': true }))
                 .on('data', data => {
-                    resolve(this.decode(data.value, codec));
+                    resolve(this.decode(data.value));
                 })
                 .on('error', err => {
                     error(err);
@@ -292,14 +273,13 @@ class LevelDBBackend {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    minValue(query=null, codec=undefined) {
+    minValue(query=null) {
         return new Promise((resolve, error) => {
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false, 'limit': 1, 'reverse': false }))
                 .on('data', data => {
-                    resolve(this.decode(data.value, codec));
+                    resolve(this.decode(data.value));
                 })
                 .on('error', err => {
                     error(err);
@@ -406,7 +386,7 @@ class LevelDBBackend {
                 batch.del(key);
             }
             for (const [key, value] of tx._modified) {
-                batch.put(key, value); // we assume it is already encoded
+                batch.put(key, this.encode(value));
             }
             batch.put('_indexVersion', this._indexVersion);
             batch.write(err => {
@@ -500,14 +480,13 @@ class LevelDBBackend {
      * Applies a function on all key-value pairs in the database.
      * This method uses a levelDB read stream to accomplish its task.
      * @param {function(key:string, value:*)} func The function to apply.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise} The promise resolves after applying the function to all entries.
      */
-    map(func, codec=undefined) {
+    map(func) {
         return new Promise((resolve, error) => {
             this._dbBackend.createReadStream({ 'values': true, 'keys': true })
                 .on('data', data => {
-                    func(data.key, this.decode(data.value, codec));
+                    func(data.key, this.decode(data.value));
                 })
                 .on('error', err => {
                     error(err);

@@ -1,7 +1,7 @@
 /**
  * This is a BTree based index, which is generally stored in memory.
  * It is used by transactions.
- * @implements IIndex
+ * @implements {IIndex}
  */
 class InMemoryIndex {
     /**
@@ -159,14 +159,13 @@ class InMemoryIndex {
     /**
      * A helper method to retrieve the values corresponding to a set of keys.
      * @param {Set.<string>} keys The set of keys to get the corresponding values for.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of values.
      * @protected
      */
-    async _retrieveValues(keys, decoder=undefined) {
+    async _retrieveValues(keys) {
         const valuePromises = [];
         for (const key of keys) {
-            valuePromises.push(this._objectStore.get(key, decoder));
+            valuePromises.push(this._objectStore.get(key));
         }
         return Promise.all(valuePromises);
     }
@@ -176,12 +175,11 @@ class InMemoryIndex {
      * If the optional query is not given, it returns all objects in the index.
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
      * @param {KeyRange} [query] Optional query to check secondary keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null, decoder=undefined) {
+    async values(query=null) {
         const keys = await this.keys(query);
-        return this._retrieveValues(keys, decoder);
+        return this._retrieveValues(keys);
     }
 
     /**
@@ -225,12 +223,11 @@ class InMemoryIndex {
      * If the optional query is not given, it returns the objects whose secondary key is maximal within the index.
      * If the query is of type KeyRange, it returns the objects whose secondary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
-    async maxValues(query=null, decoder=undefined) {
+    async maxValues(query=null) {
         const keys = await this.maxKeys(query);
-        return this._retrieveValues(keys, decoder);
+        return this._retrieveValues(keys);
     }
 
     /**
@@ -253,12 +250,11 @@ class InMemoryIndex {
      * If the optional query is not given, it returns the objects whose secondary key is minimal within the index.
      * If the query is of type KeyRange, it returns the objects whose secondary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
-    async minValues(query=null, decoder=undefined) {
+    async minValues(query=null) {
         const keys = await this.minKeys(query);
-        return this._retrieveValues(keys, decoder);
+        return this._retrieveValues(keys);
     }
 
     /**

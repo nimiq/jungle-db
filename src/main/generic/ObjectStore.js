@@ -64,12 +64,11 @@ class ObjectStore {
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    get(key, codec=undefined) {
+    get(key) {
         if (!this._backend.connected) throw 'JungleDB is not connected';
-        return this._currentState.get(key, codec);
+        return this._currentState.get(key);
     }
 
     /**
@@ -77,13 +76,12 @@ class ObjectStore {
      * Implicitly creates a transaction for this operation and commits it.
      * @param {string} key The primary key to associate the value with.
      * @param {*} value The value to write.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
-    async put(key, value, codec=undefined) {
+    async put(key, value) {
         if (!this._backend.connected) throw 'JungleDB is not connected';
         const tx = this.transaction();
-        await tx.put(key, value, codec);
+        await tx.put(key, value);
         return tx.commit();
     }
 
@@ -91,13 +89,12 @@ class ObjectStore {
      * Removes the key-value pair of the given key from the object store.
      * Implicitly creates a transaction for this operation and commits it.
      * @param {string} key The primary key to delete along with the associated object.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
-    async remove(key, codec=undefined) {
+    async remove(key) {
         if (!this._backend.connected) throw 'JungleDB is not connected';
         const tx = this.transaction();
-        await tx.remove(key, codec);
+        await tx.remove(key);
         return tx.commit();
     }
 
@@ -123,15 +120,14 @@ class ObjectStore {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    values(query=null, codec=undefined) {
+    values(query=null) {
         if (!this._backend.connected) throw 'JungleDB is not connected';
         if (query !== null && query instanceof Query) {
-            return query.values(this._currentState, codec);
+            return query.values(this._currentState);
         }
-        return this._currentState.values(query, codec);
+        return this._currentState.values(query);
     }
 
     /**
@@ -139,12 +135,11 @@ class ObjectStore {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    maxValue(query=null, codec=undefined) {
+    maxValue(query=null) {
         if (!this._backend.connected) throw 'JungleDB is not connected';
-        return this._currentState.maxValue(query, codec);
+        return this._currentState.maxValue(query);
     }
 
     /**
@@ -176,12 +171,11 @@ class ObjectStore {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    minValue(query=null, codec=undefined) {
+    minValue(query=null) {
         if (!this._backend.connected) throw 'JungleDB is not connected';
-        return this._currentState.minValue(query, codec);
+        return this._currentState.minValue(query);
     }
 
     /**
@@ -377,26 +371,6 @@ class ObjectStore {
             throw 'Cannot close database while transactions are active';
         }
         return this._backend.close();
-    }
-
-    /**
-     * Internal method called to decode a single value.
-     * @param {*} value Value to be decoded.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
-     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
-     */
-    decode(value, codec=undefined) {
-        return this._backend.decode(value, codec);
-    }
-
-    /**
-     * Internal method called to encode a single value.
-     * @param {*} value Value to be encoded.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
-     * @returns {*} The encoded value, either by the object store's default or the overriding decoder if given.
-     */
-    encode(value, codec=undefined) {
-        return this._backend.encode(value, codec);
     }
 }
 /** @type {number} The maximum number of states to stack. */

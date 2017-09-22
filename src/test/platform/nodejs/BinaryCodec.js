@@ -15,7 +15,8 @@ class BinaryCodec {
      * @returns {*} Encoded object.
      */
     encode(obj) {
-        return Buffer.from(`${obj.key}|${obj.value}`, 'utf8');
+        const str = [].concat.apply([], Object.entries(obj)).join('|');
+        return Buffer.from(str, 'utf8');
     }
 
     /**
@@ -25,11 +26,17 @@ class BinaryCodec {
      */
     decode(obj) {
         const str = obj.toString('utf-8');
-        const vals = str.split('|');
-        return {
-            key: vals[0],
-            value: vals[1]
-        };
+        const entries = str.split('|');
+        const object = {};
+        for (let i = 0; i < entries.length; i += 2) {
+            const key = entries[i];
+            let value = entries[i+1];
+            if (!isNaN(parseInt(value))) {
+                value = parseInt(value);
+            }
+            object[key] = value;
+        }
+        return object;
     }
 
     /**

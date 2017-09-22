@@ -30,32 +30,29 @@ class DefaultWrapper {
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key, codec=undefined) {
-        return this._store.get(key, codec);
+    async get(key) {
+        return this._store.get(key);
     }
 
     /**
      * Inserts or replaces a key-value pair.
      * @param {string} key The primary key to associate the value with.
      * @param {*} value The value to write.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    async put(key, value, codec=undefined) {
-        return this._store.put(key, value, codec);
+    async put(key, value) {
+        return this._store.put(key, value);
     }
 
     /**
      * Removes the key-value pair of the given key from the object store.
      * @param {string} key The primary key to delete along with the associated object.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    async remove(key, codec=undefined) {
-        return this._store.remove(key, codec);
+    async remove(key) {
+        return this._store.remove(key);
     }
 
     /**
@@ -76,11 +73,10 @@ class DefaultWrapper {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null, codec=undefined) {
-        return this._store.values(query, codec);
+    async values(query=null) {
+        return this._store.values(query);
     }
 
     /**
@@ -88,11 +84,10 @@ class DefaultWrapper {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async maxValue(query=null, codec=undefined) {
-        return this._store.maxValue(query, codec);
+    async maxValue(query=null) {
+        return this._store.maxValue(query);
     }
 
     /**
@@ -122,11 +117,10 @@ class DefaultWrapper {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async minValue(query=null, codec=undefined) {
-        return this._store.minValue(query, codec);
+    async minValue(query=null) {
+        return this._store.minValue(query);
     }
 
     /**
@@ -228,26 +222,6 @@ class DefaultWrapper {
      */
     async close() {
         return this._store.close();
-    }
-
-    /**
-     * Internal method called to decode a single value.
-     * @param {*} value Value to be decoded.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
-     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
-     */
-    decode(value, codec=undefined) {
-        return this._store.decode(value, codec);
-    }
-
-    /**
-     * Internal method called to encode a single value.
-     * @param {*} value Value to be encoded.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
-     * @returns {*} The encoded value, either by the object store's default or the overriding decoder if given.
-     */
-    encode(value, codec=undefined) {
-        return this._store.encode(value, codec);
     }
 
     /**

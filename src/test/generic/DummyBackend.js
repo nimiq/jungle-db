@@ -42,8 +42,8 @@ class DummyBackend {
      * @param {ICodec} [codec]
      * @returns {Promise.<*>}
      */
-    async get(key, codec=undefined) {
-        return this.decode(this._cache.get(key), codec);
+    async get(key) {
+        return this.decode(this._cache.get(key));
     }
 
     /**
@@ -52,9 +52,9 @@ class DummyBackend {
      * @param {ICodec} [codec]
      * @returns {Promise}
      */
-    async put(key, value, codec=undefined) {
-        const oldValue = await this.get(key, codec);
-        this._cache.set(key, this.encode(value, codec));
+    async put(key, value) {
+        const oldValue = await this.get(key);
+        this._cache.set(key, this.encode(value));
         const indexPromises = [
             this._primaryIndex.put(key, value, oldValue)
         ];
@@ -69,8 +69,8 @@ class DummyBackend {
      * @param {ICodec} [codec]
      * @returns {Promise}
      */
-    async remove(key, codec=undefined) {
-        const oldValue = await this.get(key, codec);
+    async remove(key) {
+        const oldValue = await this.get(key);
         this._cache.delete(key);
         const indexPromises = [
             this._primaryIndex.remove(key, oldValue)
@@ -86,13 +86,13 @@ class DummyBackend {
      * @param {ICodec} [codec]
      * @returns {Promise.<Array.<*>>}
      */
-    async values(query=null, codec=undefined) {
+    async values(query=null) {
         if (query !== null && query instanceof JDB.Query) {
-            return query.values(this, codec);
+            return query.values(this);
         }
         const values = [];
         for (const key of this.keys(query)) {
-            values.push(await this.get(key, codec));
+            values.push(await this.get(key));
         }
         return Promise.resolve(values);
     }
@@ -113,9 +113,9 @@ class DummyBackend {
      * @param {ICodec} [codec]
      * @returns {Promise.<*>}
      */
-    async maxValue(query=null, codec=undefined) {
+    async maxValue(query=null) {
         const maxKey = await this.maxKey(query);
-        return this.get(maxKey, codec);
+        return this.get(maxKey);
     }
 
     /**
@@ -132,9 +132,9 @@ class DummyBackend {
      * @param {ICodec} [codec]
      * @returns {Promise.<*>}
      */
-    async minValue(query=null, codec=undefined) {
+    async minValue(query=null) {
         const minKey = await this.minKey(query);
-        return this.get(minKey, codec);
+        return this.get(minKey);
     }
 
     /**
@@ -188,10 +188,10 @@ class DummyBackend {
         }
 
         for (const key of tx._removed) {
-            await this.remove(key, null);
+            await this.remove(key);
         }
         for (const [key, value] of tx._modified) {
-            await this.put(key, value, null);
+            await this.put(key, value);
         }
 
         // Update all indices.
@@ -259,18 +259,11 @@ class DummyBackend {
     /**
      * Internal method called to decode a single value.
      * @param {*} value Value to be decoded.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
      */
-    decode(value, codec=undefined) {
+    decode(value) {
         if (value === undefined) {
             return undefined;
-        }
-        if (codec !== undefined) {
-            if (codec === null) {
-                return value;
-            }
-            return codec(value);
         }
         if (this._codec !== null && this._codec !== undefined) {
             return this._codec.decode(value);
@@ -281,18 +274,11 @@ class DummyBackend {
     /**
      * Internal method called to encode a single value.
      * @param {*} value Value to be encoded.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {*} The encoded value, either by the object store's default or the overriding decoder if given.
      */
-    encode(value, codec=undefined) {
+    encode(value) {
         if (value === undefined) {
             return undefined;
-        }
-        if (codec !== undefined) {
-            if (codec === null) {
-                return value;
-            }
-            return codec.encode(value);
         }
         if (this._codec !== null && this._codec !== undefined) {
             return this._codec.encode(value);

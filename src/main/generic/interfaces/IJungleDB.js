@@ -60,8 +60,8 @@ class IJungleDB {
     /**
      * Creates a volatile object store (non-persistent).
      * @abstract
-     * @param {function(obj:*):*} [decoder] A default decoder function for the object store.
+     * @param {function(obj:*):*} [codec] A default decoder function for the object store.
      * @returns {IObjectStore}
      */
-    static createVolatileObjectStore(decoder=null) {}  // eslint-disable-line no-unused-vars
+    static createVolatileObjectStore(codec=null) {}  // eslint-disable-line no-unused-vars
 }

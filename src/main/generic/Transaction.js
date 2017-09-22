@@ -96,7 +96,7 @@ class Transaction {
                 this._originalValues.set(key, oldValue);
             }
 
-            this._put(key, value, oldValue, null);
+            this._put(key, value, oldValue);
         }
         for (const key of tx._removed) {
             // If this transaction has key in its originalValues, we use it.
@@ -194,35 +194,12 @@ class Transaction {
     }
 
     /**
-     * Internal method called to decode a single value.
-     * @param {*} value Value to be decoded.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
-     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
-     */
-    decode(value, codec=undefined) {
-        // shortcut to the commit backend (we don't need to go through the transaction stack for this)
-        return this._commitBackend.decode(value, codec);
-    }
-
-    /**
-     * Internal method called to encode a single value.
-     * @param {*} value Value to be encoded.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
-     * @returns {*} The encoded value, either by the object store's default or the overriding decoder if given.
-     */
-    encode(value, codec=undefined) {
-        // shortcut to the commit backend (we don't need to go through the transaction stack for this)
-        return this._commitBackend.encode(value, codec);
-    }
-
-    /**
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key, codec=undefined) {
+    async get(key) {
         // Order is as follows:
         // 1. check if removed,
         // 2. check if modified,
@@ -232,34 +209,33 @@ class Transaction {
             return undefined;
         }
         if (this._modified.has(key)) {
-            return this.decode(this._modified.get(key), codec);
+            return this._modified.get(key);
         }
         if (this._truncated) {
             return undefined;
         }
-        return await this._backend.get(key, codec);
+        return await this._backend.get(key);
     }
 
     /**
      * Inserts or replaces a key-value pair.
      * @param {string} key The primary key to associate the value with.
      * @param {*} value The value to write.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    async put(key, value, codec=undefined) {
+    async put(key, value) {
         if (this._state !== Transaction.STATE.OPEN) {
             throw 'Transaction already closed';
         }
 
-        const oldValue = await this.get(key, codec);
+        const oldValue = await this.get(key);
 
         // Save for indices.
         if (!this._originalValues.has(key)) {
             this._originalValues.set(key, oldValue);
         }
 
-        this._put(key, value, oldValue, codec);
+        this._put(key, value, oldValue);
     }
 
     /**
@@ -267,12 +243,11 @@ class Transaction {
      * @param {string} key The primary key to associate the value with.
      * @param {*} value The value to write.
      * @param {*} [oldValue] The old value associated with the key to update the indices (if applicable).
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @private
      */
-    _put(key, value, oldValue, codec=undefined) {
+    _put(key, value, oldValue) {
         this._removed.delete(key);
-        this._modified.set(key, this.encode(value, codec));
+        this._modified.set(key, value);
 
         // Update indices.
         for (const index of this._indices.values()) {
@@ -283,15 +258,14 @@ class Transaction {
     /**
      * Removes the key-value pair of the given key from the object store.
      * @param {string} key The primary key to delete along with the associated object.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
-    async remove(key, codec=undefined) {
+    async remove(key) {
         if (this._state !== Transaction.STATE.OPEN) {
             throw 'Transaction already closed';
         }
 
-        const oldValue = await this.get(key, codec);
+        const oldValue = await this.get(key);
         // Only remove if it exists.
         if (oldValue !== undefined) {
             // Save for indices.
@@ -349,17 +323,16 @@ class Transaction {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null, codec=undefined) {
+    async values(query=null) {
         if (query !== null && query instanceof Query) {
-            return query.values(this, codec);
+            return query.values(this);
         }
         const keys = await this.keys(query);
         const valuePromises = [];
         for (const key of keys) {
-            valuePromises.push(this.get(key, codec));
+            valuePromises.push(this.get(key));
         }
         return Promise.all(valuePromises);
     }
@@ -369,12 +342,11 @@ class Transaction {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async maxValue(query=null, codec=undefined) {
+    async maxValue(query=null) {
         const maxKey = await this.maxKey(query);
-        return this.get(maxKey, codec);
+        return this.get(maxKey);
     }
 
     /**
@@ -417,12 +389,11 @@ class Transaction {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {ICodec} [codec] Optional codec overriding the object store's default (null is the identity codec).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async minValue(query=null, codec=undefined) {
+    async minValue(query=null) {
         const minKey = await this.minKey(query);
-        return this.get(minKey, codec);
+        return this.get(minKey);
     }
 
     /**
