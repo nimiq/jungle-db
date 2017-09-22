@@ -216,4 +216,7 @@ class IObjectStore {
      * @returns {*} The encoded value, either by the object store's default or the overriding decoder if given.
      */
     encode(value, codec=undefined) {} // eslint-disable-line no-unused-vars
+
+    /** @type {boolean} */
+    get connected() {}  // eslint-disable-line no-unused-vars
 }

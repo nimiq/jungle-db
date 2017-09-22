@@ -12,6 +12,11 @@ class DefaultWrapper {
         this._store = store;
     }
 
+    /** @type {boolean} */
+    get connected() {
+        return this._store.connected;
+    }
+
     /**
      * A map of index names to indices.
      * The index names can be used to access an index.

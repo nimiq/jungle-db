@@ -10,6 +10,8 @@ global.Class = {
 global.JDB.Class = global.Class;
 
 require('../../generic/DummyBackend.js');
+require('../../generic/TestCodec.js');
+require('../../platform/nodejs/BinaryCodec.js');
 
 require('../../../main/generic/utils/BTree.js');
 require('../../../main/generic/utils/LRUMap.js');
@@ -19,6 +21,7 @@ require('../../../main/generic/utils/Synchronizer.js');
 require('../../../main/generic/utils/SetUtils.js');
 require('../../../main/generic/CachedBackend.js');
 require('../../../main/generic/InMemoryIndex.js');
+require('../../../main/generic/InMemoryBackend.js');
 require('../../../main/generic/KeyRange.js');
 require('../../../main/generic/ObjectStore.js');
 require('../../../main/generic/Query.js');

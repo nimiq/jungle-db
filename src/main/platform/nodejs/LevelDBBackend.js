@@ -31,6 +31,11 @@ class LevelDBBackend {
         this._codec = codec;
     }
 
+    /** @type {boolean} */
+    get connected() {
+        return this._db.connected;
+    }
+
     /**
      * Initialises the persisted indices of the object store.
      * @returns {Promise.<Array.<PersistentIndex>>} The list of indices.

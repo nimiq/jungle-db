@@ -43,6 +43,11 @@ class Transaction {
         }
     }
 
+    /** @type {boolean} */
+    get connected() {
+        return this._commitBackend.connected;
+    }
+
     /** @type {number} A unique transaction id. */
     get id() {
         return this._id;

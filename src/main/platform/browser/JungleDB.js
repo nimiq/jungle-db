@@ -108,7 +108,7 @@ class JungleDB {
      * @returns {IObjectStore}
      */
     static createVolatileObjectStore(codec=null) {
-        return new ObjectStore(new InMemoryBackend('', codec));
+        return new ObjectStore(new InMemoryBackend('', codec), this);
     }
 
     /**

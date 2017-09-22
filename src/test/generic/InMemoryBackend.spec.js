@@ -1,19 +1,17 @@
-describe('ObjectStore', () => {
-    let backend, objectStore;
+describe('Query', () => {
+    let objectStore;
 
     const setEqual = function(actual, expected) {
         return expected.equals(actual);
     };
 
     beforeEach((done) => {
-        backend = new DummyBackend();
-
-        objectStore = new JDB.ObjectStore(backend, backend);
+        objectStore = JDB.JungleDB.createVolatileObjectStore();
 
         (async function () {
             // Add 10 objects.
             for (let i=0; i<10; ++i) {
-                await backend.put(`key${i}`, `value${i}`);
+                await objectStore.put(`key${i}`, `value${i}`);
             }
         })().then(done, done.fail);
 
@@ -67,9 +65,6 @@ describe('ObjectStore', () => {
             expect(await tx3.get('key0')).toBe(undefined);
             expect(await tx3.get('test')).toBe('success');
             expect(await tx3.get('key1')).toBe('someval');
-            expect(await backend.get('key0')).toBe('value0'); // not yet written
-            expect(await backend.get('test')).toBe(undefined); // not yet written
-            expect(await backend.get('key1')).toBe('value1'); // not yet written
 
             // More changes
             await tx3.remove('key2');
@@ -96,10 +91,6 @@ describe('ObjectStore', () => {
             expect(await tx4.get('test')).toBe('success2');
             expect(await tx4.get('key1')).toBe('someval');
             expect(await tx4.get('key2')).toBe(undefined);
-            expect(await backend.get('key0')).toBe('value0'); // not yet written
-            expect(await backend.get('test')).toBe(undefined); // not yet written
-            expect(await backend.get('key1')).toBe('value1'); // not yet written
-            expect(await backend.get('key2')).toBe('value2'); // not yet written
 
             // Abort second transaction and commit empty fourth transaction.
             expect(await tx2.abort()).toBe(true);
@@ -107,13 +98,9 @@ describe('ObjectStore', () => {
             expect(tx4.state).toBe(JDB.Transaction.STATE.COMMITTED);
 
             // Now everything should be in the backend.
-            expect(await backend.get('key0')).toBe('someval');
             expect(await objectStore.get('key0')).toBe('someval');
-            expect(await backend.get('test')).toBe('success2');
             expect(await objectStore.get('test')).toBe('success2');
-            expect(await backend.get('key1')).toBe('someval');
             expect(await objectStore.get('key1')).toBe('someval');
-            expect(await backend.get('key2')).toBe(undefined);
             expect(await objectStore.get('key2')).toBe(undefined);
 
             // Create a fifth transaction, which should be based on the new state.
@@ -148,18 +135,15 @@ describe('ObjectStore', () => {
             // Create a third transaction, which should be based on tx1.
             const tx3 = objectStore.transaction();
             expect(await tx3.get('key0')).toBe(undefined);
-            expect(await backend.get('key0')).toBe('value0'); // not yet written
 
             // Should not be able to commit tx2.
             expect(await tx2.commit()).toBe(false);
             expect(tx2.state).toBe(JDB.Transaction.STATE.CONFLICTED);
-            expect(await backend.get('key0')).toBe('value0'); // not yet written
 
             // Abort third transaction.
             expect(await tx3.abort()).toBe(true);
 
             // Now tx1 should be in the backend.
-            expect(await backend.get('key0')).toBe(undefined);
             expect(await objectStore.get('key0')).toBe(undefined);
 
             // Create a fourth transaction, which should be based on the new state.

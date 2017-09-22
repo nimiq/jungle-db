@@ -15,6 +15,11 @@ class CachedBackend {
         this._cache = new LRUMap(CachedBackend.MAX_CACHE_SIZE);
     }
 
+    /** @type {boolean} */
+    get connected() {
+        return this._backend.connected;
+    }
+
     /**
      * A map of index names to indices as defined by the underlying backend.
      * The index names can be used to access an index.

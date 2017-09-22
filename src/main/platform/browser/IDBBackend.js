@@ -19,6 +19,11 @@ class IDBBackend {
         this._codec = codec;
     }
 
+    /** @type {boolean} */
+    get connected() {
+        return this._db.connected;
+    }
+
     /**
      * A map of index names to indices.
      * The index names can be used to access an index.

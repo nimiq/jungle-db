@@ -19,6 +19,11 @@ class InMemoryBackend {
         this._codec = codec;
     }
 
+    /** @type {boolean} */
+    get connected() {
+        return true;
+    }
+
     /**
      * @type {Map.<string,IIndex>}
      */
@@ -177,10 +182,10 @@ class InMemoryBackend {
         }
 
         for (const key of tx._removed) {
-            await this.remove(key);
+            await this.remove(key, null);
         }
         for (const [key, value] of tx._modified) {
-            await this.put(key, value);
+            await this.put(key, value, null);
         }
 
         // Update all indices.
@@ -256,6 +261,9 @@ class InMemoryBackend {
      * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
      */
     decode(value, codec=undefined) {
+        if (value === undefined) {
+            return undefined;
+        }
         if (codec !== undefined) {
             if (codec === null) {
                 return value;
@@ -263,7 +271,7 @@ class InMemoryBackend {
             return codec(value);
         }
         if (this._codec !== null && this._codec !== undefined) {
-            return this._codec(value);
+            return this._codec.decode(value);
         }
         return value;
     }
