@@ -282,5 +282,14 @@ class InMemoryBackend {
     get tableName() {
         return this._tableName;
     }
+
+    /**
+     * Creates a new transaction, ensuring read isolation
+     * on the most recently successfully committed state.
+     * @returns {Transaction} The transaction object.
+     */
+    transaction() {
+        throw 'Unsupported operation';
+    }
 }
 Class.register(InMemoryBackend);

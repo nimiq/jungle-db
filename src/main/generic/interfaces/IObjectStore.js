@@ -195,4 +195,12 @@ class IObjectStore {
 
     /** @type {boolean} */
     get connected() {}  // eslint-disable-line no-unused-vars
+
+    /**
+     * Creates a new transaction, ensuring read isolation
+     * on the most recently successfully committed state.
+     * @abstract
+     * @returns {Transaction} The transaction object.
+     */
+    transaction() {} // eslint-disable-line no-unused-vars
 }

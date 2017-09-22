@@ -328,7 +328,7 @@ class ObjectStore {
 
     /**
      * Creates a new transaction, ensuring read isolation
-     * on the most recently successfully commited state.
+     * on the most recently successfully committed state.
      * @returns {Transaction} The transaction object.
      */
     transaction() {

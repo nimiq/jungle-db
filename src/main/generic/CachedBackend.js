@@ -256,6 +256,15 @@ class CachedBackend {
     close() {
         return this._backend.close();
     }
+
+    /**
+     * Creates a new transaction, ensuring read isolation
+     * on the most recently successfully committed state.
+     * @returns {Transaction} The transaction object.
+     */
+    transaction() {
+        throw 'Unsupported operation';
+    }
 }
 /** @type {number} Maximum number of cached elements. */
 CachedBackend.MAX_CACHE_SIZE = 5000 /*elements*/;
