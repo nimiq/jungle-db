@@ -104,7 +104,7 @@ class JungleDB {
 
     /**
      * Creates a volatile object store (non-persistent).
-     * @param {ICodec} [codec] A default codec for the object store.
+     * @param {ICodec} [codec] A codec for the object store.
      * @returns {IObjectStore}
      */
     static createVolatileObjectStore(codec=null) {
@@ -118,7 +118,7 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
-     * @param {ICodec} [codec] A default codec for the object store.
+     * @param {ICodec} [codec] A codec for the object store.
      * @param {boolean} [persistent] If set to false, this object store is not persistent.
      * @returns {IObjectStore}
      */

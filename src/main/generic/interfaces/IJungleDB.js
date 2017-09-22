@@ -43,7 +43,7 @@ class IJungleDB {
      * the table does not exist yet.
      * @abstract
      * @param {string} tableName The name of the object store.
-     * @param {ICodec} [codec] A default codec for the object store.
+     * @param {ICodec} [codec] A codec for the object store.
      * @param {boolean} [persistent] If set to false, this object store is not persistent.
      * @returns {IObjectStore}
      */
@@ -60,7 +60,7 @@ class IJungleDB {
     /**
      * Creates a volatile object store (non-persistent).
      * @abstract
-     * @param {function(obj:*):*} [codec] A default decoder function for the object store.
+     * @param {function(obj:*):*} [codec] A codec for the object store.
      * @returns {IObjectStore}
      */
     static createVolatileObjectStore(codec=null) {}  // eslint-disable-line no-unused-vars
