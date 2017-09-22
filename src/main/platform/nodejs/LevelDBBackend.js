@@ -564,6 +564,15 @@ class LevelDBBackend {
         }
         return Promise.all(indexPromises);
     }
+
+    /**
+     * Creates a new transaction, ensuring read isolation
+     * on the most recently successfully committed state.
+     * @returns {Transaction} The transaction object.
+     */
+    transaction() {
+        throw 'Unsupported operation';
+    }
 }
 LevelDBBackend.MAX_INDEX_VERSION = 1000;
 Class.register(LevelDBBackend);

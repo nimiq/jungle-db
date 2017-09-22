@@ -409,5 +409,14 @@ class IDBBackend {
         // Nothing to do here, it is all done on the DB level.
         return this._db.close();
     }
+
+    /**
+     * Creates a new transaction, ensuring read isolation
+     * on the most recently successfully committed state.
+     * @returns {Transaction} The transaction object.
+     */
+    transaction() {
+        throw 'Unsupported operation';
+    }
 }
 Class.register(IDBBackend);

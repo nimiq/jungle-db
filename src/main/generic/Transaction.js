@@ -496,6 +496,15 @@ class Transaction {
     close() {
         return this.abort();
     }
+
+    /**
+     * Creates a new transaction, ensuring read isolation
+     * on the most recently successfully committed state.
+     * @returns {Transaction} The transaction object.
+     */
+    transaction() {
+        throw 'Unsupported operation';
+    }
 }
 /** @type {number} Milliseconds to wait until automatically aborting transaction. */
 Transaction.WATCHDOG_TIMER = 10000 /*ms*/;

@@ -214,4 +214,12 @@ class IObjectStore {
      * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
      */
     decodeArray(values, decoder=undefined) {} // eslint-disable-line no-unused-vars
+
+    /**
+     * Creates a new transaction, ensuring read isolation
+     * on the most recently successfully committed state.
+     * @abstract
+     * @returns {Transaction} The transaction object.
+     */
+    transaction() {} // eslint-disable-line no-unused-vars
 }
