@@ -21,8 +21,8 @@ const sources = {
             './src/main/platform/browser/PersistentIndex.js'
         ],
         node: [
-            './src/main/platform/nodejs/IndexTransaction.js',
             './src/main/platform/nodejs/utils/LevelDBTools.js',
+            './src/main/platform/nodejs/utils/IndexCodec.js',
             './src/main/platform/nodejs/LevelDBBackend.js',
             './src/main/platform/nodejs/JungleDB.js',
             './src/main/platform/nodejs/PersistentIndex.js'

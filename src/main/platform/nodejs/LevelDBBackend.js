@@ -1,5 +1,3 @@
-const levelup = require('levelup');
-
 /**
  * This is a wrapper around the levelup interface for the LevelDB.
  * It manages the access to a single table/object store.
@@ -10,19 +8,10 @@ class LevelDBBackend {
      * Creates a wrapper given a JungleDB, the table's name, the database directory and an encoding.
      * @param {JungleDB} db The JungleDB object managing the connection.
      * @param {string} tableName The table name this object store represents.
-     * @param {string} databaseDir The directory of the database. The object store is stored in there as a subfolder.
      * @param {ICodec} [codec] A default codec for the object store.
      */
-    constructor(db, tableName, databaseDir, codec=null) {
+    constructor(db, tableName, codec=null) {
         this._db = db;
-
-        this._databaseDirectory = databaseDir + tableName;
-        this._dbBackend = levelup(this._databaseDirectory, {
-            keyEncoding: 'ascii',
-            valueEncoding: codec === null ? JungleDB.JSON_ENCODING : codec.valueEncoding
-        });
-
-        this._indexVersion = 0;
 
         this._tableName = tableName;
         /** @type {Map.<string,PersistentIndex>} */
@@ -36,12 +25,36 @@ class LevelDBBackend {
         return this._db.connected;
     }
 
+    get _valueEncoding() {
+        return this._codec === null ? JungleDB.JSON_ENCODING : this._codec.valueEncoding;
+    }
+
+    /**
+     * Extends a batch operation with a tree transaction.
+     * @param {LevelDBBackend} backend The index backend.
+     * @param {TreeTransaction} treeTx The tree transaction.
+     */
+    static extendBatch(batch, backend, treeTx) {
+        // Shortcut if treeTx is null or undefined.
+        if (!treeTx) {
+            return;
+        }
+
+        batch.push({key: '_root', value: backend.encode(treeTx.root.id), type: 'put', prefix: backend._dbBackend, valueEncoding: backend._valueEncoding});
+        for (const node of treeTx.removed) {
+            batch.push({key: ''+node.id, type: 'del', prefix: backend._dbBackend, valueEncoding: backend._valueEncoding});
+        }
+        for (const node of treeTx.modified) {
+            batch.push({key: ''+node.id, value: backend.encode(node.toJSON()), type: 'put', prefix: backend._dbBackend, valueEncoding: backend._valueEncoding});
+        }
+    }
+
     /**
      * Initialises the persisted indices of the object store.
      * @returns {Promise.<Array.<PersistentIndex>>} The list of indices.
      */
     async init() {
-        this._indexVersion = (await this.get('_indexVersion')) || this._indexVersion;
+        this._dbBackend = this._db.backend.sublevel(this._tableName, { valueEncoding: this._valueEncoding });
         const indexPromises = [];
         for (const index of this._indices.values()) {
             indexPromises.push(index.init());
@@ -114,26 +127,20 @@ class LevelDBBackend {
      */
     async put(key, value) {
         const oldValue = await this.get(key);
-        return new Promise((resolve, error) => {
-            const batch = this._dbBackend.batch();
+        const batch = [];
 
-            this._indexVersion = (this._indexVersion + 1) % LevelDBBackend.MAX_INDEX_VERSION;
-            batch.put(key, this.encode(value));
-            batch.put('_indexVersion', this._indexVersion);
-            batch.write(err => {
+        batch.push({key: key, value: this.encode(value), type: 'put'});
+        for (const index of this._indices.values()) {
+            LevelDBBackend.extendBatch(batch, index.backend, index.put(key, value, oldValue));
+        }
+
+        return new Promise((resolve, error) => {
+            this._dbBackend.batch(batch, err => {
                 if (err) {
                     error(err);
                     return;
                 }
-
-                // Remove from all indices.
-                const indexPromises = [];
-                for (const index of this._indices.values()) {
-                    indexPromises.push(index.put(key, value, oldValue));
-                }
-                Promise.all(indexPromises).then(() => {
-                    resolve();
-                }).catch(error);
+                resolve();
             });
         });
     }
@@ -149,26 +156,20 @@ class LevelDBBackend {
         if (oldValue === undefined) {
             return Promise.resolve();
         }
-        return new Promise((resolve, error) => {
-            const batch = this._dbBackend.batch();
+        const batch = [];
 
-            this._indexVersion = (this._indexVersion + 1) % LevelDBBackend.MAX_INDEX_VERSION;
-            batch.del(key);
-            batch.put('_indexVersion', this._indexVersion);
-            batch.write(err => {
+        batch.push({key: key, type: 'del'});
+        for (const index of this._indices.values()) {
+            LevelDBBackend.extendBatch(batch, index.backend, index.remove(key, oldValue));
+        }
+
+        return new Promise((resolve, error) => {
+            this._dbBackend.batch(batch, err => {
                 if (err) {
                     error(err);
                     return;
                 }
-
-                // Remove from all indices.
-                const indexPromises = [];
-                for (const index of this._indices.values()) {
-                    indexPromises.push(index.remove(key, oldValue));
-                }
-                Promise.all(indexPromises).then(() => {
-                    resolve();
-                }).catch(error);
+                resolve();
             });
         });
     }
@@ -189,7 +190,7 @@ class LevelDBBackend {
             const result = [];
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false }))
                 .on('data', data => {
-                    result.push(this.decode(data.value));
+                    result.push(this.decode(data));
                 })
                 .on('error', err => {
                     error(err);
@@ -241,7 +242,7 @@ class LevelDBBackend {
         return new Promise((resolve, error) => {
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false, 'limit': 1, 'reverse': true }))
                 .on('data', data => {
-                    resolve(this.decode(data.value));
+                    resolve(this.decode(data));
                 })
                 .on('error', err => {
                     error(err);
@@ -279,7 +280,7 @@ class LevelDBBackend {
         return new Promise((resolve, error) => {
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false, 'limit': 1, 'reverse': false }))
                 .on('data', data => {
-                    resolve(this.decode(data.value));
+                    resolve(this.decode(data));
                 })
                 .on('error', err => {
                     error(err);
@@ -351,21 +352,6 @@ class LevelDBBackend {
         return this._tableName;
     }
 
-    /** @type {string} The database directory. */
-    get databaseDirectory() {
-        return this._databaseDirectory;
-    }
-
-    /** @type {number} The version number of the corresponding primary index. */
-    get indexVersion() {
-        return this._indexVersion;
-    }
-
-    /** @type {number} The version number of the database. */
-    get databaseVersion() {
-        return this._dbVersion;
-    }
-
     /**
      * Internally applies a transaction to the store's state.
      * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
@@ -378,33 +364,63 @@ class LevelDBBackend {
         if (tx._truncated) {
             await this.truncate();
         }
-        return new Promise((resolve, error) => {
-            this._indexVersion = (this._indexVersion + 1) % LevelDBBackend.MAX_INDEX_VERSION;
-            const batch = this._dbBackend.batch();
+        const batch = [];
 
-            for (const key of tx._removed) {
-                batch.del(key);
-            }
-            for (const [key, value] of tx._modified) {
-                batch.put(key, this.encode(value));
-            }
-            batch.put('_indexVersion', this._indexVersion);
-            batch.write(err => {
+        for (const key of tx._removed) {
+            batch.push({key: key, type: 'del'});
+        }
+        for (const [key, value] of tx._modified) {
+            batch.push({key: key, value: this.encode(value), type: 'put'});
+        }
+
+        for (const index of this._indices.values()) {
+            LevelDBBackend.extendBatch(batch, index.backend, await index._apply(tx));
+        }
+
+        return new Promise((resolve, error) => {
+            this._dbBackend.batch(batch, err => {
                 if (err) {
                     error(err);
                     return;
                 }
 
-                // Update all indices.
-                const indexPromises = [];
-                for (const index of this._indices.values()) {
-                    indexPromises.push(index._apply(tx));
-                }
-                Promise.all(indexPromises).then(() => {
-                    resolve(true);
-                }).catch(error);
+                resolve(true);
             });
         });
+    }
+
+    /**
+     * Truncates a sublevel object store.
+     * @param db A levelDB instance.
+     * @param {string} tableName A table's name.
+     * @returns {Promise.<void>}
+     */
+    static async truncate(db, tableName) {
+        const sub = db.sublevel(tableName);
+
+        const deletePromises = [];
+        await new Promise((resolve, error) => {
+            sub.createReadStream({ 'values': false, 'keys': true })
+                .on('data', data => {
+                    deletePromises.push(new Promise((resolveInner, errorInner) => {
+                        sub.del(data, err => {
+                            if (err) {
+                                errorInner(err);
+                                return;
+                            }
+                            resolveInner();
+                        });
+                    }));
+                })
+                .on('error', err => {
+                    error(err);
+                })
+                .on('end', () => {
+                    resolve();
+                });
+        });
+
+        return Promise.all(deletePromises);
     }
 
     /**
@@ -412,35 +428,20 @@ class LevelDBBackend {
      * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
-        await this._close();
-        await LevelDBBackend.destroy(this._databaseDirectory);
-        this._dbBackend = levelup(this._databaseDirectory, {
-            keyEncoding: 'ascii',
-            valueEncoding: this._valueEncoding
-        });
-
+        const deletePromises = [LevelDBBackend.truncate(this._db.backend, this._tableName)];
         // Truncate all indices.
-        const indexPromises = [];
         for (const index of this._indices.values()) {
-            indexPromises.push(index.truncate());
+            deletePromises.push(index.truncate());
         }
-        return Promise.all(indexPromises);
+        return Promise.all(deletePromises);
     }
 
     /**
      * Fully deletes the object store and its indices.
      * @returns {Promise} The promise resolves after deleting the object store and its indices.
      */
-    async destroy() {
-        await this._close();
-        await LevelDBBackend.destroy(this._databaseDirectory);
-
-        // Truncate all indices.
-        const indexPromises = [];
-        for (const index of this._indices.values()) {
-            indexPromises.push(index.destroy());
-        }
-        return Promise.all(indexPromises);
+    destroy() {
+        return this.truncate();
     }
 
     /**
@@ -516,7 +517,7 @@ class LevelDBBackend {
     createIndex(indexName, keyPath, multiEntry=false) {
         if (this._db.connected) throw 'Cannot create index while connected';
         keyPath = keyPath || indexName;
-        const index = new PersistentIndex(this, indexName, keyPath, multiEntry);
+        const index = new PersistentIndex(this, this._db, indexName, keyPath, multiEntry);
         this._indices.set(indexName, index);
     }
 
@@ -553,5 +554,4 @@ class LevelDBBackend {
         throw 'Unsupported operation';
     }
 }
-LevelDBBackend.MAX_INDEX_VERSION = 1000;
 Class.register(LevelDBBackend);
