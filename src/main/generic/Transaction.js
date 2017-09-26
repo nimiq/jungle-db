@@ -523,7 +523,9 @@ class Transaction {
 
     /**
      * Creates a nested transaction, ensuring read isolation.
-     * For a read isolated transaction, this method has to be called on the main object store.
+     * This makes the current transaction read-only until all sub-transactions have been closed (committed/aborted).
+     * The same semantic for commits applies: Only the first transaction that commits will be applied. Subsequent transactions will be conflicted.
+     * This behaviour has one exception: If all nested transactions are closed, the outer transaction returns to a normal state and new nested transactions can again be created and committed.
      * @returns {Transaction} The transaction object.
      */
     transaction() {
