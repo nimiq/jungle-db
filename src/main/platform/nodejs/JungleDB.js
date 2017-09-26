@@ -1,5 +1,3 @@
-const fs = require('fs');
-
 /**
  * @implements {IJungleDB}
  */
@@ -25,8 +23,11 @@ class JungleDB {
         this._objectStoreBackends = [];
         this._objectStoresToDelete = [];
 
-        if (!fs.existsSync(this._databaseDir)){
-            fs.mkdirSync(this._databaseDir);
+        if (!JungleDB._fs) {
+            JungleDB._fs = require('fs');
+        }
+        if (!JungleDB._fs.existsSync(this._databaseDir)){
+            JungleDB._fs.mkdirSync(this._databaseDir);
         }
     }
 
@@ -37,7 +38,7 @@ class JungleDB {
      */
     _readDBVersion() {
         return new Promise((resolve, reject) => {
-            fs.readFile(`${this._databaseDir}.dbVersion`, 'utf8', (err, data) => {
+            JungleDB._fs.readFile(`${this._databaseDir}.dbVersion`, 'utf8', (err, data) => {
                 if (err) {
                     resolve(-1);
                     return;
@@ -54,7 +55,7 @@ class JungleDB {
      */
     _writeDBVersion(version) {
         return new Promise((resolve, reject) => {
-            fs.writeFile(`${this._databaseDir}.dbVersion`, `${version}`, 'utf8', err => {
+            JungleDB._fs.writeFile(`${this._databaseDir}.dbVersion`, `${version}`, 'utf8', err => {
                 if (err) {
                     reject(err);
                     return;
@@ -93,7 +94,7 @@ class JungleDB {
      * @returns {Promise} The promise resolves after deleting the database.
      */
     async destroy() {
-        fs.unlinkSync(`${this._databaseDir}.dbVersion`);
+        JungleDB._fs.unlinkSync(`${this._databaseDir}.dbVersion`);
         const promises = [];
         // Create new ObjectStores.
         for (const objStore of this._objectStoreBackends) {
