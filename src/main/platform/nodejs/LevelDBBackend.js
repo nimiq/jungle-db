@@ -1,4 +1,5 @@
 const levelup = require('levelup');
+const fs = require('fs');
 
 /**
  * This is a wrapper around the levelup interface for the LevelDB.
@@ -17,6 +18,9 @@ class LevelDBBackend {
         this._db = db;
 
         this._databaseDirectory = databaseDir + tableName;
+        if (!fs.existsSync(this._databaseDirectory)){
+            fs.mkdirSync(this._databaseDirectory);
+        }
         this._dbBackend = levelup(this._databaseDirectory, {
             keyEncoding: 'ascii',
             valueEncoding: codec === null ? JungleDB.JSON_ENCODING : codec.valueEncoding

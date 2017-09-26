@@ -24,6 +24,10 @@ class JungleDB {
         this._objectStores = new Map();
         this._objectStoreBackends = [];
         this._objectStoresToDelete = [];
+
+        if (!fs.existsSync(this._databaseDir)){
+            fs.mkdirSync(this._databaseDir);
+        }
     }
 
     /**
@@ -105,10 +109,6 @@ class JungleDB {
      * @private
      */
     async _initDB() {
-        if (!fs.existsSync(this._databaseDir)){
-            fs.mkdirSync(this._databaseDir);
-        }
-
         const storedVersion = await this._readDBVersion();
         let promises = [];
         // Upgrade database.
