@@ -129,4 +129,29 @@ describe('Transaction', () => {
             expect(subValue(await index.minValues(JDB.KeyRange.lowerBound(5, true)))).toEqual(new Set(['newValue6']));
         })().then(done, done.fail);
     });
+
+    it('does not allow changing nested transactions', (done) => {
+        (async function () {
+            const tx1 = tx.transaction();
+
+            // Should not be able to remove a key in the outer transaction.
+            try {
+                await tx.remove('key0');
+                done.fail('did not throw when changing outer tx');
+            } catch (e) {
+                // all ok
+            }
+        })().then(done, done.fail);
+    });
+
+    it('does apply nested transactions', (done) => {
+        (async function () {
+            const tx1 = tx.transaction();
+
+            await tx1.put('test', 'foobar');
+            expect(await tx.get('test')).toBeUndefined();
+            expect(await tx1.commit()).toBe(true);
+            expect(await tx.get('test')).toBe('foobar');
+        })().then(done, done.fail);
+    });
 });
