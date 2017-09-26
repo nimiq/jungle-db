@@ -35,6 +35,11 @@ class ObjectStore {
         this._closedBaseStates = new Set();
     }
 
+    /** @type {boolean} */
+    get connected() {
+        return this._backend.connected;
+    }
+
     /** @type {IObjectStore} */
     get _currentState() {
         return this._stateStack.length > 0 ? this._stateStack[this._stateStack.length - 1] : this._backend;
@@ -51,7 +56,7 @@ class ObjectStore {
      * @type {Map.<string,IIndex>}
      */
     get indices() {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         return this._currentState.indices;
     }
 
@@ -59,12 +64,11 @@ class ObjectStore {
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    get(key, decoder=undefined) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
-        return this._currentState.get(key, decoder);
+    get(key) {
+        if (!this._backend.connected) throw 'JungleDB is not connected';
+        return this._currentState.get(key);
     }
 
     /**
@@ -75,7 +79,7 @@ class ObjectStore {
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async put(key, value) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         const tx = this.transaction();
         await tx.put(key, value);
         return tx.commit();
@@ -88,7 +92,7 @@ class ObjectStore {
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async remove(key) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         const tx = this.transaction();
         await tx.remove(key);
         return tx.commit();
@@ -103,7 +107,7 @@ class ObjectStore {
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to the query.
      */
     keys(query=null) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         if (query !== null && query instanceof Query) {
             return query.keys(this._currentState);
         }
@@ -116,15 +120,14 @@ class ObjectStore {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    values(query=null, decoder=undefined) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+    values(query=null) {
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         if (query !== null && query instanceof Query) {
-            return query.values(this._currentState, decoder);
+            return query.values(this._currentState);
         }
-        return this._currentState.values(query, decoder);
+        return this._currentState.values(query);
     }
 
     /**
@@ -132,12 +135,11 @@ class ObjectStore {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    maxValue(query=null, decoder=undefined) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
-        return this._currentState.maxValue(query, decoder);
+    maxValue(query=null) {
+        if (!this._backend.connected) throw 'JungleDB is not connected';
+        return this._currentState.maxValue(query);
     }
 
     /**
@@ -148,7 +150,7 @@ class ObjectStore {
      * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     maxKey(query=null) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         return this._currentState.maxKey(query);
     }
 
@@ -160,7 +162,7 @@ class ObjectStore {
      * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     minKey(query=null) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         return this._currentState.minKey(query);
     }
 
@@ -169,12 +171,11 @@ class ObjectStore {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    minValue(query=null, decoder=undefined) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
-        return this._currentState.minValue(query, decoder);
+    minValue(query=null) {
+        if (!this._backend.connected) throw 'JungleDB is not connected';
+        return this._currentState.minValue(query);
     }
 
     /**
@@ -185,7 +186,7 @@ class ObjectStore {
      * @returns {Promise.<number>}
      */
     count(query=null) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         return this._currentState.count(query);
     }
 
@@ -200,7 +201,7 @@ class ObjectStore {
      * @protected
      */
     async commit(tx) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         if (!(tx instanceof Transaction) || tx.state !== Transaction.STATE.OPEN || !this._txBaseStates.has(tx.id)) {
             throw 'Can only commit open transactions';
         }
@@ -238,7 +239,7 @@ class ObjectStore {
      * @protected
      */
     async abort(tx) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         if (!(tx instanceof Transaction) || tx.state !== Transaction.STATE.OPEN || !this._txBaseStates.has(tx.id)) {
             throw 'Can only abort open transactions';
         }
@@ -292,7 +293,7 @@ class ObjectStore {
      * @returns {IIndex} The index associated with the given name.
      */
     index(indexName) {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         return this._currentState.index(indexName);
     }
 
@@ -331,7 +332,7 @@ class ObjectStore {
      * @returns {Transaction} The transaction object.
      */
     transaction() {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         const tx = new Transaction(this._currentState, this);
         this._txBaseStates.set(tx.id, this._currentStateId);
         this._openTransactions[this._currentStateId] = this._openTransactions[this._currentStateId] ? this._openTransactions[this._currentStateId] + 1 : 1;
@@ -354,7 +355,7 @@ class ObjectStore {
      * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
-        if (!this._db.connected) throw 'JungleDB is not connected';
+        if (!this._backend.connected) throw 'JungleDB is not connected';
         const tx = this.transaction();
         await tx.truncate();
         return tx.commit();
@@ -370,26 +371,6 @@ class ObjectStore {
             throw 'Cannot close database while transactions are active';
         }
         return this._backend.close();
-    }
-
-    /**
-     * Internal method called to decode a single value.
-     * @param {*} value Value to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
-     */
-    decode(value, decoder=undefined) {
-        return this._backend.decode(value, decoder);
-    }
-
-    /**
-     * Internal method called to decode multiple values.
-     * @param {Array.<*>} values Values to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
-     */
-    decodeArray(values, decoder=undefined) {
-        return this._backend.decodeArray(values, decoder);
     }
 }
 /** @type {number} The maximum number of states to stack. */

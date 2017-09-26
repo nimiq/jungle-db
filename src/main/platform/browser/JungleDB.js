@@ -104,11 +104,11 @@ class JungleDB {
 
     /**
      * Creates a volatile object store (non-persistent).
-     * @param {function(obj:*):*} [decoder] A default decoder function for the object store.
+     * @param {ICodec} [codec] A codec for the object store.
      * @returns {IObjectStore}
      */
-    static createVolatileObjectStore(decoder=null) {
-        return new ObjectStore(new InMemoryBackend('', decoder));
+    static createVolatileObjectStore(codec=null) {
+        return new ObjectStore(new InMemoryBackend('', codec), this);
     }
 
     /**
@@ -118,20 +118,20 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default.
+     * @param {ICodec} [codec] A codec for the object store.
      * @param {boolean} [persistent] If set to false, this object store is not persistent.
      * @returns {IObjectStore}
      */
-    createObjectStore(tableName, decoder=null, persistent=true) {
+    createObjectStore(tableName, codec=null, persistent=true) {
         if (this._connected) throw 'Cannot create ObjectStore while connected';
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
         }
         const backend = persistent
-            ? new IDBBackend(this, tableName, decoder)
-            : new InMemoryBackend(tableName, decoder);
+            ? new IDBBackend(this, tableName, codec)
+            : new InMemoryBackend(tableName, codec);
         const cachedBackend = new CachedBackend(backend);
-        const objStore = new ObjectStore(cachedBackend, this, decoder);
+        const objStore = new ObjectStore(cachedBackend, this);
         this._objectStores.set(tableName, objStore);
         this._objectStoreBackends.set(tableName, backend);
         return objStore;

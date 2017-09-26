@@ -12,6 +12,11 @@ class DefaultWrapper {
         this._store = store;
     }
 
+    /** @type {boolean} */
+    get connected() {
+        return this._store.connected;
+    }
+
     /**
      * A map of index names to indices.
      * The index names can be used to access an index.
@@ -25,11 +30,10 @@ class DefaultWrapper {
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key, decoder=undefined) {
-        return this._store.get(key, decoder);
+    async get(key) {
+        return this._store.get(key);
     }
 
     /**
@@ -69,11 +73,10 @@ class DefaultWrapper {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null, decoder=undefined) {
-        return this._store.values(query, decoder);
+    async values(query=null) {
+        return this._store.values(query);
     }
 
     /**
@@ -81,11 +84,10 @@ class DefaultWrapper {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async maxValue(query=null, decoder=undefined) {
-        return this._store.maxValue(query, decoder);
+    async maxValue(query=null) {
+        return this._store.maxValue(query);
     }
 
     /**
@@ -115,11 +117,10 @@ class DefaultWrapper {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async minValue(query=null, decoder=undefined) {
-        return this._store.minValue(query, decoder);
+    async minValue(query=null) {
+        return this._store.minValue(query);
     }
 
     /**
@@ -202,7 +203,7 @@ class DefaultWrapper {
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
      */
-    async createIndex(indexName, keyPath, multiEntry=false) {
+    createIndex(indexName, keyPath, multiEntry=false) {
         return this._store.createIndex(indexName, keyPath, multiEntry);
     }
 
@@ -221,26 +222,6 @@ class DefaultWrapper {
      */
     async close() {
         return this._store.close();
-    }
-
-    /**
-     * Internal method called to decode a single value.
-     * @param {*} value Value to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
-     */
-    decode(value, decoder=undefined) {
-        return this._store.decode(value, decoder);
-    }
-
-    /**
-     * Internal method called to decode multiple values.
-     * @param {Array.<*>} values Values to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
-     */
-    decodeArray(values, decoder=undefined) {
-        return this._store.decodeArray(values, decoder);
     }
 
     /**

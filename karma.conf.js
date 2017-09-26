@@ -17,6 +17,8 @@ module.exports = function (config) {
         files: [
             'dist/web.js',
             'src/test/**/DummyBackend.js',
+            'src/test/generic/TestCodec.js',
+            'src/test/platform/browser/BinaryCodec.js',
             'src/test/generic/**/*.spec.js',
             'src/test/platform/browser/**/*.spec.js'
         ],

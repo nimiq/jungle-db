@@ -187,14 +187,13 @@ class Query {
     /**
      * Returns a promise of an array of objects fulfilling this query.
      * @param {IObjectStore} objectStore The object store to execute the query on.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to this query.
      */
-    async values(objectStore, decoder=undefined) {
+    async values(objectStore) {
         const keys = await this._execute(objectStore);
         const resultPromises = [];
         for (const key of keys) {
-            resultPromises.push(objectStore.get(key, decoder));
+            resultPromises.push(objectStore.get(key));
         }
         return Promise.all(resultPromises);
     }

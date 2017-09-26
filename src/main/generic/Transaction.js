@@ -43,6 +43,11 @@ class Transaction {
         }
     }
 
+    /** @type {boolean} */
+    get connected() {
+        return this._commitBackend.connected;
+    }
+
     /** @type {number} A unique transaction id. */
     get id() {
         return this._id;
@@ -189,35 +194,12 @@ class Transaction {
     }
 
     /**
-     * Internal method called to decode a single value.
-     * @param {*} value Value to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
-     */
-    decode(value, decoder=undefined) {
-        // shortcut to the commit backend (we don't need to go through the transaction stack for this)
-        return this._commitBackend.decode(value, decoder);
-    }
-
-    /**
-     * Internal method called to decode multiple values.
-     * @param {Array.<*>} values Values to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
-     */
-    decodeArray(values, decoder=undefined) {
-        // shortcut to the commit backend (we don't need to go through the transaction stack for this)
-        return this._commitBackend.decodeArray(values, decoder);
-    }
-
-    /**
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key, decoder=undefined) {
+    async get(key) {
         // Order is as follows:
         // 1. check if removed,
         // 2. check if modified,
@@ -227,12 +209,12 @@ class Transaction {
             return undefined;
         }
         if (this._modified.has(key)) {
-            return this.decode(this._modified.get(key), decoder);
+            return this._modified.get(key);
         }
         if (this._truncated) {
             return undefined;
         }
-        return await this._backend.get(key, decoder);
+        return await this._backend.get(key);
     }
 
     /**
@@ -246,7 +228,7 @@ class Transaction {
             throw 'Transaction already closed';
         }
 
-        const oldValue = await this.get(key, null);
+        const oldValue = await this.get(key);
 
         // Save for indices.
         if (!this._originalValues.has(key)) {
@@ -283,7 +265,7 @@ class Transaction {
             throw 'Transaction already closed';
         }
 
-        const oldValue = await this.get(key, null);
+        const oldValue = await this.get(key);
         // Only remove if it exists.
         if (oldValue !== undefined) {
             // Save for indices.
@@ -341,17 +323,16 @@ class Transaction {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null, decoder=undefined) {
+    async values(query=null) {
         if (query !== null && query instanceof Query) {
             return query.values(this);
         }
         const keys = await this.keys(query);
         const valuePromises = [];
         for (const key of keys) {
-            valuePromises.push(this.get(key, decoder));
+            valuePromises.push(this.get(key));
         }
         return Promise.all(valuePromises);
     }
@@ -361,12 +342,11 @@ class Transaction {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async maxValue(query=null, decoder=undefined) {
+    async maxValue(query=null) {
         const maxKey = await this.maxKey(query);
-        return this.get(maxKey, decoder);
+        return this.get(maxKey);
     }
 
     /**
@@ -409,12 +389,11 @@ class Transaction {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async minValue(query=null, decoder=undefined) {
+    async minValue(query=null) {
         const minKey = await this.minKey(query);
-        return this.get(minKey, decoder);
+        return this.get(minKey);
     }
 
     /**
@@ -478,7 +457,7 @@ class Transaction {
     /**
      * This method is not implemented for transactions.
      */
-    async createIndex() {
+    createIndex() {
         throw 'Cannot create index in transaction';
     }
 

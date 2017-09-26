@@ -15,6 +15,11 @@ class CachedBackend {
         this._cache = new LRUMap(CachedBackend.MAX_CACHE_SIZE);
     }
 
+    /** @type {boolean} */
+    get connected() {
+        return this._backend.connected;
+    }
+
     /**
      * A map of index names to indices as defined by the underlying backend.
      * The index names can be used to access an index.
@@ -27,36 +32,15 @@ class CachedBackend {
     /**
      * A helper method to retrieve the values corresponding to a set of keys.
      * @param {Set.<string>} keys The set of keys to get the corresponding values for.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of values.
      * @protected
      */
-    async _retrieveValues(keys, decoder=undefined) {
+    async _retrieveValues(keys) {
         const valuePromises = [];
         for (const key of keys) {
-            valuePromises.push(this.get(key, decoder));
+            valuePromises.push(this.get(key));
         }
         return Promise.all(valuePromises);
-    }
-
-    /**
-     * Internal method called to decode a single value.
-     * @param {*} value Value to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
-     */
-    decode(value, decoder=undefined) {
-        return this._backend.decode(value, decoder);
-    }
-
-    /**
-     * Internal method called to decode multiple values.
-     * @param {Array.<*>} values Values to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
-     */
-    decodeArray(values, decoder=undefined) {
-        return this._backend.decodeArray(values, decoder);
     }
 
     /**
@@ -65,16 +49,15 @@ class CachedBackend {
      * Otherwise, the value will be fetched from the backend object store..
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key, decoder=undefined) {
+    async get(key) {
         if (this._cache.has(key)) {
-            return this.decode(this._cache.get(key), decoder);
+            return this._cache.get(key);
         }
-        const value = await this._backend.get(key, null);
+        const value = await this._backend.get(key);
         this._cache.set(key, value);
-        return this.decode(value, decoder);
+        return value;
     }
 
     /**
@@ -117,12 +100,11 @@ class CachedBackend {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null, decoder=undefined) {
+    async values(query=null) {
         const keys = await this.keys(query);
-        return this._retrieveValues(keys, decoder);
+        return this._retrieveValues(keys);
     }
 
     /**
@@ -130,12 +112,10 @@ class CachedBackend {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async maxValue(query=null, decoder=undefined) {
-        const key = await this.maxKey(query);
-        return this.get(key, decoder);
+    maxValue(query=null) {
+        return this._backend.maxValue(query);
     }
 
     /**
@@ -165,12 +145,10 @@ class CachedBackend {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async minValue(query=null, decoder=undefined) {
-        const key = await this.minKey(query);
-        return this.get(key, decoder);
+    minValue(query=null) {
+        return this._backend.minValue(query);
     }
 
     /**

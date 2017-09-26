@@ -37,6 +37,7 @@ const sources = {
         './src/main/generic/utils/Synchronizer.js',
         './src/main/generic/CachedBackend.js',
         './src/main/generic/InMemoryIndex.js',
+        './src/main/generic/InMemoryBackend.js',
         './src/main/generic/KeyRange.js',
         './src/main/generic/ObjectStore.js',
         './src/main/generic/Query.js',
@@ -49,6 +50,8 @@ const sources = {
             './src/test/generic/**/*.spec.js'
         ],
         browser: [
+            './src/test/generic/TestCodec.js',
+            './src/test/platform/browser/BinaryCodec.js',
             './src/test/platform/browser/**/*.spec.js'
         ]
     },

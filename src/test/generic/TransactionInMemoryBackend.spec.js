@@ -1,5 +1,5 @@
-describe('Transaction', () => {
-    let backend, tx, allKeys, allValues;
+describe('Transaction with InMemoryBackend', () => {
+    let objectStore, tx, allKeys, allValues;
 
     const setEqual = function(actual, expected) {
         return expected.equals(actual);
@@ -16,22 +16,23 @@ describe('Transaction', () => {
     }
 
     beforeEach((done) => {
-        backend = new DummyBackend();
+        objectStore = JDB.JungleDB.createVolatileObjectStore();
         allKeys = new Set();
         allValues = new Set();
 
         (async function () {
-            backend.createIndex('i');
-            tx = new JDB.Transaction(backend, backend, false);
+            objectStore.createIndex('i');
 
             // Add 10 objects.
             for (let i=0; i<10; ++i) {
-                await backend.put(`key${i}`, { i: i, sub: `value${i}` });
+                await objectStore.put(`key${i}`, { i: i, sub: `value${i}` });
                 if (i > 0 && i < 5) {
                     allKeys.add(`key${i}`);
                     allValues.add(`value${i}`);
                 }
             }
+
+            tx = objectStore.transaction();
 
             for (let i=5; i<15; ++i) {
                 await tx.put(`key${i}`, { i: i, sub: `newValue${i}` });

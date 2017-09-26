@@ -1,6 +1,6 @@
 /**
  * This class represents a wrapper around the IndexedDB indices.
- * @implements IIndex
+ * @implements {IIndex}
  */
 class PersistentIndex {
     /**
@@ -61,15 +61,14 @@ class PersistentIndex {
      * If the optional query is not given, it returns all objects in the index.
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
      * @param {KeyRange} [query] Optional query to check secondary keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null, decoder=undefined) {
+    async values(query=null) {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const getRequest = this._index(db).getAll(query);
-            getRequest.onsuccess = () => resolve(this._objectStore.decodeArray(getRequest.result, decoder));
+            getRequest.onsuccess = () => resolve(this._objectStore.decodeArray(getRequest.result));
             getRequest.onerror = () => reject(getRequest.error);
         });
     }
@@ -96,15 +95,14 @@ class PersistentIndex {
      * If the optional query is not given, it returns the objects whose secondary key is maximal within the index.
      * If the query is of type KeyRange, it returns the objects whose secondary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
-    async maxValues(query=null, decoder=undefined) {
+    async maxValues(query=null) {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const request = this._index(db).openCursor(query, 'prev');
-            request.onsuccess = () => resolve(request.result ? this._objectStore.decodeArray(request.result.value, decoder) : []);
+            request.onsuccess = () => resolve(request.result ? this._objectStore.decodeArray(request.result.value) : []);
             request.onerror = () => reject(request.error);
         });
     }
@@ -131,15 +129,14 @@ class PersistentIndex {
      * If the optional query is not given, it returns the objects whose secondary key is minimal within the index.
      * If the query is of type KeyRange, it returns the objects whose secondary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
-    async minValues(query=null, decoder=undefined) {
+    async minValues(query=null) {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const request = this._index(db).openCursor(query, 'next');
-            request.onsuccess = () => resolve(request.result ? this._objectStore.decodeArray(request.result.value, decoder) : []);
+            request.onsuccess = () => resolve(request.result ? this._objectStore.decodeArray(request.result.value) : []);
             request.onerror = () => reject(request.error);
         });
     }

@@ -8,7 +8,7 @@
  * @implements {IObjectStore}
  */
 class InMemoryBackend {
-    constructor(tableName, decoder=null) {
+    constructor(tableName, codec=null) {
         this._cache = new Map();
 
         /** @type {Map.<string,PersistentIndex>} */
@@ -16,7 +16,12 @@ class InMemoryBackend {
 
         this._primaryIndex = new InMemoryIndex(this, undefined, false, true);
         this._tableName = tableName;
-        this._decoder = decoder;
+        this._codec = codec;
+    }
+
+    /** @type {boolean} */
+    get connected() {
+        return true;
     }
 
     /**
@@ -28,11 +33,10 @@ class InMemoryBackend {
 
     /**
      * @param {string} key
-     * @param {function(obj:*):*} [decoder]
      * @returns {Promise.<*>}
      */
-    async get(key, decoder=undefined) {
-        return this.decode(this._cache.get(key), decoder);
+    async get(key) {
+        return this.decode(this._cache.get(key));
     }
 
     /**
@@ -42,7 +46,7 @@ class InMemoryBackend {
      */
     async put(key, value) {
         const oldValue = await this.get(key);
-        this._cache.set(key, value);
+        this._cache.set(key, this.encode(value));
         const indexPromises = [
             this._primaryIndex.put(key, value, oldValue)
         ];
@@ -70,16 +74,15 @@ class InMemoryBackend {
 
     /**
      * @param {Query|KeyRange} [query]
-     * @param {function(obj:*):*} [decoder]
      * @returns {Promise.<Array.<*>>}
      */
-    async values(query=null, decoder=undefined) {
+    async values(query=null) {
         if (query !== null && query instanceof Query) {
             return query.values(this);
         }
         const values = [];
         for (const key of this.keys(query)) {
-            values.push(await this.get(key, decoder));
+            values.push(await this.get(key));
         }
         return Promise.resolve(values);
     }
@@ -97,12 +100,11 @@ class InMemoryBackend {
 
     /**
      * @param {KeyRange} [query]
-     * @param {function(obj:*):*} [decoder]
      * @returns {Promise.<*>}
      */
-    async maxValue(query=null, decoder=undefined) {
+    async maxValue(query=null) {
         const maxKey = await this.maxKey(query);
-        return this.get(maxKey, decoder);
+        return this.get(maxKey);
     }
 
     /**
@@ -116,12 +118,11 @@ class InMemoryBackend {
 
     /**
      * @param {KeyRange} [query]
-     * @param {function(obj:*):*} [decoder]
      * @returns {Promise.<*>}
      */
-    async minValue(query=null, decoder=undefined) {
+    async minValue(query=null) {
         const minKey = await this.minKey(query);
-        return this.get(minKey, decoder);
+        return this.get(minKey);
     }
 
     /**
@@ -175,10 +176,10 @@ class InMemoryBackend {
         }
 
         for (const key of tx._removed) {
-            await this.remove(key);
+            await this._cache.delete(key);
         }
         for (const [key, value] of tx._modified) {
-            await this.put(key, value);
+            await this._cache.set(key, this.encode(value));
         }
 
         // Update all indices.
@@ -241,7 +242,7 @@ class InMemoryBackend {
      * @param {string|Array.<string>} [keyPath]
      * @param {boolean} [multiEntry]
      */
-    async createIndex(indexName, keyPath, multiEntry=false) {
+    createIndex(indexName, keyPath, multiEntry=false) {
         keyPath = keyPath || indexName;
         const index = new InMemoryIndex(this, keyPath, multiEntry);
         this._indices.set(indexName, index);
@@ -250,42 +251,31 @@ class InMemoryBackend {
     /**
      * Internal method called to decode a single value.
      * @param {*} value Value to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
+     * @returns {*} The decoded value.
      */
-    decode(value, decoder=undefined) {
-        if (decoder !== undefined) {
-            if (decoder === null) {
-                return value;
-            }
-            return decoder(value);
+    decode(value) {
+        if (value === undefined) {
+            return undefined;
         }
-        if (this._decoder !== null && this._decoder !== undefined) {
-            return this._decoder(value);
+        if (this._codec !== null && this._codec !== undefined) {
+            return this._codec.decode(value);
         }
         return value;
     }
 
     /**
-     * Internal method called to decode multiple values.
-     * @param {Array.<*>} values Values to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
+     * Internal method called to encode a single value.
+     * @param {*} value Value to be encoded.
+     * @returns {*} The encoded value.
      */
-    decodeArray(values, decoder=undefined) {
-        if (!Array.isArray(values)) {
-            return this.decode(values, decoder);
+    encode(value) {
+        if (value === undefined) {
+            return undefined;
         }
-        if (decoder !== undefined) {
-            if (decoder === null) {
-                return values;
-            }
-            return values.map(decoder);
+        if (this._codec !== null && this._codec !== undefined) {
+            return this._codec.encode(value);
         }
-        if (this._decoder !== null && this._decoder !== undefined) {
-            return values.map(this._decoder);
-        }
-        return values;
+        return value;
     }
 
     /** @type {string} The own table name. */

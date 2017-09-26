@@ -8,15 +8,20 @@ class IDBBackend {
      * Creates a wrapper given a JungleDB object and table name.
      * @param {JungleDB} db The JungleDB object managing the connection.
      * @param {string} tableName THe table name this object store represents.
-     * @param {function(obj:*):*} [decoder] Optional decoder function for the object store (null is the identity decoder).
+     * @param {ICodec} [codec] Optional codec applied before storing/retrieving values in/from the backend (null is the identity codec).
      */
-    constructor(db, tableName, decoder=null) {
+    constructor(db, tableName, codec=null) {
         this._db = db;
         this._tableName = tableName;
         /** @type {Map.<string,IIndex>} */
         this._indices = new Map();
         this._indicesToDelete = [];
-        this._decoder = decoder;
+        this._codec = codec;
+    }
+
+    /** @type {boolean} */
+    get connected() {
+        return this._db.connected;
     }
 
     /**
@@ -49,21 +54,29 @@ class IDBBackend {
     /**
      * Internal method called to decode a single value.
      * @param {*} value Value to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
-     * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
+     * @returns {*} The decoded value.
      */
-    decode(value, decoder=undefined) {
+    decode(value) {
         if (value === undefined) {
             return undefined;
         }
-        if (decoder !== undefined) {
-            if (decoder === null) {
-                return value;
-            }
-            return decoder(value);
+        if (this._codec !== null && this._codec !== undefined) {
+            return this._codec.decode(value);
         }
-        if (this._decoder !== null && this._decoder !== undefined) {
-            return this._decoder(value);
+        return value;
+    }
+
+    /**
+     * Internal method called to encode a single value.
+     * @param {*} value Value to be encoded.
+     * @returns {*} The encoded value.
+     */
+    encode(value) {
+        if (value === undefined) {
+            return undefined;
+        }
+        if (this._codec !== null && this._codec !== undefined) {
+            return this._codec.encode(value);
         }
         return value;
     }
@@ -71,21 +84,14 @@ class IDBBackend {
     /**
      * Internal method called to decode multiple values.
      * @param {Array.<*>} values Values to be decoded.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
      */
-    decodeArray(values, decoder=undefined) {
+    decodeArray(values) {
         if (!Array.isArray(values)) {
-            return this.decode(values, decoder);
+            return this.decode(values);
         }
-        if (decoder !== undefined) {
-            if (decoder === null) {
-                return values;
-            }
-            return values.map(decoder);
-        }
-        if (this._decoder !== null && this._decoder !== undefined) {
-            return values.map(this._decoder);
+        if (this._codec !== null && this._codec !== undefined) {
+            return values.map(this._codec);
         }
         return values;
     }
@@ -94,16 +100,15 @@ class IDBBackend {
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key, decoder=undefined) {
+    async get(key) {
         const db = await this._db.backend;
         return new Promise((resolve, reject) => {
             const getTx = db.transaction([this._tableName])
                 .objectStore(this._tableName)
                 .get(key);
-            getTx.onsuccess = event => resolve(this.decode(event.target.result, decoder));
+            getTx.onsuccess = event => resolve(this.decode(event.target.result));
             getTx.onerror = reject;
         });
     }
@@ -119,7 +124,7 @@ class IDBBackend {
         return new Promise((resolve, reject) => {
             const putTx = db.transaction([this._tableName], 'readwrite')
                 .objectStore(this._tableName)
-                .put(value, key);
+                .put(this.encode(value), key);
             putTx.onsuccess = event => resolve(event.target.result);
             putTx.onerror = reject;
         });
@@ -147,10 +152,9 @@ class IDBBackend {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null, decoder=undefined) {
+    async values(query=null) {
         if (query !== null && query instanceof Query) {
             return query.values(this);
         }
@@ -160,7 +164,7 @@ class IDBBackend {
             const getRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
                 .getAll(query);
-            getRequest.onsuccess = () => resolve(this.decodeArray(getRequest.result, decoder));
+            getRequest.onsuccess = () => resolve(this.decodeArray(getRequest.result));
             getRequest.onerror = () => reject(getRequest.error);
         });
     }
@@ -193,17 +197,16 @@ class IDBBackend {
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async maxValue(query=null, decoder=undefined) {
+    async maxValue(query=null) {
         query = IDBTools.convertKeyRange(query);
         const db = await this._db.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
                 .openCursor(query, 'prev');
-            openCursorRequest.onsuccess = () => resolve(this.decode(openCursorRequest.result.value, decoder));
+            openCursorRequest.onsuccess = () => resolve(this.decode(openCursorRequest.result.value));
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
@@ -232,17 +235,16 @@ class IDBBackend {
      * If the optional query is not given, it returns the object whose key is minimal.
      * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
      * @param {KeyRange} [query] Optional query to check keys against.
-     * @param {function(obj:*):*} [decoder] Optional decoder function overriding the object store's default (null is the identity decoder).
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
-    async minValue(query=null, decoder=undefined) {
+    async minValue(query=null) {
         query = IDBTools.convertKeyRange(query);
         const db = await this._db.backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
                 .openCursor(query, 'next');
-            openCursorRequest.onsuccess = () => resolve(this.decode(openCursorRequest.result.value, decoder));
+            openCursorRequest.onsuccess = () => resolve(this.decode(openCursorRequest.result.value));
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
@@ -345,7 +347,7 @@ class IDBBackend {
                 objSt.delete(key);
             }
             for (const [key, value] of tx._modified) {
-                objSt.put(value, key);
+                objSt.put(this.encode(value), key);
             }
 
             idbTx.oncomplete = () => resolve(true);
@@ -384,7 +386,7 @@ class IDBBackend {
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
      */
-    async createIndex(indexName, keyPath, multiEntry=false) {
+    createIndex(indexName, keyPath, multiEntry=false) {
         if (this._db.connected) throw 'Cannot create index while connected';
         keyPath = keyPath || indexName;
         const index = new PersistentIndex(this, indexName, keyPath, multiEntry);
