@@ -1169,7 +1169,7 @@ class TreeTransaction {
      */
     merge(treeTx) {
         if (!(treeTx instanceof TreeTransaction)) {
-            return;
+            return this;
         }
         this._removed = this._removed.union(treeTx.removed);
         this._modified = this._modified.union(treeTx.modified).difference(this._removed);

@@ -55,7 +55,8 @@ class IDBBackend {
 
         // Create indices.
         for (const [indexName, index] of this._indices) {
-            objectStore.createIndex(indexName, index.keyPath, { unique: false, multiEntry: index.multiEntry});
+            const keyPath = Array.isArray(index.keyPath) ? index.keyPath.join('.') : index.keyPath;
+            objectStore.createIndex(indexName, keyPath, { unique: false, multiEntry: index.multiEntry});
         }
     }
 

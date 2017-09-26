@@ -9,6 +9,8 @@ global.Class = {
 
 global.JDB.Class = global.Class;
 
+process.on('unhandledRejection', console.error);
+
 require('../../generic/DummyBackend.js');
 require('../../generic/TestCodec.js');
 require('../../platform/nodejs/BinaryCodec.js');

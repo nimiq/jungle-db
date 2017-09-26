@@ -158,10 +158,10 @@ class PersistentIndex extends InMemoryIndex {
         const tx = new IndexTransaction();
         tx.put('_root', treeTx.root.id);
         for (const node of treeTx.removed) {
-            tx.remove(node.id);
+            tx.remove(''+node.id);
         }
         for (const node of treeTx.modified) {
-            tx.put(node.id, node.toJSON());
+            tx.put(''+node.id, node.toJSON());
         }
         tx.put('_version', version);
         await this._dbBackend._apply(tx);
@@ -193,7 +193,9 @@ class PersistentIndex extends InMemoryIndex {
             treeTx = super.put(key, value, oldValue).merge(treeTx);
         }
 
-        await this._persist(treeTx, this._version);
+        if (treeTx !== null) {
+            await this._persist(treeTx, this._version);
+        }
         return true;
     }
 
