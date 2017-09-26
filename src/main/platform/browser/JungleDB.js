@@ -83,9 +83,9 @@ class JungleDB {
         }
     }
 
-    /** @type {Promise.<IDBDatabase>} A promise to the underlying IDBDatabase. */
+    /** @type {IDBDatabase} The underlying IDBDatabase. */
     get backend() {
-        return this.connect();
+        return this._db;
     }
 
     /** @type {boolean} Whether a connection is established. */
@@ -154,7 +154,7 @@ class JungleDB {
     async close() {
         if (this._connected) {
             this._connected = false;
-            (await this.backend).close();
+            this.backend.close();
         }
     }
 

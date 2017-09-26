@@ -24,6 +24,14 @@ class IDBBackend {
         return this._db.connected;
     }
 
+    /** @type {IDBDatabase} */
+    get _backend() {
+        if (!this.connected) {
+            throw 'Requires a connected database';
+        }
+        return this._db.backend;
+    }
+
     /**
      * A map of index names to indices.
      * The index names can be used to access an index.
@@ -103,7 +111,7 @@ class IDBBackend {
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
     async get(key) {
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const getTx = db.transaction([this._tableName])
                 .objectStore(this._tableName)
@@ -120,7 +128,7 @@ class IDBBackend {
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
     async put(key, value) {
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const putTx = db.transaction([this._tableName], 'readwrite')
                 .objectStore(this._tableName)
@@ -136,7 +144,7 @@ class IDBBackend {
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
     async remove(key) {
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const deleteTx = db.transaction([this._tableName], 'readwrite')
                 .objectStore(this._tableName)
@@ -159,7 +167,7 @@ class IDBBackend {
             return query.values(this);
         }
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const getRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -182,7 +190,7 @@ class IDBBackend {
             return query.keys(this);
         }
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const getRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -201,7 +209,7 @@ class IDBBackend {
      */
     async maxValue(query=null) {
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -220,7 +228,7 @@ class IDBBackend {
      */
     async maxKey(query=null) {
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -239,7 +247,7 @@ class IDBBackend {
      */
     async minValue(query=null) {
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -258,7 +266,7 @@ class IDBBackend {
      */
     async minKey(query=null) {
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -277,7 +285,7 @@ class IDBBackend {
      */
     async count(query=null) {
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const getRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -335,7 +343,7 @@ class IDBBackend {
      * @protected
      */
     async _apply(tx) {
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const idbTx = db.transaction([this._tableName], 'readwrite');
             const objSt = idbTx.objectStore(this._tableName);
@@ -360,7 +368,7 @@ class IDBBackend {
      * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const getRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
