@@ -19,7 +19,7 @@ class PersistentIndex extends InMemoryIndex {
         super(objectStore, keyPath, multiEntry, unique);
 
         this._databaseDirectory = `${objectStore.databaseDirectory}/${indexName}`;
-        this._dbBackend = new LevelDBBackend(undefined, indexName, `${objectStore.databaseDirectory}/`, objectStore.valueEncoding);
+        this._dbBackend = new LevelDBBackend(undefined, indexName, `${objectStore.databaseDirectory}/`, JungleDB.JSON_ENCODING);
 
         this._indexName = indexName;
 

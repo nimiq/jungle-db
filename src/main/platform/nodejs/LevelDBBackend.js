@@ -45,7 +45,7 @@ class LevelDBBackend {
      * @returns {Promise.<Array.<PersistentIndex>>} The list of indices.
      */
     async init() {
-        this._indexVersion = (await this.get('_indexVersion')) || this._indexVersion;
+        this._indexVersion = (await this._get('_indexVersion')) || this._indexVersion;
         const indexPromises = [];
         for (const index of this._indices.values()) {
             indexPromises.push(index.init());
@@ -90,6 +90,24 @@ class LevelDBBackend {
             return this._codec.encode(value);
         }
         return value;
+    }
+
+    /**
+     * Internal getter without applying codec.
+     * @param {string} key The primary key to look for.
+     * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
+     * @private
+     */
+    async _get(key) {
+        return new Promise((resolve, error) => {
+            this._dbBackend.get(key, (err, value) => {
+                if (err) {
+                    resolve(undefined);
+                    return;
+                }
+                resolve(value);
+            });
+        });
     }
 
     /**
