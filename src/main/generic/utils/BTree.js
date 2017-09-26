@@ -1228,7 +1228,9 @@ class TreeTransaction {
      */
     get currentRecord() {
         // Potentially untracked modification.
-        this._modified.add(this._tree.currentLeaf);
+        if (this._tree.currentLeaf !== undefined) {
+            this._modified.add(this._tree.currentLeaf);
+        }
         return this._tree.currentRecord;
     }
 
