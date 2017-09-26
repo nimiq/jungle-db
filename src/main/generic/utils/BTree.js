@@ -1166,13 +1166,15 @@ class TreeTransaction {
      * This method allows to merge the set of modified and removed nodes
      * from two TreeTransactions.
      * @param {TreeTransaction} treeTx The other TreeTransaction to be merged.
+     * @returns {TreeTransaction}
      */
     merge(treeTx) {
         if (!(treeTx instanceof TreeTransaction)) {
-            return;
+            return this;
         }
         this._removed = this._removed.union(treeTx.removed);
         this._modified = this._modified.union(treeTx.modified).difference(this._removed);
+        return this;
     }
 
     /**
