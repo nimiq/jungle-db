@@ -1,6 +1,5 @@
 const levelup = require('levelup');
 const sublevel = require('level-sublevel');
-const fs = require('fs');
 
 /**
  * @implements {IJungleDB}
@@ -74,6 +73,7 @@ class JungleDB {
     connect() {
         if (this._db) return Promise.resolve(this._db);
 
+        const fs = require('fs');
         // Ensure existence of directory.
         if (!fs.existsSync(this._databaseDir)){
             fs.mkdirSync(this._databaseDir);
