@@ -1049,7 +1049,7 @@ class BTree {
      * @private
      */
     static _modifyNode(s, node) {
-        if (s instanceof Set) {
+        if (s instanceof Set && node !== undefined) {
             s.add(node);
         }
     }
