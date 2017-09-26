@@ -34,6 +34,11 @@ class Transaction {
 
         this._state = Transaction.STATE.OPEN;
 
+        // Keep track of nested transactions.
+        /** @type {Set.<Transaction>} */
+        this._nested = new Set();
+        this._nestedCommitted = false;
+
         this._enableWatchdog = enableWatchdog;
         if (this._enableWatchdog) {
             this._watchdog = setTimeout(() => {
@@ -136,17 +141,31 @@ class Transaction {
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async commit(tx) {
-        // Transaction is given, forward to backend.
+        // Transaction is given, so check whether this is a nested one.
         if (tx !== undefined) {
-            // Make sure transaction can be based on this state.
-            if (this._state !== Transaction.STATE.COMMITTED) {
-                throw 'Transaction is based on invalid state';
+            // Make sure transaction is based on this transaction.
+            if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
+                throw 'Can only commit open, nested transactions';
             }
-            return this._commitBackend.commit(tx);
+            this._nested.delete(tx);
+            let result = false;
+            // Only first one of concurrent transactions can be committed.
+            if (!this._nestedCommitted) {
+                // Apply nested transaction.
+                this._nestedCommitted = true;
+                await this._apply(tx);
+                result = true;
+            }
+            // If there are no more nested transactions, change back to OPEN state.
+            if (this._nested.size === 0) {
+                this._state = Transaction.STATE.OPEN;
+                this._nestedCommitted = false;
+            }
+            return result;
         }
 
         if (this._state !== Transaction.STATE.OPEN) {
-            throw 'Transaction already closed';
+            throw 'Transaction already closed or in nested state';
         }
         if (this._enableWatchdog) {
             clearTimeout(this._watchdog);
@@ -167,14 +186,19 @@ class Transaction {
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async abort(tx) {
-        // Transaction is given, forward to backend.
+        // Transaction is given, so check whether this is a nested one.
         if (tx !== undefined) {
-            // Make sure transaction can be based on this state.
-            if (this._state !== Transaction.STATE.COMMITTED) {
-                throw 'Transaction is based on invalid state';
+            // Make sure transaction is based on this transaction.
+            if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
+                throw 'Can only commit open, nested transactions';
             }
-
-            await this._commitBackend.abort(tx);
+            this._nested.delete(tx);
+            // If there are no more nested transactions, change back to OPEN state.
+            if (this._nested.size === 0) {
+                this._state = Transaction.STATE.OPEN;
+                this._nestedCommitted = false;
+            }
+            return true;
         }
 
         if (this._state !== Transaction.STATE.OPEN) {
@@ -498,30 +522,37 @@ class Transaction {
     }
 
     /**
-     * Creates a new transaction, ensuring read isolation
-     * on the most recently successfully committed state.
+     * Creates a nested transaction, ensuring read isolation.
+     * For a read isolated transaction, this method has to be called on the main object store.
      * @returns {Transaction} The transaction object.
      */
     transaction() {
-        throw 'Unsupported operation';
+        const tx = new Transaction(this, this, this._enableWatchdog);
+        this._nested.add(tx);
+        this._state = Transaction.STATE.NESTED;
+        return tx;
     }
 }
 /** @type {number} Milliseconds to wait until automatically aborting transaction. */
 Transaction.WATCHDOG_TIMER = 10000 /*ms*/;
 /**
  * The states of a transaction.
- * New transactions are in the state OPEN until they are aborted or committed.
+ * New transactions are in the state OPEN until they are aborted, committed or a nested transaction is created.
  * Aborted transactions move to the state ABORTED.
  * Committed transactions move to the state COMMITTED,
  * if no other transaction has been applied to the same state.
  * Otherwise, they change their state to CONFLICTED.
+ * When creating a nested (not read-isolated) transaction on top of a transaction,
+ * the outer transaction moves to the state NESTED until the inner transaction is either aborted or committed.
+ * Again, only one inner transaction may be committed.
  * @enum {number}
  */
 Transaction.STATE = {
     OPEN: 0,
     COMMITTED: 1,
     ABORTED: 2,
-    CONFLICTED: 3
+    CONFLICTED: 3,
+    NESTED: 4
 };
 Transaction._instanceCount = 0;
 Class.register(Transaction);

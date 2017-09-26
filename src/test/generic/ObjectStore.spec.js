@@ -1,4 +1,4 @@
-describe('Query', () => {
+describe('ObjectStore', () => {
     let backend, objectStore;
 
     const setEqual = function(actual, expected) {
@@ -166,6 +166,84 @@ describe('Query', () => {
             const tx4 = objectStore.transaction();
             expect(await tx4.get('key0')).toBe(undefined);
             await tx4.abort();
+        })().then(done, done.fail);
+    });
+
+    it('does not allow to commit/abort transactions with nested sub-transactions', (done) => {
+        (async function () {
+            // Create two transactions on the main state.
+            const tx1 = objectStore.transaction();
+            expect(tx1.state).toBe(JDB.Transaction.STATE.OPEN);
+            const tx2 = tx1.transaction();
+            expect(tx1.state).toBe(JDB.Transaction.STATE.NESTED);
+            expect(tx2.state).toBe(JDB.Transaction.STATE.OPEN);
+            const tx3 = tx2.transaction();
+            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
+            expect(tx3.state).toBe(JDB.Transaction.STATE.OPEN);
+            const tx4 = tx2.transaction();
+            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
+            expect(tx4.state).toBe(JDB.Transaction.STATE.OPEN);
+
+            // Should not be able to commit.
+            try {
+                await tx1.commit();
+                done.fail('did not throw when committing outer tx');
+            } catch (e) {
+                // all ok
+            }
+
+            // Should not be able to abort.
+            try {
+                await tx1.abort();
+                done.fail('did not throw when aborting outer tx');
+            } catch (e) {
+                // all ok
+            }
+
+            // Should not be able to commit.
+            try {
+                await tx2.commit();
+                done.fail('did not throw when committing middle tx');
+            } catch (e) {
+                // all ok
+            }
+
+            // Should not be able to abort.
+            try {
+                await tx2.abort();
+                done.fail('did not throw when aborting middle tx');
+            } catch (e) {
+                // all ok
+            }
+
+            expect(tx1.state).toBe(JDB.Transaction.STATE.NESTED);
+            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
+            expect(tx3.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx4.state).toBe(JDB.Transaction.STATE.OPEN);
+
+            expect(await tx3.commit()).toBe(true);
+            expect(tx1.state).toBe(JDB.Transaction.STATE.NESTED);
+            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
+            expect(tx3.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(tx4.state).toBe(JDB.Transaction.STATE.OPEN);
+
+            expect(await tx4.commit()).toBe(false);
+            expect(tx1.state).toBe(JDB.Transaction.STATE.NESTED);
+            expect(tx2.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx3.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(tx4.state).toBe(JDB.Transaction.STATE.CONFLICTED);
+
+            expect(await tx2.commit()).toBe(true);
+            expect(tx1.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx2.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(tx3.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(tx4.state).toBe(JDB.Transaction.STATE.CONFLICTED);
+
+            expect(await tx1.abort()).toBe(true);
+            expect(tx1.state).toBe(JDB.Transaction.STATE.ABORTED);
+            expect(tx2.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(tx3.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(tx4.state).toBe(JDB.Transaction.STATE.CONFLICTED);
         })().then(done, done.fail);
     });
 });
