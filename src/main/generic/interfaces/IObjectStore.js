@@ -176,7 +176,7 @@ class IObjectStore {
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
      */
-    async createIndex(indexName, keyPath, multiEntry=false) {} // eslint-disable-line no-unused-vars
+    createIndex(indexName, keyPath, multiEntry=false) {} // eslint-disable-line no-unused-vars
 
     /**
      * Deletes a secondary index from the object store.

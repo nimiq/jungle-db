@@ -457,7 +457,7 @@ class Transaction {
     /**
      * This method is not implemented for transactions.
      */
-    async createIndex() {
+    createIndex() {
         throw 'Cannot create index in transaction';
     }
 

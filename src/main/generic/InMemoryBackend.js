@@ -242,7 +242,7 @@ class InMemoryBackend {
      * @param {string|Array.<string>} [keyPath]
      * @param {boolean} [multiEntry]
      */
-    async createIndex(indexName, keyPath, multiEntry=false) {
+    createIndex(indexName, keyPath, multiEntry=false) {
         keyPath = keyPath || indexName;
         const index = new InMemoryIndex(this, keyPath, multiEntry);
         this._indices.set(indexName, index);

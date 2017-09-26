@@ -9,8 +9,8 @@ describe('Query', () => {
         backend = new DummyBackend();
 
         (async function () {
-            await backend.createIndex('test', 'test', false);
-            await backend.createIndex('multi', 'multi', true);
+            backend.createIndex('test', 'test', false);
+            backend.createIndex('multi', 'multi', true);
 
             // Add 10 objects.
             for (let i=0; i<10; ++i) {

@@ -21,7 +21,7 @@ describe('Transaction', () => {
         allValues = new Set();
 
         (async function () {
-            await backend.createIndex('i');
+            backend.createIndex('i');
             tx = new JDB.Transaction(backend, backend, false);
 
             // Add 10 objects.

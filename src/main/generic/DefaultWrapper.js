@@ -203,7 +203,7 @@ class DefaultWrapper {
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
      */
-    async createIndex(indexName, keyPath, multiEntry=false) {
+    createIndex(indexName, keyPath, multiEntry=false) {
         return this._store.createIndex(indexName, keyPath, multiEntry);
     }
 

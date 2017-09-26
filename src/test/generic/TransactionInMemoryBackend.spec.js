@@ -21,7 +21,7 @@ describe('Transaction with InMemoryBackend', () => {
         allValues = new Set();
 
         (async function () {
-            await objectStore.createIndex('i');
+            objectStore.createIndex('i');
 
             // Add 10 objects.
             for (let i=0; i<10; ++i) {

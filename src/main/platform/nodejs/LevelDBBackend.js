@@ -513,7 +513,7 @@ class LevelDBBackend {
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
      */
-    async createIndex(indexName, keyPath, multiEntry=false) {
+    createIndex(indexName, keyPath, multiEntry=false) {
         if (this._db.connected) throw 'Cannot create index while connected';
         keyPath = keyPath || indexName;
         const index = new PersistentIndex(this, indexName, keyPath, multiEntry);
