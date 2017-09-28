@@ -169,7 +169,7 @@ describe('ObjectStore', () => {
         })().then(done, done.fail);
     });
 
-    it('does not allow to commit/abort transactions with nested sub-transactions', (done) => {
+    it('does not allow to commit transactions with nested sub-transactions', (done) => {
         (async function () {
             // Create two transactions on the main state.
             const tx1 = objectStore.transaction();
@@ -192,26 +192,10 @@ describe('ObjectStore', () => {
                 // all ok
             }
 
-            // Should not be able to abort.
-            try {
-                await tx1.abort();
-                done.fail('did not throw when aborting outer tx');
-            } catch (e) {
-                // all ok
-            }
-
             // Should not be able to commit.
             try {
                 await tx2.commit();
                 done.fail('did not throw when committing middle tx');
-            } catch (e) {
-                // all ok
-            }
-
-            // Should not be able to abort.
-            try {
-                await tx2.abort();
-                done.fail('did not throw when aborting middle tx');
             } catch (e) {
                 // all ok
             }
@@ -244,6 +228,29 @@ describe('ObjectStore', () => {
             expect(tx2.state).toBe(JDB.Transaction.STATE.COMMITTED);
             expect(tx3.state).toBe(JDB.Transaction.STATE.COMMITTED);
             expect(tx4.state).toBe(JDB.Transaction.STATE.CONFLICTED);
+        })().then(done, done.fail);
+    });
+
+    it('aborts nested transactions on outer abort', (done) => {
+        (async function () {
+            // Create two transactions on the main state.
+            const tx1 = objectStore.transaction();
+            expect(tx1.state).toBe(JDB.Transaction.STATE.OPEN);
+            const tx2 = tx1.transaction();
+            expect(tx1.state).toBe(JDB.Transaction.STATE.NESTED);
+            expect(tx2.state).toBe(JDB.Transaction.STATE.OPEN);
+            const tx3 = tx2.transaction();
+            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
+            expect(tx3.state).toBe(JDB.Transaction.STATE.OPEN);
+            const tx4 = tx2.transaction();
+            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
+            expect(tx4.state).toBe(JDB.Transaction.STATE.OPEN);
+
+            await tx1.abort();
+            expect(tx1.state).toBe(JDB.Transaction.STATE.ABORTED);
+            expect(tx2.state).toBe(JDB.Transaction.STATE.ABORTED);
+            expect(tx3.state).toBe(JDB.Transaction.STATE.ABORTED);
+            expect(tx4.state).toBe(JDB.Transaction.STATE.ABORTED);
         })().then(done, done.fail);
     });
 });
