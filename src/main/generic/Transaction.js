@@ -43,7 +43,7 @@ class Transaction {
         if (this._enableWatchdog) {
             this._watchdog = setTimeout(() => {
                 this.abort();
-                throw 'Watchdog timer aborted transaction';
+                console.error('Watchdog timer aborted transaction', this);
             }, Transaction.WATCHDOG_TIMER);
         }
     }
@@ -206,8 +206,11 @@ class Transaction {
             return true;
         }
 
-        if (this._state !== Transaction.STATE.OPEN) {
+        if (this._state !== Transaction.STATE.OPEN && this._state !== Transaction.STATE.NESTED) {
             throw 'Transaction already closed';
+        }
+        if (this._state === Transaction.STATE.NESTED) {
+            await Promise.all(Array.from(this._nested).map(tx => tx.abort()));
         }
         if (this._enableWatchdog) {
             clearTimeout(this._watchdog);
