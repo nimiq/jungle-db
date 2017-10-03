@@ -383,7 +383,7 @@ class ObjectStore {
                 return true;
             } else {
                 tx.dependency.onFlushable(tx, cleanup);
-                return false; // we do not know when the state is actually applied, so we count it as still there
+                return false; // We do not know when the state is actually applied, so we count it as still there.
             }
         } else {
             // Check both ends of the stack.
@@ -400,6 +400,7 @@ class ObjectStore {
                     break;
                 }
             }
+            return false;
         }
     }
 

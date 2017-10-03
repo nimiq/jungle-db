@@ -39,4 +39,4 @@ class IndexCodec {
         return JungleDB.JSON_ENCODING;
     }
 }
-JDB.Class.register(IndexCodec);
+Class.register(IndexCodec);

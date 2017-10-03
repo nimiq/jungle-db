@@ -144,7 +144,7 @@ class CombinedTransaction {
      * @returns {boolean} Whether a commit will be successful.
      */
     _isCommittable() {
-       return this._transactions.every(tx => tx._isCommittable());
+        return this._transactions.every(tx => tx._isCommittable());
     }
 
     /**
