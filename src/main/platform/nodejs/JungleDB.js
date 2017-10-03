@@ -216,6 +216,54 @@ class JungleDB {
         if (this._connected) throw 'Cannot delete ObjectStore while connected';
         this._objectStoresToDelete.push(tableName);
     }
+
+    /**
+     * Is used to commit multiple transactions atomically.
+     * This guarantees that either all transactions are written or none.
+     * The method takes a list of transactions (at least two transactions).
+     * If the commit was successful, the method returns true, and false otherwise.
+     * @param {Transaction|CombinedTransaction} tx1 The first transaction
+     * (a CombinedTransaction object is only used internally).
+     * @param {Transaction} tx2 The second transaction.
+     * @param {...Transaction} txs A list of further transactions to commit together.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     */
+    async commitCombined(tx1, tx2, ...txs) {
+        // If tx1 is a CombinedTransaction, flush it to the database.
+        if (tx1 instanceof CombinedTransaction) {
+            const functions = [];
+            /** @type {Array.<EncodedTransaction>} */
+            let batch = [];
+
+            const infos = await Promise.all(tx1.transactions.map(tx => tx.objectStore._backend.applyCombined(tx)));
+            for (const info of infos) {
+                if (typeof info === 'function') {
+                    functions.push(info);
+                } else {
+                    batch = batch.concat(info);
+                }
+            }
+
+            return new Promise((resolve, error) => {
+                this.backend.batch(batch, err => {
+                    if (err) {
+                        error(err);
+                        return;
+                    }
+
+                    functions.forEach(f => f());
+                    resolve(true);
+                });
+            });
+        }
+        txs.push(tx1);
+        txs.push(tx2);
+        if (!txs.every(tx => tx instanceof Transaction)) {
+            throw 'Invalid arguments supplied';
+        }
+        const ctx = new CombinedTransaction(...txs);
+        return ctx.commit();
+    }
 }
 /**
  * A LevelDB JSON encoding that can handle Uint8Arrays and Sets.

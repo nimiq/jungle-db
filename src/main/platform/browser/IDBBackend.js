@@ -1,7 +1,7 @@
 /**
  * This class is a wrapper around the IndexedDB.
  * It manages the access to a single table/object store.
- * @implements {IObjectStore}
+ * @implements {IBackend}
  */
 class IDBBackend {
     /**
@@ -297,25 +297,6 @@ class IDBBackend {
     }
 
     /**
-     * The wrapper object stores do not support this functionality
-     * as it is managed by the ObjectStore.
-     * @param {Transaction} [tx]
-     * @returns {Promise.<boolean>}
-     */
-    async commit(tx) {
-        throw 'Unsupported operation';
-    }
-
-    /**
-     * The wrapper object stores do not support this functionality
-     * as it is managed by the ObjectStore.
-     * @param {Transaction} [tx]
-     */
-    async abort(tx) {
-        throw 'Unsupported operation';
-    }
-
-    /**
      * Returns the index of the given name.
      * If the index does not exist, it returns undefined.
      * @param {string} indexName The name of the requested index.
@@ -422,12 +403,24 @@ class IDBBackend {
     }
 
     /**
-     * Creates a new transaction, ensuring read isolation
-     * on the most recently successfully committed state.
-     * @returns {Transaction} The transaction object.
+     * Returns the necessary information in order to flush a combined transaction.
+     * @param {Transaction} tx The transaction that should be applied to this backend.
+     * @returns {Promise.<EncodedTransaction>} A special transaction object bundling all necessary information.
      */
-    transaction() {
-        throw 'Unsupported operation';
+    async applyCombined(tx) {
+        const encodedTx = new EncodedTransaction(this._tableName);
+
+        if (tx._truncated) {
+            encodedTx.truncate();
+        }
+
+        for (const key of tx._removed) {
+            encodedTx.delete(key);
+        }
+        for (const [key, value] of tx._modified) {
+            encodedTx.put(this.encode(value), key);
+        }
+        return encodedTx;
     }
 }
 Class.register(IDBBackend);

@@ -39,6 +39,16 @@ class PersistentIndex extends InMemoryIndex {
     }
 
     /**
+     * Reinitialises the index in memory and
+     * returns batch operations to reinitialise the index.
+     * @returns {Promise.<Array>} The promise contains the batch operations.
+     */
+    async _truncate() {
+        await InMemoryIndex.prototype.truncate.call(this);
+        return LevelDBBackend._truncate(this._dbBackend._dbBackend);
+    }
+
+    /**
      * Closes the connection to the index database.
      * @returns {Promise} The promise resolves after closing the object store.
      */

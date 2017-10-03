@@ -1,7 +1,7 @@
 /**
  * This is a wrapper around the levelup interface for the LevelDB.
  * It manages the access to a single table/object store.
- * @implements {IObjectStore}
+ * @implements {IBackend}
  */
 class LevelDBBackend {
     /**
@@ -31,6 +31,7 @@ class LevelDBBackend {
 
     /**
      * Extends a batch operation with a tree transaction.
+     * @param {Array} batch
      * @param {LevelDBBackend} backend The index backend.
      * @param {TreeTransaction} treeTx The tree transaction.
      */
@@ -361,10 +362,11 @@ class LevelDBBackend {
      * @protected
      */
     async _apply(tx) {
+        let batch = [];
+
         if (tx._truncated) {
-            await this.truncate();
+            batch = await this._truncate();
         }
-        const batch = [];
 
         for (const key of tx._removed) {
             batch.push({key: key, type: 'del'});
@@ -397,30 +399,40 @@ class LevelDBBackend {
      */
     static async truncate(db, tableName) {
         const sub = db.sublevel(tableName);
+        const batch = await LevelDBBackend._truncate(sub);
 
-        const deletePromises = [];
-        await new Promise((resolve, error) => {
+        return new Promise((resolve, error) => {
+            sub.batch(batch, err => {
+                if (err) {
+                    error(err);
+                    return;
+                }
+
+                resolve(true);
+            });
+        });
+    }
+
+    /**
+     * Prepares a batch operation to truncate a sublevel.
+     * @param sub A levelDB sublevel instance.
+     * @param {string} tableName A table's name.
+     * @returns {Promise.<Array>}
+     */
+    static async _truncate(sub) {
+        return new Promise((resolve, error) => {
+            const batch = [];
             sub.createReadStream({ 'values': false, 'keys': true })
                 .on('data', data => {
-                    deletePromises.push(new Promise((resolveInner, errorInner) => {
-                        sub.del(data, err => {
-                            if (err) {
-                                errorInner(err);
-                                return;
-                            }
-                            resolveInner();
-                        });
-                    }));
+                    batch.push({key: data, type: 'del', prefix: this._dbBackend, valueEncoding: this._valueEncoding});
                 })
                 .on('error', err => {
                     error(err);
                 })
                 .on('end', () => {
-                    resolve();
+                    resolve(batch);
                 });
         });
-
-        return Promise.all(deletePromises);
     }
 
     /**
@@ -428,12 +440,30 @@ class LevelDBBackend {
      * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
-        const deletePromises = [LevelDBBackend.truncate(this._db.backend, this._tableName)];
+        const batch = await this._truncate();
+        return new Promise((resolve, error) => {
+            this._dbBackend.batch(batch, err => {
+                if (err) {
+                    error(err);
+                    return;
+                }
+
+                resolve(true);
+            });
+        });
+    }
+
+    /**
+     * Empties the object store.
+     * @returns {Promise} The promise resolves after emptying the object store.
+     */
+    async _truncate() {
+        let batch = await LevelDBBackend._truncate(this._dbBackend);
         // Truncate all indices.
         for (const index of this._indices.values()) {
-            deletePromises.push(index.truncate());
+            batch = batch.concat(index._truncate());
         }
-        return Promise.all(deletePromises);
+        return batch;
     }
 
     /**
@@ -552,6 +582,32 @@ class LevelDBBackend {
      */
     transaction() {
         throw 'Unsupported operation';
+    }
+
+    /**
+     * Returns the necessary information in order to flush a combined transaction.
+     * @param {Transaction} tx The transaction that should be applied to this backend.
+     * @returns {Promise.<Array>} An array containing the batch operations.
+     */
+    async applyCombined(tx) {
+        let batch = [];
+
+        if (tx._truncated) {
+            batch = await this._truncate();
+        }
+
+        for (const key of tx._removed) {
+            batch.push({key: key, type: 'del', prefix: this._dbBackend, valueEncoding: this._valueEncoding});
+        }
+        for (const [key, value] of tx._modified) {
+            batch.push({key: key, value: this.encode(value), type: 'put', prefix: this._dbBackend, valueEncoding: this._valueEncoding});
+        }
+
+        for (const index of this._indices.values()) {
+            LevelDBBackend.extendBatch(batch, index.backend, await index._apply(tx));
+        }
+
+        return batch;
     }
 }
 Class.register(LevelDBBackend);
