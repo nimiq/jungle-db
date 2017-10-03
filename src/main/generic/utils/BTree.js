@@ -1049,7 +1049,7 @@ class BTree {
      * @private
      */
     static _modifyNode(s, node) {
-        if (s instanceof Set) {
+        if (s instanceof Set && node !== undefined) {
             s.add(node);
         }
     }
@@ -1166,6 +1166,7 @@ class TreeTransaction {
      * This method allows to merge the set of modified and removed nodes
      * from two TreeTransactions.
      * @param {TreeTransaction} treeTx The other TreeTransaction to be merged.
+     * @returns {TreeTransaction}
      */
     merge(treeTx) {
         if (!(treeTx instanceof TreeTransaction)) {
@@ -1227,7 +1228,9 @@ class TreeTransaction {
      */
     get currentRecord() {
         // Potentially untracked modification.
-        this._modified.add(this._tree.currentLeaf);
+        if (this._tree.currentLeaf !== undefined) {
+            this._modified.add(this._tree.currentLeaf);
+        }
         return this._tree.currentRecord;
     }
 
