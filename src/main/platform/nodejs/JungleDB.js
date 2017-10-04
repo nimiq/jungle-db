@@ -177,7 +177,7 @@ class JungleDB {
      * @returns {IObjectStore}
      */
     static createVolatileObjectStore(codec=null) {
-        return new ObjectStore(new InMemoryBackend('', codec), this);
+        return new ObjectStore(new InMemoryBackend('', codec), null);
     }
 
     /**
@@ -228,7 +228,7 @@ class JungleDB {
      * @param {...Transaction} txs A list of further transactions to commit together.
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
-    async commitCombined(tx1, tx2, ...txs) {
+    static async commitCombined(tx1, tx2, ...txs) {
         // If tx1 is a CombinedTransaction, flush it to the database.
         if (tx1 instanceof CombinedTransaction) {
             const functions = [];
@@ -245,15 +245,20 @@ class JungleDB {
             }
 
             return new Promise((resolve, error) => {
-                this.backend.batch(batch, err => {
-                    if (err) {
-                        error(err);
-                        return;
-                    }
+                if (batch.length > 0) {
+                    tx1.backend.backend.batch(batch, err => {
+                        if (err) {
+                            error(err);
+                            return;
+                        }
 
+                        functions.forEach(f => f());
+                        resolve(true);
+                    });
+                } else {
                     functions.forEach(f => f());
                     resolve(true);
-                });
+                }
             });
         }
         txs.push(tx1);

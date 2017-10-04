@@ -42,7 +42,8 @@ const sources = {
         './src/main/generic/ObjectStore.js',
         './src/main/generic/Query.js',
         './src/main/generic/TransactionIndex.js',
-        './src/main/generic/Transaction.js'
+        './src/main/generic/Transaction.js',
+        './src/main/generic/CombinedTransaction.js'
     ],
     test: {
         generic: [

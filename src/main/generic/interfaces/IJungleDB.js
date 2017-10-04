@@ -77,5 +77,5 @@ class IJungleDB {
      * @param {...Transaction} txs A list of further transactions to commit together.
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
-    commitCombined(tx1, tx2, ...txs) {} // eslint-disable-line no-unused-vars
+    static commitCombined(tx1, tx2, ...txs) {} // eslint-disable-line no-unused-vars
 }

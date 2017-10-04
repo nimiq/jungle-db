@@ -7,13 +7,20 @@ class CombinedTransaction {
      * @param {...Transaction} transactions The transactions to build the combined transaction from.
      */
     constructor(...transactions) {
-        if (!CombinedTransaction.isConsistent(transactions)) {
+        if (!this.isConsistent(transactions)) {
             throw 'Given set of transactions violates rules for combined transactions';
         }
         this._transactions = transactions;
-        this._dependency = this; // Update members.
         /** @type {Map.<Transaction,function()>} */
         this._flushable = new Map();
+
+        // Update members.
+        this._dependency = this;
+    }
+
+    /** @type {JungleDB} */
+    get backend() {
+        return this._jdb;
     }
 
     /** @type {Array.<Transaction>} */
@@ -22,45 +29,24 @@ class CombinedTransaction {
     }
 
     /**
-     * Merges two combined transactions.
-     * @param {CombinedTransaction} ctx The combined transaction to merge.
-     * @param {Transaction} tx The transaction that is now applied to one of our own transactions.
-     */
-    merge(ctx, tx) {
-        if (ctx === null) {
-            return;
-        }
-        // Use all transactions from ctx except tx.
-        // Then update dependencies in ctx Transactions to this.
-        let ctxTransactions = new Set(ctx._transactions);
-        let ownTransactions = new Set(this._transactions);
-        ownTransactions = ownTransactions.union(ctxTransactions);
-        ownTransactions.delete(tx);
-        ctxTransactions.delete(tx);
-        this._transactions = Array.from(ownTransactions);
-        ctx._transactions = Array.from(ctxTransactions);
-
-        for (const [key, value] of ctx._flushable) {
-            this._flushable.set(key, value);
-        }
-        this._flushable.delete(tx);
-        ctx._dependency = this;
-    }
-
-    /**
      * Verifies the two most important consistency rules for combined transactions:
      * 1. only transactions from different object stores
      * 2. only open transactions
      * 3. only transactions from the same JungleDB instance
-     * @param {...Transaction} transactions
+     * 4. only non-nested transactions
+     * @param {Array.<Transaction>} transactions
      * @returns {boolean} Whether the given set of transactions is suitable for a combined transaction.
      */
-    static isConsistent(...transactions) {
+    isConsistent(transactions) {
         const objectStores = new Set();
-        let jdb = null;
+        this._jdb = null;
         for (const tx of transactions) {
             // Rule 2 is violated:
             if (tx.state !== Transaction.STATE.OPEN) {
+                return false;
+            }
+            // Rule 4 is violated:
+            if (tx.nested) {
                 return false;
             }
             // Rule 1 is violated:
@@ -68,9 +54,9 @@ class CombinedTransaction {
                 return false;
             }
             // Rule 3 is violated:
-            if (jdb === null) {
-                jdb = tx._objectStore.jungleDB;
-            } else if (jdb !== tx._objectStore.jungleDB) {
+            if (this._jdb === null) {
+                this._jdb = tx._objectStore.jungleDB;
+            } else if (this._jdb !== tx._objectStore.jungleDB && tx._objectStore.jungleDB !== null) { // null = InMemory
                 return false;
             }
             objectStores.add(tx._objectStore);
@@ -93,7 +79,7 @@ class CombinedTransaction {
         // All are flushable, so go ahead.
         if (this._transactions.every(tx => this._flushable.has(tx))) {
             JungleDB.commitCombined(this).then(() => {
-                for (const value of ctx._flushable.values()) {
+                for (const value of this._flushable.values()) {
                     value();
                 }
             });
@@ -153,7 +139,7 @@ class CombinedTransaction {
      * @returns {Promise} A promise that resolves upon successful application of the transaction.
      */
     async _commit() {
-        return Promise.all(this._transactions.map(tx => tx._commit()));
+        return Promise.all(this._transactions.map(tx => tx.commit()));
     }
 
     /**

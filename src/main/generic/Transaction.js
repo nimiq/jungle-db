@@ -61,6 +61,11 @@ class Transaction {
         return this._objectStore;
     }
 
+    /** @type {boolean} */
+    get nested() {
+        return this._commitBackend instanceof Transaction;
+    }
+
     /**
      * @type {CombinedTransaction} If existent, a combined transaction encompassing this object.
      */
@@ -220,9 +225,6 @@ class Transaction {
         // Apply nested transaction.
         this._nestedCommitted = true;
         await this._apply(tx);
-        if (this._dependency !== null) {
-            this._dependency.merge(tx._dependency, tx);
-        }
         // If there are no more nested transactions, change back to OPEN state.
         if (this._nested.size === 0) {
             this._state = Transaction.STATE.OPEN;
@@ -573,6 +575,10 @@ class Transaction {
         this._nested.add(tx);
         this._state = Transaction.STATE.NESTED;
         return tx;
+    }
+
+    toString() {
+        return `${this._id}`;
     }
 }
 /** @type {number} Milliseconds to wait until automatically aborting transaction. */

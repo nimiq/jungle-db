@@ -29,6 +29,7 @@ require('../../../main/generic/ObjectStore.js');
 require('../../../main/generic/Query.js');
 require('../../../main/generic/TransactionIndex.js');
 require('../../../main/generic/Transaction.js');
+require('../../../main/generic/CombinedTransaction.js');
 
 require('../../../main/platform/nodejs/utils/LevelDBTools.js');
 require('../../../main/platform/nodejs/utils/IndexCodec.js');

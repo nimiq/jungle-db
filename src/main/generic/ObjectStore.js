@@ -253,19 +253,20 @@ class ObjectStore {
         openTransactions.delete(tx.id);
         const numOpenTransactions = openTransactions.size;
 
+
+        // Create new layer on stack (might be immediately removed by a state flattening).
+        if (this._stateStack.length >= ObjectStore.MAX_STACK_SIZE) {
+            throw 'Transaction stack size exceeded';
+        }
+        this._stateStack.push(tx);
+        this._openTransactions.set(tx.id, new Set());
+        this._closedBaseStates.add(baseState);
+
         // If this is the last transaction, we push our changes to the underlying layer.
         // This only works if the given transaction does not have dependencies or the current state is the backend.
         if (numOpenTransactions === 0 && (tx.dependency === null || baseState === ObjectStore.BACKEND_ID)) {
             // The underlying layer *has to be* the last one in our stack.
             await this._flattenState(tx);
-        } else {
-            // Otherwise, create new layer on stack.
-            if (this._stateStack.length >= ObjectStore.MAX_STACK_SIZE) {
-                throw 'Transaction stack size exceeded';
-            }
-            this._stateStack.push(tx);
-            this._openTransactions.set(tx.id, new Set());
-            this._closedBaseStates.add(baseState);
         }
     }
 
@@ -350,6 +351,15 @@ class ObjectStore {
                         this._txBaseStates.set(childTx.id, baseState);
                     }
                 }
+                // If tx is in the state stack (i.e., a closed base state), update its potential closed child.
+                if (this._closedBaseStates.has(tx.id)) {
+                    const index = this._stateStack.indexOf(tx);
+                    if (index + 1 < this._stateStack.length) {
+                        const childTx = this._stateStack[index + 1];
+                        childTx._backend = backend;
+                        this._txBaseStates.set(childTx.id, baseState);
+                    }
+                }
 
                 // Copy relevant baseState data to new base state.
                 // If tx was a closed base state, the new base state also is.
@@ -375,6 +385,8 @@ class ObjectStore {
                 if (statePosition >= 0) {
                     this._stateStack.splice(statePosition, 1);
                 }
+
+                this._flattenState();
             };
 
             if (tx.dependency === null) {
