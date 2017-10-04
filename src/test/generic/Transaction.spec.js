@@ -82,6 +82,7 @@ describe('Transaction', () => {
                 done.fail('did not throw');
             } catch (e) {
                 // all ok
+                expect(true).toBe(true);
             }
 
             try {
@@ -89,6 +90,7 @@ describe('Transaction', () => {
                 done.fail('did not throw');
             } catch (e) {
                 // all ok
+                expect(true).toBe(true);
             }
         })().then(done, done.fail);
     });
@@ -102,6 +104,7 @@ describe('Transaction', () => {
                 done.fail('did not throw');
             } catch (e) {
                 // all ok
+                expect(true).toBe(true);
             }
 
             try {
@@ -109,6 +112,7 @@ describe('Transaction', () => {
                 done.fail('did not throw');
             } catch (e) {
                 // all ok
+                expect(true).toBe(true);
             }
         })().then(done, done.fail);
     });
@@ -140,6 +144,7 @@ describe('Transaction', () => {
                 done.fail('did not throw when changing outer tx');
             } catch (e) {
                 // all ok
+                expect(true).toBe(true);
             }
         })().then(done, done.fail);
     });
