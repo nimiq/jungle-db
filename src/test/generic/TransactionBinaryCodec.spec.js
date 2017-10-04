@@ -83,6 +83,7 @@ describe('Transaction with binary codec', () => {
                 done.fail('did not throw');
             } catch (e) {
                 // all ok
+                expect(true).toBe(true);
             }
 
             try {
@@ -90,6 +91,7 @@ describe('Transaction with binary codec', () => {
                 done.fail('did not throw');
             } catch (e) {
                 // all ok
+                expect(true).toBe(true);
             }
         })().then(done, done.fail);
     });
@@ -103,6 +105,7 @@ describe('Transaction with binary codec', () => {
                 done.fail('did not throw');
             } catch (e) {
                 // all ok
+                expect(true).toBe(true);
             }
 
             try {
@@ -110,6 +113,7 @@ describe('Transaction with binary codec', () => {
                 done.fail('did not throw');
             } catch (e) {
                 // all ok
+                expect(true).toBe(true);
             }
         })().then(done, done.fail);
     });

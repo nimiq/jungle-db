@@ -6,6 +6,7 @@
  * Transactions opened after the successful commit of another transaction will be based on the
  * new state and hence can be committed again.
  * @implements {IObjectStore}
+ * @implements {ICommittable}
  */
 class Transaction {
     /**
@@ -14,17 +15,20 @@ class Transaction {
      * aborting them after a certain time specified by WATCHDOG_TIMER.
      * This helps to detect unclosed transactions preventing to store the state in
      * the persistent backend.
+     * @param {ObjectStore} objectStore The object store this transaction belongs to.
      * @param {IObjectStore} backend The backend on which the transaction is based,
      * i.e., another transaction or the real database.
-     * @param {IObjectStore} [commitBackend] The object store managing the transactions,
+     * @param {ICommittable} [commitBackend] The object store managing the transactions,
      * i.e., the ObjectStore object.
      * @param {boolean} [enableWatchdog] If this is is set to true (default),
      * transactions will be automatically aborted if left open for longer than WATCHDOG_TIMER.
      * @protected
      */
-    constructor(backend, commitBackend, enableWatchdog=true) {
+    constructor(objectStore, backend, commitBackend, enableWatchdog=true) {
         this._id = Transaction._instanceCount++;
-        this._backend = backend;
+        this._objectStore = objectStore;
+        this.__backend = backend;
+        /** @type {ICommittable} */
         this._commitBackend = commitBackend || backend;
         this._modified = new Map();
         this._removed = new Set();
@@ -39,6 +43,10 @@ class Transaction {
         this._nested = new Set();
         this._nestedCommitted = false;
 
+        // Handle dependencies due to cross-objectstore transactions.
+        /** @type {CombinedTransaction} */
+        this._dependency = null;
+
         this._enableWatchdog = enableWatchdog;
         if (this._enableWatchdog) {
             this._watchdog = setTimeout(() => {
@@ -46,6 +54,23 @@ class Transaction {
                 console.error('Watchdog timer aborted transaction', this);
             }, Transaction.WATCHDOG_TIMER);
         }
+    }
+
+    /** @type {ObjectStore} */
+    get objectStore() {
+        return this._objectStore;
+    }
+
+    /** @type {boolean} */
+    get nested() {
+        return this._commitBackend instanceof Transaction;
+    }
+
+    /**
+     * @type {CombinedTransaction} If existent, a combined transaction encompassing this object.
+     */
+    get dependency() {
+        return this._dependency;
     }
 
     /** @type {boolean} */
@@ -148,25 +173,12 @@ class Transaction {
     async commit(tx) {
         // Transaction is given, so check whether this is a nested one.
         if (tx !== undefined) {
-            // Make sure transaction is based on this transaction.
-            if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
-                throw 'Can only commit open, nested transactions';
+            if (!this._isCommittable(tx)) {
+                await this.abort(tx);
+                return false;
             }
-            this._nested.delete(tx);
-            let result = false;
-            // Only first one of concurrent transactions can be committed.
-            if (!this._nestedCommitted) {
-                // Apply nested transaction.
-                this._nestedCommitted = true;
-                await this._apply(tx);
-                result = true;
-            }
-            // If there are no more nested transactions, change back to OPEN state.
-            if (this._nested.size === 0) {
-                this._state = Transaction.STATE.OPEN;
-                this._nestedCommitted = false;
-            }
-            return result;
+            await this._commit(tx);
+            return true;
         }
 
         if (this._state !== Transaction.STATE.OPEN) {
@@ -182,6 +194,51 @@ class Transaction {
             this._state = Transaction.STATE.CONFLICTED;
             return false;
         }
+    }
+
+    /**
+     * Is used to probe whether a transaction can be committed.
+     * This, for example, includes a check whether another transaction has already been committed.
+     * @protected
+     * @param {Transaction} [tx] The transaction to be applied, if not given checks for the this transaction.
+     * @returns {boolean} Whether a commit will be successful.
+     */
+    _isCommittable(tx) {
+        if (tx !== undefined) {
+            // Make sure transaction is based on this transaction.
+            if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
+                throw 'Can only commit open, nested transactions';
+            }
+            return !this._nestedCommitted;
+        }
+        return this._commitBackend._isCommittable(this);
+    }
+
+    /**
+     * Is used to commit the transaction to the in memory state.
+     * @protected
+     * @param {Transaction} tx The transaction to be applied.
+     * @returns {Promise} A promise that resolves upon successful application of the transaction.
+     */
+    async _commit(tx) {
+        this._nested.delete(tx);
+        // Apply nested transaction.
+        this._nestedCommitted = true;
+        await this._apply(tx);
+        // If there are no more nested transactions, change back to OPEN state.
+        if (this._nested.size === 0) {
+            this._state = Transaction.STATE.OPEN;
+            this._nestedCommitted = false;
+        }
+    }
+
+    /**
+     * Allows to change the backend of a Transaction when the state has been flushed.
+     * @param backend
+     * @protected
+     */
+    set _backend(backend) {
+        this.__backend = backend;
     }
 
     /**
@@ -241,7 +298,7 @@ class Transaction {
         if (this._truncated) {
             return undefined;
         }
-        return await this._backend.get(key);
+        return await this.__backend.get(key);
     }
 
     /**
@@ -333,7 +390,7 @@ class Transaction {
         }
         let keys = new Set();
         if (!this._truncated) {
-            keys = await this._backend.keys(query);
+            keys = await this.__backend.keys(query);
         }
         keys = keys.difference(this._removed);
         for (const key of this._modified.keys()) {
@@ -387,13 +444,13 @@ class Transaction {
         // Take underlying maxKey.
         let maxKey = undefined;
         if (!this._truncated) {
-            maxKey = await this._backend.maxKey(query);
+            maxKey = await this.__backend.maxKey(query);
         }
 
         // If this key has been removed, find next best key.
         while (maxKey !== undefined && this._removed.has(maxKey)) {
             const tmpQuery = KeyRange.upperBound(maxKey, true);
-            maxKey = await this._backend.maxKey(tmpQuery);
+            maxKey = await this.__backend.maxKey(tmpQuery);
 
             // If we get out of the range, stop here.
             if (query !== null && !query.includes(maxKey)) {
@@ -434,13 +491,13 @@ class Transaction {
         // Take underlying minKey.
         let minKey = undefined;
         if (!this._truncated) {
-            minKey = await this._backend.minKey(query);
+            minKey = await this.__backend.minKey(query);
         }
 
         // If this key has been removed, find next best key.
         while (minKey !== undefined && this._removed.has(minKey)) {
             const tmpQuery = KeyRange.lowerBound(minKey, true);
-            minKey = await this._backend.minKey(tmpQuery);
+            minKey = await this.__backend.minKey(tmpQuery);
 
             // If we get out of the range, stop here.
             if (query !== null && !query.includes(minKey)) {
@@ -511,10 +568,17 @@ class Transaction {
      * @returns {Transaction} The transaction object.
      */
     transaction() {
-        const tx = new Transaction(this, this, this._enableWatchdog);
+        if (this._state !== Transaction.STATE.OPEN && this._state !== Transaction.STATE.NESTED) {
+            throw 'Transaction already closed';
+        }
+        const tx = new Transaction(this._objectStore, this, this, this._enableWatchdog);
         this._nested.add(tx);
         this._state = Transaction.STATE.NESTED;
         return tx;
+    }
+
+    toString() {
+        return `${this._id}`;
     }
 }
 /** @type {number} Milliseconds to wait until automatically aborting transaction. */

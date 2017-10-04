@@ -1,3 +1,6 @@
+const levelup = require('levelup');
+const sublevel = require('level-sublevel');
+
 /**
  * @implements {IJungleDB}
  */
@@ -22,13 +25,6 @@ class JungleDB {
         this._objectStores = new Map();
         this._objectStoreBackends = [];
         this._objectStoresToDelete = [];
-
-        if (!JungleDB._fs) {
-            JungleDB._fs = require('fs');
-        }
-        if (!JungleDB._fs.existsSync(this._databaseDir)){
-            JungleDB._fs.mkdirSync(this._databaseDir);
-        }
     }
 
     /**
@@ -38,12 +34,12 @@ class JungleDB {
      */
     _readDBVersion() {
         return new Promise((resolve, reject) => {
-            JungleDB._fs.readFile(`${this._databaseDir}.dbVersion`, 'utf8', (err, data) => {
+            this._db.get('_dbVersion', { valueEncoding: 'ascii' }, (err, value) => {
                 if (err) {
                     resolve(-1);
                     return;
                 }
-                resolve(parseInt(data));
+                resolve(parseInt(value));
             });
         });
     }
@@ -55,7 +51,7 @@ class JungleDB {
      */
     _writeDBVersion(version) {
         return new Promise((resolve, reject) => {
-            JungleDB._fs.writeFile(`${this._databaseDir}.dbVersion`, `${version}`, 'utf8', err => {
+            this._db.put('_dbVersion', `${version}`, { valueEncoding: 'ascii' }, err => {
                 if (err) {
                     reject(err);
                     return;
@@ -65,11 +61,28 @@ class JungleDB {
         });
     }
 
+    /** The underlying LevelDB. */
+    get backend() {
+        return this._db;
+    }
+
     /**
      * Connects to the indexedDB.
      * @returns {Promise} A promise resolving on successful connection.
      */
     connect() {
+        if (this._db) return Promise.resolve(this._db);
+
+        const fs = require('fs');
+        // Ensure existence of directory.
+        if (!fs.existsSync(this._databaseDir)){
+            fs.mkdirSync(this._databaseDir);
+        }
+
+        this._db = sublevel(levelup(this._databaseDir, {
+            keyEncoding: 'ascii'
+        }));
+
         return this._initDB();
     }
 
@@ -80,11 +93,15 @@ class JungleDB {
     close() {
         if (this._connected) {
             this._connected = false;
-            const promises = [];
-            for (const objStore of this._objectStores.values()) {
-                promises.push(objStore.close());
-            }
-            return Promise.all(promises);
+            return new Promise((resolve, error) => {
+                this._db.close(err => {
+                    if (err) {
+                        error(err);
+                        return;
+                    }
+                    resolve();
+                });
+            });
         }
         return Promise.resolve();
     }
@@ -94,13 +111,8 @@ class JungleDB {
      * @returns {Promise} The promise resolves after deleting the database.
      */
     async destroy() {
-        JungleDB._fs.unlinkSync(`${this._databaseDir}.dbVersion`);
-        const promises = [];
-        // Create new ObjectStores.
-        for (const objStore of this._objectStoreBackends) {
-            promises.push(objStore.destroy());
-        }
-        return Promise.all(promises);
+        await this.close();
+        return LevelDBBackend.destroy(this._databaseDir);
     }
 
     /**
@@ -116,7 +128,7 @@ class JungleDB {
         if (this._dbVersion > storedVersion) {
             // Delete object stores, if requested.
             for (const tableName of this._objectStoresToDelete) {
-                promises.push(LevelDBBackend.destroy(this._databaseDir + tableName));
+                promises.push(LevelDBBackend.truncate(this._db, tableName));
             }
             delete this._objectStoresToDelete;
 
@@ -165,7 +177,7 @@ class JungleDB {
      * @returns {IObjectStore}
      */
     static createVolatileObjectStore(codec=null) {
-        return new ObjectStore(new InMemoryBackend('', codec), this);
+        return new ObjectStore(new InMemoryBackend('', codec), null);
     }
 
     /**
@@ -187,7 +199,7 @@ class JungleDB {
 
         // LevelDB already implements a LRU cache. so we don't need to cache it.
         const backend = persistent
-            ? new LevelDBBackend(this, tableName, this._databaseDir, codec)
+            ? new LevelDBBackend(this, tableName, codec)
             : new InMemoryBackend(tableName, codec);
         const objStore = new ObjectStore(backend, this);
         this._objectStores.set(tableName, objStore);
@@ -203,6 +215,59 @@ class JungleDB {
     async deleteObjectStore(tableName) {
         if (this._connected) throw 'Cannot delete ObjectStore while connected';
         this._objectStoresToDelete.push(tableName);
+    }
+
+    /**
+     * Is used to commit multiple transactions atomically.
+     * This guarantees that either all transactions are written or none.
+     * The method takes a list of transactions (at least two transactions).
+     * If the commit was successful, the method returns true, and false otherwise.
+     * @param {Transaction|CombinedTransaction} tx1 The first transaction
+     * (a CombinedTransaction object is only used internally).
+     * @param {Transaction} tx2 The second transaction.
+     * @param {...Transaction} txs A list of further transactions to commit together.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     */
+    static async commitCombined(tx1, tx2, ...txs) {
+        // If tx1 is a CombinedTransaction, flush it to the database.
+        if (tx1 instanceof CombinedTransaction) {
+            const functions = [];
+            /** @type {Array.<EncodedTransaction>} */
+            let batch = [];
+
+            const infos = await Promise.all(tx1.transactions.map(tx => tx.objectStore._backend.applyCombined(tx)));
+            for (const info of infos) {
+                if (typeof info === 'function') {
+                    functions.push(info);
+                } else {
+                    batch = batch.concat(info);
+                }
+            }
+
+            return new Promise((resolve, error) => {
+                if (batch.length > 0) {
+                    tx1.backend.backend.batch(batch, err => {
+                        if (err) {
+                            error(err);
+                            return;
+                        }
+
+                        functions.forEach(f => f());
+                        resolve(true);
+                    });
+                } else {
+                    functions.forEach(f => f());
+                    resolve(true);
+                }
+            });
+        }
+        txs.push(tx1);
+        txs.push(tx2);
+        if (!txs.every(tx => tx instanceof Transaction)) {
+            throw 'Invalid arguments supplied';
+        }
+        const ctx = new CombinedTransaction(...txs);
+        return ctx.commit();
     }
 }
 /**

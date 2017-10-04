@@ -1,7 +1,7 @@
 /**
  * This class is a wrapper around the IndexedDB.
  * It manages the access to a single table/object store.
- * @implements {IObjectStore}
+ * @implements {IBackend}
  */
 class IDBBackend {
     /**
@@ -22,6 +22,14 @@ class IDBBackend {
     /** @type {boolean} */
     get connected() {
         return this._db.connected;
+    }
+
+    /** @type {IDBDatabase} */
+    get _backend() {
+        if (!this.connected) {
+            throw 'Requires a connected database';
+        }
+        return this._db.backend;
     }
 
     /**
@@ -104,7 +112,7 @@ class IDBBackend {
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
     async get(key) {
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const getTx = db.transaction([this._tableName])
                 .objectStore(this._tableName)
@@ -121,7 +129,7 @@ class IDBBackend {
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
     async put(key, value) {
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const putTx = db.transaction([this._tableName], 'readwrite')
                 .objectStore(this._tableName)
@@ -137,7 +145,7 @@ class IDBBackend {
      * @returns {Promise} The promise resolves after writing to the current object store finished.
      */
     async remove(key) {
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const deleteTx = db.transaction([this._tableName], 'readwrite')
                 .objectStore(this._tableName)
@@ -160,7 +168,7 @@ class IDBBackend {
             return query.values(this);
         }
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const getRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -183,7 +191,7 @@ class IDBBackend {
             return query.keys(this);
         }
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const getRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -202,7 +210,7 @@ class IDBBackend {
      */
     async maxValue(query=null) {
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -221,7 +229,7 @@ class IDBBackend {
      */
     async maxKey(query=null) {
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -240,7 +248,7 @@ class IDBBackend {
      */
     async minValue(query=null) {
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -259,7 +267,7 @@ class IDBBackend {
      */
     async minKey(query=null) {
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -278,7 +286,7 @@ class IDBBackend {
      */
     async count(query=null) {
         query = IDBTools.convertKeyRange(query);
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const getRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -286,25 +294,6 @@ class IDBBackend {
             getRequest.onsuccess = () => resolve(getRequest.result);
             getRequest.onerror = () => reject(getRequest.error);
         });
-    }
-
-    /**
-     * The wrapper object stores do not support this functionality
-     * as it is managed by the ObjectStore.
-     * @param {Transaction} [tx]
-     * @returns {Promise.<boolean>}
-     */
-    async commit(tx) {
-        throw 'Unsupported operation';
-    }
-
-    /**
-     * The wrapper object stores do not support this functionality
-     * as it is managed by the ObjectStore.
-     * @param {Transaction} [tx]
-     */
-    async abort(tx) {
-        throw 'Unsupported operation';
     }
 
     /**
@@ -336,7 +325,7 @@ class IDBBackend {
      * @protected
      */
     async _apply(tx) {
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const idbTx = db.transaction([this._tableName], 'readwrite');
             const objSt = idbTx.objectStore(this._tableName);
@@ -361,7 +350,7 @@ class IDBBackend {
      * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
-        const db = await this._db.backend;
+        const db = this._backend;
         return new Promise((resolve, reject) => {
             const getRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
@@ -414,12 +403,24 @@ class IDBBackend {
     }
 
     /**
-     * Creates a new transaction, ensuring read isolation
-     * on the most recently successfully committed state.
-     * @returns {Transaction} The transaction object.
+     * Returns the necessary information in order to flush a combined transaction.
+     * @param {Transaction} tx The transaction that should be applied to this backend.
+     * @returns {Promise.<EncodedTransaction>} A special transaction object bundling all necessary information.
      */
-    transaction() {
-        throw 'Unsupported operation';
+    async applyCombined(tx) {
+        const encodedTx = new EncodedTransaction(this._tableName);
+
+        if (tx._truncated) {
+            encodedTx.truncate();
+        }
+
+        for (const key of tx._removed) {
+            encodedTx.remove(key);
+        }
+        for (const [key, value] of tx._modified) {
+            encodedTx.put(this.encode(value), key);
+        }
+        return encodedTx;
     }
 }
 Class.register(IDBBackend);

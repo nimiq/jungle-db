@@ -4,21 +4,41 @@
  * and to apply them all at once.
  * This class is to be used only internally.
  */
-class IndexTransaction {
+class EncodedTransaction {
     /**
      * Create a new IndexTransaction.
      */
-    constructor() {
+    constructor(tableName) {
+        this._tableName = tableName;
         this._modified = new Map();
         this._removed = new Set();
         this._truncated = false;
     }
 
+    /** @type {string} */
+    get tableName() {
+        return this._tableName;
+    }
+
+    /** @type {Map.<string,*>} */
+    get modified() {
+        return this._modified;
+    }
+
+    /** @type {Set.<string>} */
+    get removed() {
+        return this._removed;
+    }
+
+    /** @type {boolean} */
+    get truncated() {
+        return this._truncated;
+    }
+
     /**
      * Empty the index transaction.
-     * @returns {Promise.<void>} Promise resolves upon completion.
      */
-    async truncate() {
+    truncate() {
         this._truncated = true;
         this._modified.clear();
         this._removed.clear();
@@ -45,4 +65,4 @@ class IndexTransaction {
     }
 
 }
-Class.register(IndexTransaction);
+Class.register(EncodedTransaction);

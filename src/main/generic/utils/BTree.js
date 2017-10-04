@@ -1064,7 +1064,7 @@ class BTree {
      */
     static loadFromJSON(rootId, nodes, order) {
         const tree = new BTree(order);
-        const root = Node.fromJSON(nodes.get(rootId));
+        const root = nodes.get(rootId);
         tree._root = root;
         const queue = [root];
         let maxId = 0;
@@ -1075,19 +1075,19 @@ class BTree {
 
             if (node.isLeaf()) {
                 let tmp = nodes.get(prevLeaf);
-                node.prevLeaf = tmp ? Node.fromJSON(tmp) : null;
+                node.prevLeaf = tmp ? tmp : null;
                 if (node.prevLeaf) {
                     queue.push(node.prevLeaf);
                 }
                 tmp = nodes.get(nextLeaf);
-                node.nextLeaf = tmp ? Node.fromJSON(tmp) : null;
+                node.nextLeaf = tmp ? tmp : null;
                 if (node.nextLeaf) {
                     queue.push(node.nextLeaf);
                 }
             } else {
                 for (let i=0; i<node.nodePointers.length; ++i) {
                     let tmp = nodes.get(node.nodePointers[i]);
-                    tmp = tmp ? Node.fromJSON(tmp) : null;
+                    tmp = tmp ? tmp : null;
                     if (tmp) {
                         queue.push(tmp);
                     }

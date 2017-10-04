@@ -83,9 +83,9 @@ class JungleDB {
         }
     }
 
-    /** @type {Promise.<IDBDatabase>} A promise to the underlying IDBDatabase. */
+    /** @type {IDBDatabase} The underlying IDBDatabase. */
     get backend() {
-        return this.connect();
+        return this._db;
     }
 
     /** @type {boolean} Whether a connection is established. */
@@ -108,7 +108,7 @@ class JungleDB {
      * @returns {IObjectStore}
      */
     static createVolatileObjectStore(codec=null) {
-        return new ObjectStore(new InMemoryBackend('', codec), this);
+        return new ObjectStore(new InMemoryBackend('', codec), null);
     }
 
     /**
@@ -154,7 +154,7 @@ class JungleDB {
     async close() {
         if (this._connected) {
             this._connected = false;
-            (await this.backend).close();
+            this.backend.close();
         }
     }
 
@@ -169,6 +169,80 @@ class JungleDB {
             req.onsuccess = resolve;
             req.onerror = reject;
         });
+    }
+
+    /**
+     * Is used to commit multiple transactions atomically.
+     * This guarantees that either all transactions are written or none.
+     * The method takes a list of transactions (at least two transactions).
+     * If the commit was successful, the method returns true, and false otherwise.
+     * @param {Transaction|CombinedTransaction} tx1 The first transaction
+     * (a CombinedTransaction object is only used internally).
+     * @param {Transaction} tx2 The second transaction.
+     * @param {...Transaction} txs A list of further transactions to commit together.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     */
+    static async commitCombined(tx1, tx2, ...txs) {
+        // If tx1 is a CombinedTransaction, flush it to the database.
+        if (tx1 instanceof CombinedTransaction) {
+            const functions = [];
+            /** @type {Array.<EncodedTransaction>} */
+            const encodedTxs = [];
+            const tableNames = [];
+
+            const infos = await Promise.all(tx1.transactions.map(tx => tx.objectStore._backend.applyCombined(tx)));
+            for (const info of infos) {
+                let tmp = info;
+                if (!Array.isArray(info)) {
+                    tmp = [info];
+                }
+                for (const innerInfo of tmp) {
+                    if (typeof innerInfo === 'function') {
+                        functions.push(innerInfo);
+                    } else {
+                        encodedTxs.push(innerInfo);
+                        tableNames.push(innerInfo.tableName);
+                    }
+                }
+            }
+
+            const db = tx1.backend !== null ? tx1.backend.backend : null;
+            return new Promise((resolve, reject) => {
+                if (tableNames.length > 0) {
+                    const idbTx = db.transaction(tableNames, 'readwrite');
+
+                    for (const encodedTx of encodedTxs) {
+                        const objSt = idbTx.objectStore(encodedTx.tableName);
+
+                        if (encodedTx.truncated) {
+                            objSt.clear();
+                        }
+                        for (const key of encodedTx.removed) {
+                            objSt.delete(key);
+                        }
+                        for (const [key, value] of encodedTx.modified) {
+                            objSt.put(value, key);
+                        }
+                    }
+
+                    idbTx.oncomplete = () => {
+                        functions.forEach(f => f());
+                        resolve(true);
+                    };
+                    idbTx.onerror = reject;
+                } else {
+                    functions.forEach(f => f());
+                    resolve(true);
+                }
+            });
+        }
+        txs.push(tx1);
+        txs.push(tx2);
+        if (!txs.every(tx => tx instanceof Transaction)) {
+            throw 'Invalid arguments supplied';
+        }
+        const ctx = new CombinedTransaction(...txs);
+        return ctx.commit();
     }
 }
 Class.register(JungleDB);

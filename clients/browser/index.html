@@ -11,9 +11,12 @@
     const db = new JDB.JungleDB('test', 1);
     const st = db.createObjectStore('testTable');
     st.createIndex('prop');
+    st.createIndex('test', 'a.b');
 
     db.connect().then(() => {
-        st.values(Query.and(Query.ge('prop', 'dff'), Query.min('prop'))).then(console.log);
+        st.put('aa', {'prop': 123, 'a': {'b': 5}}).then(() => {
+            st.values(JDB.Query.and(JDB.Query.ge('prop', 'dff'), JDB.Query.min('prop'))).then(console.log);
+        });
     });
 </script>
 

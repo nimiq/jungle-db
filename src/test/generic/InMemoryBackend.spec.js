@@ -1,4 +1,4 @@
-describe('Query', () => {
+describe('InMemoryBackend', () => {
     let objectStore;
 
     const setEqual = function(actual, expected) {

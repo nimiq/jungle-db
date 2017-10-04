@@ -9,22 +9,25 @@ class PersistentIndex extends InMemoryIndex {
     /**
      * Creates a new PersistentIndex for a LevelDB backend.
      * @param {LevelDBBackend} objectStore The underlying LevelDB backend.
+     * @param {JungleDB} db The underlying JungleDB.
      * @param {string} indexName The index name.
      * @param {string|Array.<string>} [keyPath] The key path of the indexed attribute.
      * If the keyPath is not given, this is a primary index.
      * @param {boolean} [multiEntry] Whether the indexed attribute is considered to be iterable or not.
      * @param {boolean} [unique] Whether there is a unique constraint on the attribute.
      */
-    constructor(objectStore, indexName, keyPath, multiEntry=false, unique=false) {
+    constructor(objectStore, db, indexName, keyPath, multiEntry=false, unique=false) {
         super(objectStore, keyPath, multiEntry, unique);
 
-        this._databaseDirectory = `${objectStore.databaseDirectory}/${indexName}`;
-        this._dbBackend = new LevelDBBackend(undefined, indexName, `${objectStore.databaseDirectory}/`, JungleDB.JSON_ENCODING);
+        this._prefix = `_${objectStore.tableName}-${indexName}`;
+        this._dbBackend = new LevelDBBackend(db, this._prefix, IndexCodec.instance);
 
         this._indexName = indexName;
+    }
 
-        this._persistanceSynchronizer = new Synchronizer();
-        this._version = 0;
+    /** The levelDB backend. */
+    get backend() {
+        return this._dbBackend;
     }
 
     /**
@@ -32,8 +35,17 @@ class PersistentIndex extends InMemoryIndex {
      * @returns {Promise} The promise resolves after emptying the index.
      */
     truncate() {
-        this._version = 0;
         return Promise.all([super.truncate(), this._dbBackend.truncate()]);
+    }
+
+    /**
+     * Reinitialises the index in memory and
+     * returns batch operations to reinitialise the index.
+     * @returns {Promise.<Array>} The promise contains the batch operations.
+     */
+    async _truncate() {
+        await InMemoryIndex.prototype.truncate.call(this);
+        return LevelDBBackend._truncate(this._dbBackend._dbBackend);
     }
 
     /**
@@ -84,11 +96,11 @@ class PersistentIndex extends InMemoryIndex {
      * @returns {Promise.<PersistentIndex>} A promise of the fully initialised index.
      */
     async init() {
-        const [version, root] = await Promise.all([this._get('_version'), this._get('_root')]);
-        this._version = version || this._version;
+        await this._dbBackend.init();
+        const root = await this._get('_root');
 
         // Check whether the stored index is consistent with the main database.
-        if (this._version === this._objectStore.indexVersion && (typeof root === 'number')) {
+        if (typeof root === 'number') {
             const nodes = await this._load();
             this._tree = BTree.loadFromJSON(root, nodes);
         } else {
@@ -100,72 +112,9 @@ class PersistentIndex extends InMemoryIndex {
             await this._objectStore.map((key, value) => {
                 this.put(key, value, undefined);
             });
-            await this._dbBackend.put('_version', this._objectStore.indexVersion);
         }
 
         return this;
-    }
-
-    /**
-     * Inserts a new key-value pair into the index.
-     * For replacing an existing pair, the old value has to be passed as well.
-     * @param {string} key The primary key of the pair.
-     * @param {*} value The value of the pair. The indexed key will be extracted from this.
-     * @param {*} [oldValue] The old value associated with the primary key.
-     * @returns {Promise.<TreeTransaction>} A promise resolving upon successful completion.
-     */
-    put(key, value, oldValue) {
-        const treeTx = super.put(key, value, oldValue);
-        this._version = (this._version + 1) % LevelDBBackend.MAX_INDEX_VERSION;
-        return this._persist(treeTx, this._version);
-    }
-
-    /**
-     * Removes a key-value pair from the index.
-     * @param {string} key The primary key of the pair.
-     * @param {*} obj The old value of the pair. The indexed key will be extracted from this.
-     * @returns {Promise.<TreeTransaction>} A promise resolving upon successful completion.
-     */
-    remove(key, obj) {
-        const treeTx = super.remove(key, obj);
-        this._version = (this._version + 1) % LevelDBBackend.MAX_INDEX_VERSION;
-        return this._persist(treeTx, this._version);
-    }
-
-    /**
-     * Internal method to synchronously persist changes in the index.
-     * @param {TreeTransaction} treeTx The tree transaction to persist.
-     * @param {number} version The new version number of this index.
-     * @returns {Promise} A promise resolving upon successful completion.
-     * @private
-     */
-    _persist(treeTx, version) {
-        this._persistanceSynchronizer.push(() => {
-            return this._write(treeTx, version);
-        });
-    }
-
-    /**
-     * Internal method updating the database in batch.
-     * @param {TreeTransaction} treeTx The tree transaction to persist.
-     * @param {number} version The new version number of this index.
-     * @returns {Promise} A promise resolving upon successful completion.
-     * @private
-     */
-    async _write(treeTx, version) {
-        // Save to underlying database.
-        // Make use of transactions.
-        const tx = new IndexTransaction();
-        tx.put('_root', treeTx.root.id);
-        for (const node of treeTx.removed) {
-            tx.remove(''+node.id);
-        }
-        for (const node of treeTx.modified) {
-            tx.put(''+node.id, node.toJSON());
-        }
-        tx.put('_version', version);
-        await this._dbBackend._apply(tx);
-        return treeTx;
     }
 
     /**
@@ -173,7 +122,7 @@ class PersistentIndex extends InMemoryIndex {
      * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
      * or no changes are applied.
      * @param {Transaction} tx The transaction to apply.
-     * @returns {Promise} The promise resolves after applying the transaction.
+     * @returns {Promise.<TreeTransaction>} The promise resolves after applying the transaction.
      * @protected
      */
     async _apply(tx) {
@@ -181,7 +130,6 @@ class PersistentIndex extends InMemoryIndex {
         if (tx._truncated) {
             await this.truncate();
         }
-        this._version = (this._version + 1) % LevelDBBackend.MAX_INDEX_VERSION;
         let treeTx = null;
 
         for (const key of tx._removed) {
@@ -193,10 +141,7 @@ class PersistentIndex extends InMemoryIndex {
             treeTx = super.put(key, value, oldValue).merge(treeTx);
         }
 
-        if (treeTx !== null) {
-            await this._persist(treeTx, this._version);
-        }
-        return true;
+        return treeTx;
     }
 
     /**

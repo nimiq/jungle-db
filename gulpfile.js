@@ -16,13 +16,14 @@ const sources = {
         browser: [
             './src/main/platform/browser/Class.js',
             './src/main/platform/browser/utils/IDBTools.js',
+            './src/main/platform/browser/EncodedTransaction.js',
             './src/main/platform/browser/IDBBackend.js',
             './src/main/platform/browser/JungleDB.js',
             './src/main/platform/browser/PersistentIndex.js'
         ],
         node: [
-            './src/main/platform/nodejs/IndexTransaction.js',
             './src/main/platform/nodejs/utils/LevelDBTools.js',
+            './src/main/platform/nodejs/utils/IndexCodec.js',
             './src/main/platform/nodejs/LevelDBBackend.js',
             './src/main/platform/nodejs/JungleDB.js',
             './src/main/platform/nodejs/PersistentIndex.js'
@@ -42,7 +43,8 @@ const sources = {
         './src/main/generic/ObjectStore.js',
         './src/main/generic/Query.js',
         './src/main/generic/TransactionIndex.js',
-        './src/main/generic/Transaction.js'
+        './src/main/generic/Transaction.js',
+        './src/main/generic/CombinedTransaction.js'
     ],
     test: {
         generic: [

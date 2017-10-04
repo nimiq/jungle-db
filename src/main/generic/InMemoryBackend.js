@@ -5,7 +5,7 @@
  * Other transactions based on the same state will end up in a conflicted state if committed.
  * Transactions opened after the successful commit of another transaction will be based on the
  * new state and hence can be committed again.
- * @implements {IObjectStore}
+ * @implements {IBackend}
  */
 class InMemoryBackend {
     constructor(tableName, codec=null) {
@@ -143,21 +143,6 @@ class InMemoryBackend {
     }
 
     /**
-     * @param {Transaction} [tx]
-     * @returns {Promise.<boolean>}
-     */
-    async commit(tx) {
-        throw 'Unsupported operation';
-    }
-
-    /**
-     * @param {Transaction} [tx]
-     */
-    async abort(tx) {
-        throw 'Unsupported operation';
-    }
-
-    /**
      * @param {string} indexName
      * @returns {IIndex}
      */
@@ -284,12 +269,13 @@ class InMemoryBackend {
     }
 
     /**
-     * Creates a new transaction, ensuring read isolation
-     * on the most recently successfully committed state.
-     * @returns {Transaction} The transaction object.
+     * Returns the necessary information in order to flush a combined transaction.
+     * @param {Transaction} tx The transaction that should be applied to this backend.
+     * @returns {Promise.<*|function()>} Either the tableName if this is a native, persistent backend
+     * or a function that effectively applies the transaction to non-persistent backends.
      */
-    transaction() {
-        throw 'Unsupported operation';
+    async applyCombined(tx) {
+        return () => this._apply(tx);
     }
 }
 Class.register(InMemoryBackend);

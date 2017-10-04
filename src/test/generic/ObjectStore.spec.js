@@ -147,25 +147,44 @@ describe('ObjectStore', () => {
 
             // Create a third transaction, which should be based on tx1.
             const tx3 = objectStore.transaction();
+            await tx3.put('test', 'successful');
             expect(await tx3.get('key0')).toBe(undefined);
             expect(await backend.get('key0')).toBe('value0'); // not yet written
 
             // Should not be able to commit tx2.
             expect(await tx2.commit()).toBe(false);
             expect(tx2.state).toBe(JDB.Transaction.STATE.CONFLICTED);
-            expect(await backend.get('key0')).toBe('value0'); // not yet written
+
+            // tx1 might be flushed by now. No more transactions possible on top of it.
+            try {
+                tx1.transaction();
+                expect(true).toBe(false);
+            } catch (e) {
+                expect(true).toBe(true);
+            }
+
+            // Create another transaction, which should be based on the same backend as tx3.
+            const tx4 = objectStore.transaction();
+            expect(tx3.__backend).toBe(tx4.__backend);
+            expect(await tx4.get('key0')).toBe(undefined);
+            expect(await tx4.get('test')).toBe(undefined);
 
             // Abort third transaction.
-            expect(await tx3.abort()).toBe(true);
+            expect(await tx3.commit()).toBe(true);
+            expect(await tx4.commit()).toBe(false);
 
             // Now tx1 should be in the backend.
             expect(await backend.get('key0')).toBe(undefined);
             expect(await objectStore.get('key0')).toBe(undefined);
+            // As well as tx3.
+            expect(await backend.get('test')).toBe('successful');
+            expect(await objectStore.get('test')).toBe('successful');
 
             // Create a fourth transaction, which should be based on the new state.
-            const tx4 = objectStore.transaction();
-            expect(await tx4.get('key0')).toBe(undefined);
-            await tx4.abort();
+            const tx5 = objectStore.transaction();
+            expect(await tx5.get('key0')).toBe(undefined);
+            expect(await tx5.get('test')).toBe('successful');
+            await tx5.abort();
         })().then(done, done.fail);
     });
 
