@@ -69,20 +69,19 @@ class CombinedTransaction {
      * Triggers combined flush as soon as all transactions are ready.
      * @param {Transaction} tx Transaction to be reported flushable.
      * @param {function()} callback A callback to be called after the transaction is flushed.
-     * @returns {boolean} Whether the flushing has been triggered.
+     * @returns {Promise.<boolean>} Whether the flushing has been triggered.
      */
-    onFlushable(tx, callback=null) {
+    async onFlushable(tx, callback=null) {
         // Save as flushable and prepare and flush only if all are flushable.
         // Afterwards call the callbacks to cleanup the ObjectStores' transaction stacks.
         this._flushable.set(tx, callback);
 
         // All are flushable, so go ahead.
         if (this._transactions.every(tx => this._flushable.has(tx))) {
-            JungleDB.commitCombined(this).then(() => {
-                for (const value of this._flushable.values()) {
-                    value();
-                }
-            });
+            await JungleDB.commitCombined(this);
+            for (const value of this._flushable.values()) {
+                value();
+            }
             return true;
         }
         return false;

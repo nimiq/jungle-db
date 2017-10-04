@@ -2,12 +2,12 @@
  * This is an intermediate layer caching the results of a backend.
  * While simple get/put queries make use of the cache,
  * more advanced queries will be forwarded to the backend.
- * @implements {IObjectStore}
+ * @implements {IBackend}
  */
 class CachedBackend {
     /**
      * Creates a new instance of the cached layer using the specified backend.
-     * @param {IObjectStore} backend The backend to use.
+     * @param {IBackend} backend The backend to use.
      */
     constructor(backend) {
         this._backend = backend;
@@ -188,6 +188,17 @@ class CachedBackend {
      * @protected
      */
     _apply(tx) {
+        this._applyLocally(tx);
+        return this._backend._apply(tx);
+    }
+
+    /**
+     * Internally applies a transaction to the cache's state.
+     * @param {Transaction} tx The transaction to apply.
+     * @returns {Promise} The promise resolves after applying the transaction.
+     * @protected
+     */
+    _applyLocally(tx) {
         // Update local state and push to backend for batch transaction.
         if (tx._truncated) {
             this._cache.clear();
@@ -198,7 +209,6 @@ class CachedBackend {
         for (const [key, value] of tx._modified) {
             this._cache.set(key, value);
         }
-        return this._backend._apply(tx);
     }
 
     /**
@@ -264,6 +274,17 @@ class CachedBackend {
      */
     transaction() {
         throw 'Unsupported operation';
+    }
+
+    /**
+     * Returns the necessary information in order to flush a combined transaction.
+     * @abstract
+     * @param {Transaction} tx The transaction that should be applied to this backend.
+     * @returns {Promise.<*|function()|Array.<*|function()>>} For non-persistent backends: a function that effectively applies the transaction.
+     * Native backends otherwise specify their own information as needed by their JungleDB instance.
+     */
+    async applyCombined(tx) {
+        return [await this._backend.applyCombined(tx), () => this._applyLocally(tx)];
     }
 }
 /** @type {number} Maximum number of cached elements. */

@@ -415,7 +415,7 @@ class IDBBackend {
         }
 
         for (const key of tx._removed) {
-            encodedTx.delete(key);
+            encodedTx.remove(key);
         }
         for (const [key, value] of tx._modified) {
             encodedTx.put(this.encode(value), key);

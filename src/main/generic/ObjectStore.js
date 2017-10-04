@@ -385,8 +385,6 @@ class ObjectStore {
                 if (statePosition >= 0) {
                     this._stateStack.splice(statePosition, 1);
                 }
-
-                this._flattenState();
             };
 
             if (tx.dependency === null) {
@@ -394,8 +392,7 @@ class ObjectStore {
                 cleanup();
                 return true;
             } else {
-                tx.dependency.onFlushable(tx, cleanup);
-                return false; // We do not know when the state is actually applied, so we count it as still there.
+                return await tx.dependency.onFlushable(tx, cleanup);
             }
         } else {
             // Check both ends of the stack.

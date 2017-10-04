@@ -192,11 +192,17 @@ class JungleDB {
 
             const infos = await Promise.all(tx1.transactions.map(tx => tx.objectStore._backend.applyCombined(tx)));
             for (const info of infos) {
-                if (typeof info === 'function') {
-                    functions.push(info);
-                } else {
-                    encodedTxs.push(info);
-                    tableNames.push(info.tableName);
+                let tmp = info;
+                if (!Array.isArray(info)) {
+                    tmp = [info];
+                }
+                for (const innerInfo of tmp) {
+                    if (typeof innerInfo === 'function') {
+                        functions.push(innerInfo);
+                    } else {
+                        encodedTxs.push(innerInfo);
+                        tableNames.push(innerInfo.tableName);
+                    }
                 }
             }
 
