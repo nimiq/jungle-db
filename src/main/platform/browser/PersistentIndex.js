@@ -67,9 +67,18 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
-            const getRequest = this._index(db).getAll(query);
-            getRequest.onsuccess = () => resolve(this._objectStore.decodeArray(getRequest.result));
-            getRequest.onerror = () => reject(getRequest.error);
+            const results = [];
+            const request = this._index(db).openCursor(query);
+            request.onsuccess = event => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    results.push(this._objectStore.decode(cursor.primaryKey, cursor.value));
+                    cursor.continue();
+                } else {
+                    resolve(results);
+                }
+            };
+            request.onerror = () => reject(request.error);
         });
     }
 
@@ -101,8 +110,22 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
+            const results = [];
+            let maxKey = null;
             const request = this._index(db).openCursor(query, 'prev');
-            request.onsuccess = () => resolve(request.result ? this._objectStore.decodeArray(request.result.value) : []);
+            request.onsuccess = event => {
+                const cursor = event.target.result;
+                if (maxKey === null) {
+                    maxKey = cursor.key;
+                }
+                // Only iterate until key changes.
+                if (cursor && maxKey === cursor.key) {
+                    results.push(this._objectStore.decode(cursor.primaryKey, cursor.value));
+                    cursor.continue();
+                } else {
+                    resolve(results);
+                }
+            };
             request.onerror = () => reject(request.error);
         });
     }
@@ -118,8 +141,22 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
+            const results = new Set();
+            let maxKey = null;
             const request = this._index(db).openKeyCursor(query, 'prev');
-            request.onsuccess = () => resolve(Set.from(request.result ? request.result.primaryKey : []));
+            request.onsuccess = event => {
+                const cursor = event.target.result;
+                if (maxKey === null) {
+                    maxKey = cursor.key;
+                }
+                // Only iterate until key changes.
+                if (cursor && maxKey === cursor.key) {
+                    results.add(cursor.primaryKey);
+                    cursor.continue();
+                } else {
+                    resolve(results);
+                }
+            };
             request.onerror = () => reject(request.error);
         });
     }
@@ -135,8 +172,22 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
+            const results = [];
+            let maxKey = null;
             const request = this._index(db).openCursor(query, 'next');
-            request.onsuccess = () => resolve(request.result ? this._objectStore.decodeArray(request.result.value) : []);
+            request.onsuccess = event => {
+                const cursor = event.target.result;
+                if (maxKey === null) {
+                    maxKey = cursor.key;
+                }
+                // Only iterate until key changes.
+                if (cursor && maxKey === cursor.key) {
+                    results.push(this._objectStore.decode(cursor.primaryKey, cursor.value));
+                    cursor.continue();
+                } else {
+                    resolve(results);
+                }
+            };
             request.onerror = () => reject(request.error);
         });
     }
@@ -152,8 +203,22 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
+            const results = new Set();
+            let maxKey = null;
             const request = this._index(db).openKeyCursor(query, 'next');
-            request.onsuccess = () => resolve(Set.from(request.result ? request.result.primaryKey : []));
+            request.onsuccess = event => {
+                const cursor = event.target.result;
+                if (maxKey === null) {
+                    maxKey = cursor.key;
+                }
+                // Only iterate until key changes.
+                if (cursor && maxKey === cursor.key) {
+                    results.add(cursor.primaryKey);
+                    cursor.continue();
+                } else {
+                    resolve(results);
+                }
+            };
             request.onerror = () => reject(request.error);
         });
     }

@@ -74,15 +74,16 @@ class LevelDBBackend {
 
     /**
      * Internal method called to decode a single value.
+     * @param {string} key Key corresponding to the value.
      * @param {*} value Value to be decoded.
      * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
      */
-    decode(value) {
+    decode(key, value) {
         if (value === undefined) {
             return undefined;
         }
         if (this._codec !== null && this._codec !== undefined) {
-            return this._codec.decode(value);
+            return this._codec.decode(key, value);
         }
         return value;
     }
@@ -115,7 +116,7 @@ class LevelDBBackend {
                     resolve(undefined);
                     return;
                 }
-                resolve(this.decode(value));
+                resolve(this.decode(key, value));
             });
         });
     }
@@ -189,9 +190,9 @@ class LevelDBBackend {
         }
         return new Promise((resolve, error) => {
             const result = [];
-            this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false }))
+            this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': true }))
                 .on('data', data => {
-                    result.push(this.decode(data));
+                    result.push(this.decode(data.key, data.value));
                 })
                 .on('error', err => {
                     error(err);
@@ -241,9 +242,9 @@ class LevelDBBackend {
      */
     maxValue(query=null) {
         return new Promise((resolve, error) => {
-            this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false, 'limit': 1, 'reverse': true }))
+            this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': true, 'limit': 1, 'reverse': true }))
                 .on('data', data => {
-                    resolve(this.decode(data));
+                    resolve(this.decode(data.key, data.value));
                 })
                 .on('error', err => {
                     error(err);
@@ -279,9 +280,9 @@ class LevelDBBackend {
      */
     minValue(query=null) {
         return new Promise((resolve, error) => {
-            this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false, 'limit': 1, 'reverse': false }))
+            this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': true, 'limit': 1, 'reverse': false }))
                 .on('data', data => {
-                    resolve(this.decode(data));
+                    resolve(this.decode(data.key, data.value));
                 })
                 .on('error', err => {
                     error(err);
@@ -517,7 +518,7 @@ class LevelDBBackend {
         return new Promise((resolve, error) => {
             this._dbBackend.createReadStream({ 'values': true, 'keys': true })
                 .on('data', data => {
-                    func(data.key, this.decode(data.value));
+                    func(data.key, this.decode(data.key, data.value));
                 })
                 .on('error', err => {
                     error(err);

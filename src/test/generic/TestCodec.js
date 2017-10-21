@@ -23,12 +23,13 @@ class TestCodec {
 
     /**
      * Decodes an object before returning it to the user.
+     * @param {string} key The object's primary key.
      * @param {*} obj The object to decode.
      * @returns {*} Decoded object.
      */
-    decode(obj) {
+    decode(key, obj) {
         return {
-            key: obj.k,
+            key: key,
             value: obj.v
         };
     }

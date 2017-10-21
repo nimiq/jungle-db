@@ -62,15 +62,16 @@ class IDBBackend {
 
     /**
      * Internal method called to decode a single value.
+     * @param {string} key Key corresponding to the value.
      * @param {*} value Value to be decoded.
      * @returns {*} The decoded value.
      */
-    decode(value) {
+    decode(key, value) {
         if (value === undefined) {
             return undefined;
         }
         if (this._codec !== null && this._codec !== undefined) {
-            return this._codec.decode(value);
+            return this._codec.decode(key, value);
         }
         return value;
     }
@@ -91,21 +92,6 @@ class IDBBackend {
     }
 
     /**
-     * Internal method called to decode multiple values.
-     * @param {Array.<*>} values Values to be decoded.
-     * @returns {Array.<*>} The decoded values, either by the object store's default or the overriding decoder if given.
-     */
-    decodeArray(values) {
-        if (!Array.isArray(values)) {
-            return this.decode(values);
-        }
-        if (this._codec !== null && this._codec !== undefined) {
-            return values.map(this._codec);
-        }
-        return values;
-    }
-
-    /**
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
@@ -117,7 +103,7 @@ class IDBBackend {
             const getTx = db.transaction([this._tableName])
                 .objectStore(this._tableName)
                 .get(key);
-            getTx.onsuccess = event => resolve(this.decode(event.target.result));
+            getTx.onsuccess = event => resolve(this.decode(key, event.target.result));
             getTx.onerror = reject;
         });
     }
@@ -170,11 +156,20 @@ class IDBBackend {
         query = IDBTools.convertKeyRange(query);
         const db = this._backend;
         return new Promise((resolve, reject) => {
-            const getRequest = db.transaction([this._tableName], 'readonly')
+            const results = [];
+            const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
-                .getAll(query);
-            getRequest.onsuccess = () => resolve(this.decodeArray(getRequest.result));
-            getRequest.onerror = () => reject(getRequest.error);
+                .openCursor(query);
+            openCursorRequest.onsuccess = event => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    results.push(this.decode(cursor.primaryKey, cursor.value));
+                    cursor.continue();
+                } else {
+                    resolve(results);
+                }
+            };
+            openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
 
@@ -215,7 +210,10 @@ class IDBBackend {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
                 .openCursor(query, 'prev');
-            openCursorRequest.onsuccess = () => resolve(this.decode(openCursorRequest.result.value));
+            openCursorRequest.onsuccess = event => {
+                const cursor = event.target.result;
+                resolve(this.decode(cursor.primaryKey, cursor.value));
+            };
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
@@ -253,7 +251,10 @@ class IDBBackend {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
                 .openCursor(query, 'next');
-            openCursorRequest.onsuccess = () => resolve(this.decode(openCursorRequest.result.value));
+            openCursorRequest.onsuccess = event => {
+                const cursor = event.target.result;
+                resolve(this.decode(cursor.primaryKey, cursor.value));
+            };
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
