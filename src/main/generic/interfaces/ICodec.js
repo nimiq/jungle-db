@@ -23,11 +23,11 @@ class ICodec {
     /**
      * Decodes an object before returning it to the user.
      * @abstract
-     * @param {string} key The object's primary key.
      * @param {*} obj The object to decode.
+     * @param {string} key The object's primary key.
      * @returns {*} Decoded object.
      */
-    decode(key, obj) {} // eslint-disable-line no-unused-vars
+    decode(obj, key) {} // eslint-disable-line no-unused-vars
 
     /**
      * A value encoding used for the nodeJS implementation and ignored for the indexedDB.

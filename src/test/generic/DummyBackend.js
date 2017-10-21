@@ -43,7 +43,7 @@ class DummyBackend {
      * @returns {Promise.<*>}
      */
     async get(key) {
-        return this.decode(key, this._cache.get(key));
+        return this.decode(this._cache.get(key), key);
     }
 
     /**
@@ -258,16 +258,16 @@ class DummyBackend {
 
     /**
      * Internal method called to decode a single value.
-     * @param {string} key The object's primary key.
      * @param {*} value Value to be decoded.
+     * @param {string} key The object's primary key.
      * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
      */
-    decode(key, value) {
+    decode(value, key) {
         if (value === undefined) {
             return undefined;
         }
         if (this._codec !== null && this._codec !== undefined) {
-            return this._codec.decode(key, value);
+            return this._codec.decode(value, key);
         }
         return value;
     }

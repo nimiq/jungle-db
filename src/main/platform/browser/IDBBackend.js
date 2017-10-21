@@ -62,16 +62,16 @@ class IDBBackend {
 
     /**
      * Internal method called to decode a single value.
-     * @param {string} key Key corresponding to the value.
      * @param {*} value Value to be decoded.
+     * @param {string} key Key corresponding to the value.
      * @returns {*} The decoded value.
      */
-    decode(key, value) {
+    decode(value, key) {
         if (value === undefined) {
             return undefined;
         }
         if (this._codec !== null && this._codec !== undefined) {
-            return this._codec.decode(key, value);
+            return this._codec.decode(value, key);
         }
         return value;
     }
@@ -103,7 +103,7 @@ class IDBBackend {
             const getTx = db.transaction([this._tableName])
                 .objectStore(this._tableName)
                 .get(key);
-            getTx.onsuccess = event => resolve(this.decode(key, event.target.result));
+            getTx.onsuccess = event => resolve(this.decode(event.target.result, key));
             getTx.onerror = reject;
         });
     }
@@ -163,7 +163,7 @@ class IDBBackend {
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
                 if (cursor) {
-                    results.push(this.decode(cursor.primaryKey, cursor.value));
+                    results.push(this.decode(cursor.value, cursor.primaryKey));
                     cursor.continue();
                 } else {
                     resolve(results);
@@ -212,7 +212,7 @@ class IDBBackend {
                 .openCursor(query, 'prev');
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
-                resolve(this.decode(cursor.primaryKey, cursor.value));
+                resolve(this.decode(cursor.value, cursor.primaryKey));
             };
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
@@ -253,7 +253,7 @@ class IDBBackend {
                 .openCursor(query, 'next');
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
-                resolve(this.decode(cursor.primaryKey, cursor.value));
+                resolve(this.decode(cursor.value, cursor.primaryKey));
             };
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });

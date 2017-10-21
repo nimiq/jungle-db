@@ -21,11 +21,11 @@ class BinaryCodec {
 
     /**
      * Decodes an object before returning it to the user.
-     * @param {string} key The object's primary key.
      * @param {*} obj The object to decode.
+     * @param {string} key The object's primary key.
      * @returns {*} Decoded object.
      */
-    decode(key, obj) {
+    decode(obj, key) {
         const str = obj.toString('utf-8');
         const entries = str.split('|');
         const object = {};
