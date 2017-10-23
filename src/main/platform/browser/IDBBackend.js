@@ -212,7 +212,7 @@ class IDBBackend {
                 .openCursor(query, 'prev');
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
-                resolve(this.decode(cursor.value, cursor.primaryKey));
+                resolve(cursor ? this.decode(cursor.value, cursor.primaryKey) : undefined);
             };
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
@@ -232,7 +232,7 @@ class IDBBackend {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
                 .openKeyCursor(query, 'prev');
-            openCursorRequest.onsuccess = () => resolve(openCursorRequest.result.primaryKey);
+            openCursorRequest.onsuccess = () => resolve(openCursorRequest.result ? openCursorRequest.result.primaryKey : undefined);
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
@@ -253,7 +253,7 @@ class IDBBackend {
                 .openCursor(query, 'next');
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
-                resolve(this.decode(cursor.value, cursor.primaryKey));
+                resolve(cursor ? this.decode(cursor.value, cursor.primaryKey) : undefined);
             };
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
@@ -273,7 +273,7 @@ class IDBBackend {
             const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
                 .openKeyCursor(query, 'next');
-            openCursorRequest.onsuccess = () => resolve(openCursorRequest.result.primaryKey);
+            openCursorRequest.onsuccess = () => resolve(openCursorRequest.result ? openCursorRequest.result.primaryKey : undefined);
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
