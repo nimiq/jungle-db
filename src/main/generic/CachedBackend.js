@@ -102,9 +102,8 @@ class CachedBackend {
      * @param {Query|KeyRange} [query] Optional query to check keys against.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null) {
-        const keys = await this.keys(query);
-        return this._retrieveValues(keys);
+    values(query=null) {
+        return this._backend.values(query);
     }
 
     /**
