@@ -114,7 +114,9 @@ class InMemoryIndex {
         if (oldIKey !== undefined) {
             this._remove(key, oldIKey, treeTx);
         }
-        this._insert(key, newIKey, treeTx);
+        if (newIKey !== undefined) {
+            this._insert(key, newIKey, treeTx);
+        }
         return treeTx;
     }
 
