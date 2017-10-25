@@ -422,6 +422,142 @@ class Transaction {
     }
 
     /**
+     * Iterates over the keys in a given range and direction.
+     * The callback is called for each primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(key:string):boolean} callback A predicate called for each key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    async keyStream(callback, ascending=true, query=null) {
+        // TODO Optimize this sorting step.
+        let keys = Array.from(this._modified.keys());
+        if (query instanceof KeyRange) {
+            keys = keys.filter(key => query.includes(key));
+        }
+        keys = keys.sort();
+
+        let txIt = keys.iterator(ascending);
+        if (!this._truncated) {
+            let stopped = false;
+
+            await this.__backend.keyStream(key => {
+                // Iterate over TxKeys as long as they are smaller (ascending) or larger (descending).
+                while (txIt.hasNext() && ((ascending && txIt.peek() < key) || (!ascending && txIt.peek() > key))) {
+                    const currentTxKey = txIt.next();
+                    if (!callback(currentTxKey)) {
+                        // Do not continue iteration.
+                        stopped = true;
+                        return false;
+                    }
+                }
+                // Special case: what if next key is identical (-> modified)?
+                // Present modified version and continue.
+                if (txIt.hasNext() && txIt.peek() === key) {
+                    const currentTxKey = txIt.next();
+                    if (!callback(currentTxKey)) {
+                        // Do not continue iteration.
+                        stopped = true;
+                        return false;
+                    }
+                    return true;
+                }
+                // Then give key of the backend's key stream.
+                // But only if it hasn't been removed (lazy operator prevents calling callback in this case).
+                if (!this._removed.has(key) && !callback(key)) {
+                    // Do not continue iteration.
+                    stopped = true;
+                    return false;
+                }
+                return true;
+            }, ascending, query);
+
+            // Do not continue, if already stopped.
+            if (stopped) {
+                return;
+            }
+        }
+
+        // Iterate over the remaining TxKeys.
+        while (txIt.hasNext()) {
+            if (!callback(txIt.next())) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * Iterates over the keys and values in a given range and direction.
+     * The callback is called for each value and primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(value:*, key:string):boolean} callback A predicate called for each value and key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    async valueStream(callback, ascending=true, query=null) {
+        // TODO Optimize this sorting step.
+        let keys = Array.from(this._modified.keys());
+        if (query instanceof KeyRange) {
+            keys = keys.filter(key => query.includes(key));
+        }
+        keys = keys.sort();
+
+        let txIt = keys.iterator(ascending);
+        if (!this._truncated) {
+            let stopped = false;
+
+            await this.__backend.valueStream((value, key) => {
+                // Iterate over TxKeys as long as they are smaller (ascending) or larger (descending).
+                while (txIt.hasNext() && ((ascending && txIt.peek() < key) || (!ascending && txIt.peek() > key))) {
+                    const currentTxKey = txIt.next();
+                    const value = this._modified.get(currentTxKey);
+                    if (!callback(value, currentTxKey)) {
+                        // Do not continue iteration.
+                        stopped = true;
+                        return false;
+                    }
+                }
+                // Special case: what if next key is identical (-> modified)?
+                // Present modified version and continue.
+                if (txIt.hasNext() && txIt.peek() === key) {
+                    const currentTxKey = txIt.next();
+                    const value = this._modified.get(currentTxKey);
+                    if (!callback(value, currentTxKey)) {
+                        // Do not continue iteration.
+                        stopped = true;
+                        return false;
+                    }
+                    return true;
+                }
+                // Then give key of the backend's key stream.
+                // But only if it hasn't been removed (lazy operator prevents calling callback in this case).
+                if (!this._removed.has(key) && !callback(value, key)) {
+                    // Do not continue iteration.
+                    stopped = true;
+                    return false;
+                }
+                return true;
+            }, ascending, query);
+
+            // Do not continue, if already stopped.
+            if (stopped) {
+                return;
+            }
+        }
+
+        // Iterate over the remaining TxKeys.
+        while (txIt.hasNext()) {
+            const key = txIt.next();
+            const value = await this.get(key);
+            if (!callback(value, key)) {
+                break;
+            }
+        }
+    }
+
+    /**
      * Returns a promise of the object whose primary key is maximal for the given range.
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.

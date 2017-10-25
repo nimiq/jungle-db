@@ -234,6 +234,76 @@ class LevelDBBackend {
     }
 
     /**
+     * Iterates over the keys in a given range and direction.
+     * The callback is called for each primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(key:string):boolean} callback A predicate called for each key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    keyStream(callback, ascending=true, query=null) {
+        return new Promise((resolve, error) => {
+            const stream = this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': false, 'keys': true, 'reverse': !ascending }));
+            let stopped = false;
+            stream.on('data', data => {
+                if (!callback(data)) {
+                    stopped = true;
+                    stream.pause();
+                    stream.destroy();
+                }
+            })
+            .on('error', err => {
+                if (!stopped) {
+                    error(err);
+                }
+            })
+            .on('end', () => {
+                resolve();
+            })
+            .on('close', () => {
+                resolve();
+            });
+        });
+    }
+
+    /**
+     * Iterates over the keys and values in a given range and direction.
+     * The callback is called for each value and primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(value:*, key:string):boolean} callback A predicate called for each value and key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    valueStream(callback, ascending=true, query=null) {
+        return new Promise((resolve, error) => {
+            const stream = this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': true, 'reverse': !ascending }));
+            let stopped = false;
+            stream.on('data', data => {
+                if (!callback(data.value, data.key)) {
+                    stopped = true;
+                    stream.pause();
+                    stream.destroy();
+                }
+            })
+            .on('error', err => {
+                if (!stopped) {
+                    error(err);
+                } else {
+                    resolve();
+                }
+            })
+            .on('end', () => {
+                resolve();
+            })
+            .on('close', () => {
+                resolve();
+            });
+        });
+    }
+
+    /**
      * Returns a promise of the object whose primary key is maximal for the given range.
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.

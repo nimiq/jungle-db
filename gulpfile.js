@@ -34,6 +34,7 @@ const sources = {
         './src/main/generic/utils/LRUMap.js',
         './src/main/generic/utils/ObjectUtils.js',
         './src/main/generic/utils/Observable.js',
+        './src/main/generic/utils/ArrayUtils.js',
         './src/main/generic/utils/SetUtils.js',
         './src/main/generic/utils/Synchronizer.js',
         './src/main/generic/CachedBackend.js',

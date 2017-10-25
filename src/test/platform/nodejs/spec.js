@@ -20,6 +20,7 @@ require('../../../main/generic/utils/LRUMap.js');
 require('../../../main/generic/utils/ObjectUtils.js');
 require('../../../main/generic/utils/Observable.js');
 require('../../../main/generic/utils/Synchronizer.js');
+require('../../../main/generic/utils/ArrayUtils.js');
 require('../../../main/generic/utils/SetUtils.js');
 require('../../../main/generic/CachedBackend.js');
 require('../../../main/generic/InMemoryIndex.js');

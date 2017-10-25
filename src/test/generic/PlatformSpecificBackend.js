@@ -1,14 +1,16 @@
 describe('InMemoryBackend', () => {
-    let objectStore;
+    let objectStore, db;
 
     const setEqual = function(actual, expected) {
         return expected.equals(actual);
     };
 
     beforeEach((done) => {
-        objectStore = JDB.JungleDB.createVolatileObjectStore();
+        db = new JDB.JungleDB('test', 1);
+        objectStore = db.createObjectStore('testStore');
 
         (async function () {
+            await db.connect();
             // Add 10 objects.
             for (let i=0; i<10; ++i) {
                 await objectStore.put(`key${i}`, `value${i}`);
@@ -16,6 +18,12 @@ describe('InMemoryBackend', () => {
         })().then(done, done.fail);
 
         jasmine.addCustomEqualityTester(setEqual);
+    });
+
+    afterEach((done) => {
+        (async function () {
+            await db.destroy();
+        })().then(done, done.fail);
     });
 
     it('can open a transaction and commit it', (done) => {

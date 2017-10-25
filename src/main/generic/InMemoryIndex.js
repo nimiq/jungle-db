@@ -221,6 +221,93 @@ class InMemoryIndex {
     }
 
     /**
+     * Iterates over the keys in a given range and direction.
+     * The callback is called for each primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(key:string):boolean} callback A predicate called for each key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    keyStream(callback, ascending=true, query=null) {
+        if (!this._unique) {
+            throw 'Unsupported operation for non-unique indices';
+        }
+
+        // Find lower bound and start from there.
+        if (!(query instanceof KeyRange)) {
+            if (ascending) {
+                this._tree.goTop();
+            } else {
+                this._tree.goBottom();
+            }
+        } else {
+            if (ascending) {
+                if (!this._tree.goToLowerBound(query.lower, query.lowerOpen)) {
+                    return Promise.resolve();
+                }
+            } else {
+                if (!this._tree.goToUpperBound(query.upper, query.upperOpen)) {
+                    return Promise.resolve();
+                }
+            }
+        }
+
+        while (!(query instanceof KeyRange) || query.includes(this._tree.currentKey)) {
+            if (!callback(this._tree.currentRecord)) {
+                break;
+            }
+            if (!this._tree.skip(ascending ? 1 : -1)) {
+                break;
+            }
+        }
+        return Promise.resolve();
+    }
+
+    /**
+     * Iterates over the keys and values in a given range and direction.
+     * The callback is called for each value and primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(value:*, key:string):boolean} callback A predicate called for each value and key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolved after all elements have been streamed.
+     */
+    async valueStream(callback, ascending=true, query=null) {
+        if (!this._unique) {
+            throw 'Unsupported operation for non-unique indices';
+        }
+
+        // Find lower bound and start from there.
+        if (!(query instanceof KeyRange)) {
+            if (ascending) {
+                this._tree.goTop();
+            } else {
+                this._tree.goBottom();
+            }
+        } else {
+            if (ascending) {
+                if (!this._tree.goToLowerBound(query.lower, query.lowerOpen)) {
+                    return;
+                }
+            } else {
+                if (!this._tree.goToUpperBound(query.upper, query.upperOpen)) {
+                    return;
+                }
+            }
+        }
+
+        while (!(query instanceof KeyRange) || query.includes(this._tree.currentKey)) {
+            if (!callback(await this._objectStore.get(this._tree.currentRecord), this._tree.currentRecord)) {
+                break;
+            }
+            if (!this._tree.skip(ascending ? 1 : -1)) {
+                break;
+            }
+        }
+    }
+
+    /**
      * Returns a promise of an array of objects whose secondary key is maximal for the given range.
      * If the optional query is not given, it returns the objects whose secondary key is maximal within the index.
      * If the query is of type KeyRange, it returns the objects whose secondary key is maximal for the given range.

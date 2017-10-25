@@ -99,6 +99,32 @@ class InMemoryBackend {
     }
 
     /**
+     * Iterates over the keys in a given range and direction.
+     * The callback is called for each primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(key:string):boolean} callback A predicate called for each key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    keyStream(callback, ascending=true, query=null) {
+        return this._primaryIndex.keyStream(callback, ascending, query);
+    }
+
+    /**
+     * Iterates over the keys and values in a given range and direction.
+     * The callback is called for each value and primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(value:*, key:string):boolean} callback A predicate called for each value and key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    valueStream(callback, ascending=true, query=null) {
+        return this._primaryIndex.valueStream(callback, ascending, query);
+    }
+
+    /**
      * @param {KeyRange} [query]
      * @returns {Promise.<*>}
      */

@@ -197,6 +197,70 @@ class IDBBackend {
     }
 
     /**
+     * Iterates over the keys in a given range and direction.
+     * The callback is called for each primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(key:string):boolean} callback A predicate called for each key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    keyStream(callback, ascending=true, query=null) {
+        query = IDBTools.convertKeyRange(query);
+        const db = this._backend;
+        return new Promise((resolve, reject) => {
+            const openCursorRequest = db.transaction([this._tableName], 'readonly')
+                .objectStore(this._tableName)
+                .openKeyCursor(query, ascending ? 'next' : 'prev');
+            openCursorRequest.onsuccess = event => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    if (callback(cursor.primaryKey)) {
+                        cursor.continue();
+                    } else {
+                        resolve();
+                    }
+                } else {
+                    resolve();
+                }
+            };
+            openCursorRequest.onerror = () => reject(openCursorRequest.error);
+        });
+    }
+
+    /**
+     * Iterates over the keys and values in a given range and direction.
+     * The callback is called for each value and primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(value:*, key:string):boolean} callback A predicate called for each value and key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    valueStream(callback, ascending=true, query=null) {
+        query = IDBTools.convertKeyRange(query);
+        const db = this._backend;
+        return new Promise((resolve, reject) => {
+            const openCursorRequest = db.transaction([this._tableName], 'readonly')
+                .objectStore(this._tableName)
+                .openCursor(query, ascending ? 'next' : 'prev');
+            openCursorRequest.onsuccess = event => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    if (callback(cursor.value, cursor.primaryKey)) {
+                        cursor.continue();
+                    } else {
+                        resolve();
+                    }
+                } else {
+                    resolve();
+                }
+            };
+            openCursorRequest.onerror = () => reject(openCursorRequest.error);
+        });
+    }
+
+    /**
      * Returns a promise of the object whose primary key is maximal for the given range.
      * If the optional query is not given, it returns the object whose key is maximal.
      * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.

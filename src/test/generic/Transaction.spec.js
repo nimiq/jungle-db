@@ -159,4 +159,84 @@ describe('Transaction', () => {
             expect(await tx.get('test')).toBe('foobar');
         })().then(done, done.fail);
     });
+
+    it('correctly constructs key streams', (done) => {
+        (async function () {
+            const keys = Array.from(allKeys).sort();
+            let i = 0;
+            await tx.keyStream(key => {
+                expect(key).toBe(keys[i]);
+                ++i;
+                return true;
+            });
+            expect(i).toBe(14);
+            --i;
+
+            await tx.keyStream(key => {
+                expect(key).toBe(keys[i]);
+                --i;
+                return true;
+            }, false);
+            expect(i).toBe(-1);
+
+            i = 6;
+            await tx.keyStream(key => {
+                expect(key).toBe(`key${i}`);
+                --i;
+                return true;
+            }, false, JDB.KeyRange.bound('key3', 'key6'));
+            expect(i).toBe(2);
+
+            i = 5;
+            await tx.keyStream(key => {
+                expect(key).toBe(`key${i}`);
+                ++i;
+                return i < 7;
+            }, true, JDB.KeyRange.lowerBound('key4', true));
+            expect(i).toBe(7);
+        })().then(done, done.fail);
+    });
+
+    it('correctly constructs value streams', (done) => {
+        (async function () {
+            const keys = Array.from(allKeys).sort();
+            let i = 0;
+            await tx.valueStream((value, key) => {
+                const val = parseInt(keys[i].substr(3));
+                expect(value.sub).toBe(val >= 5 ? `newValue${val}` : `value${val}`);
+                expect(key).toBe(keys[i]);
+                ++i;
+                return true;
+            });
+            expect(i).toBe(14);
+            --i;
+
+            await tx.valueStream((value, key) => {
+                const val = parseInt(keys[i].substr(3));
+                expect(value.sub).toBe(val >= 5 ? `newValue${val}` : `value${val}`);
+                expect(key).toBe(keys[i]);
+                --i;
+                return true;
+            }, false);
+            expect(i).toBe(-1);
+
+            i = 6;
+            await tx.valueStream((value, key) => {
+                expect(value.sub).toBe(i >= 5 ? `newValue${i}` : `value${i}`);
+                expect(key).toBe(`key${i}`);
+                --i;
+                return true;
+            }, false, JDB.KeyRange.bound('key3', 'key6'));
+            expect(i).toBe(2);
+
+            i = 5;
+            await tx.valueStream((value, key) => {
+                expect(value.sub).toBe(i >= 5 ? `newValue${i}` : `value${i}`);
+                expect(key).toBe(`key${i}`);
+                ++i;
+                return i < 7;
+            }, true, JDB.KeyRange.lowerBound('key4', true));
+            expect(i).toBe(7);
+        })().then(done, done.fail);
+    });
 });
