@@ -1,4 +1,4 @@
-describe('InMemoryBackend', () => {
+describe('PlatformSpecificBackend', () => {
     let objectStore, db;
 
     const setEqual = function(actual, expected) {

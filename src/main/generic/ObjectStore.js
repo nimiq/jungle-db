@@ -427,14 +427,14 @@ class ObjectStore {
             if (tx.dependency === null) {
                 // If we apply to the backend, update the snapshots.
                 if (baseState === ObjectStore.BACKEND_ID) {
-                    await this._snapshotManager.applyTx(tx);
+                    await this._snapshotManager.applyTx(tx, backend);
                 }
                 await backend._apply(tx);
                 cleanup();
                 return true;
             } else {
                 // We apply to the backend, so also update snapshots before the flush.
-                return await tx.dependency.onFlushable(tx, cleanup, () => this._snapshotManager.applyTx(tx));
+                return await tx.dependency.onFlushable(tx, cleanup, () => this._snapshotManager.applyTx(tx, backend));
             }
         } else {
             // Check both ends of the stack.

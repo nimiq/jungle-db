@@ -33,13 +33,12 @@ class SnapshotManager {
     }
 
     /**
-     * Internally applies a transaction to the transaction's state.
-     * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
-     * or no changes are applied.
+     * Updates the snapshots managed by this class.
      * @param {Transaction} tx The transaction to apply.
+     * @param {IObjectStore} backend
      * @returns {Promise} The promise resolves after applying the transaction.
      */
-    async applyTx(tx) {
+    async applyTx(tx, backend) {
         if (!(tx instanceof Transaction)) {
             throw 'Can only apply transactions';
         }
@@ -52,7 +51,7 @@ class SnapshotManager {
             applications.push(snapshot._apply(tx));
         }
         for (const snapshot of tx._snapshotManager) {
-            snapshot._backend = this;
+            snapshot._backend = backend;
             this._snapshots.add(snapshot);
         }
         return Promise.all(applications);

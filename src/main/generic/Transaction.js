@@ -103,20 +103,6 @@ class Transaction {
     }
 
     /**
-     * Creates an in-memory snapshot of this state.
-     * This snapshot only maintains the differences between the state at the time of the snapshot
-     * and the current state.
-     * To stop maintaining the snapshot, it has to be aborted.
-     * @returns {Snapshot}
-     */
-    snapshot() {
-        if (this.state !== Transaction.STATE.CLOSED) {
-            throw 'Can only create snapshots on closed transactions';
-        }
-        return this._snapshotManager.createSnapshot(this._objectStore, this);
-    }
-
-    /**
      * Internally applies a transaction to the transaction's state.
      * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
      * or no changes are applied.
@@ -130,7 +116,7 @@ class Transaction {
         }
 
         // First handle snapshots.
-        await this._snapshotManager.applyTx(tx);
+        await this._snapshotManager.applyTx(tx, this);
 
         if (tx._truncated) {
             await this.truncate();
@@ -741,6 +727,20 @@ class Transaction {
         this._nested.add(tx);
         this._state = Transaction.STATE.NESTED;
         return tx;
+    }
+
+    /**
+     * Creates an in-memory snapshot of this state.
+     * This snapshot only maintains the differences between the state at the time of the snapshot
+     * and the current state.
+     * To stop maintaining the snapshot, it has to be aborted.
+     * @returns {Snapshot}
+     */
+    snapshot() {
+        if (this.state !== Transaction.STATE.COMMITTED) {
+            throw 'Can only create snapshots on closed transactions';
+        }
+        return this._snapshotManager.createSnapshot(this._objectStore, this);
     }
 
     toString() {

@@ -14,7 +14,7 @@ class Snapshot extends Transaction {
      * @protected
      */
     constructor(objectStore, backend) {
-        super(objectStore, backend, backend, false);
+        super(objectStore, backend, objectStore, false);
     }
 
     /**
@@ -31,10 +31,17 @@ class Snapshot extends Transaction {
         if (tx._truncated) {
             // Need to copy complete old state.
             await this.valueStream((value, key) => {
-                this._put(key, value);
+                if (!this._modified.has(key)) {
+                    this._put(key, value);
+                }
+                return true;
             });
         }
         for (const [key, value] of tx._modified) {
+            // Continue if we already have the old value for this key.
+            if (this._modified.has(key)) {
+                continue;
+            }
             let oldValue = tx._originalValues.get(key);
             // If this key is newly introduced,
             // we have to mark it as removed to maintain our state.
@@ -46,6 +53,10 @@ class Snapshot extends Transaction {
             }
         }
         for (const key of tx._removed) {
+            // Continue if we already have the old value for this key.
+            if (this._modified.has(key)) {
+                continue;
+            }
             // Removed values have to be remembered.
             this._put(key, tx._originalValues.get(key));
         }
@@ -93,6 +104,7 @@ class Snapshot extends Transaction {
     /**
      * Aborts a snapshot and stops updating its diff.
      * @override
+     * @param [tx]
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async abort(tx) {
