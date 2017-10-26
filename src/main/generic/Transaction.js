@@ -47,6 +47,8 @@ class Transaction {
         /** @type {CombinedTransaction} */
         this._dependency = null;
 
+        this._snapshotManager = new SnapshotManager();
+
         this._enableWatchdog = enableWatchdog;
         if (this._enableWatchdog) {
             this._watchdog = setTimeout(() => {
@@ -101,6 +103,20 @@ class Transaction {
     }
 
     /**
+     * Creates an in-memory snapshot of this state.
+     * This snapshot only maintains the differences between the state at the time of the snapshot
+     * and the current state.
+     * To stop maintaining the snapshot, it has to be aborted.
+     * @returns {Snapshot}
+     */
+    snapshot() {
+        if (this.state !== Transaction.STATE.CLOSED) {
+            throw 'Can only create snapshots on closed transactions';
+        }
+        return this._snapshotManager.createSnapshot(this._objectStore, this);
+    }
+
+    /**
      * Internally applies a transaction to the transaction's state.
      * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
      * or no changes are applied.
@@ -112,6 +128,10 @@ class Transaction {
         if (!(tx instanceof Transaction)) {
             throw 'Can only apply transactions';
         }
+
+        // First handle snapshots.
+        await this._snapshotManager.applyTx(tx);
+
         if (tx._truncated) {
             await this.truncate();
         }
@@ -148,6 +168,10 @@ class Transaction {
      * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
+        if (this._state !== Transaction.STATE.OPEN) {
+            throw 'Transaction already closed';
+        }
+
         this._truncated = true;
         this._modified.clear();
         this._removed.clear();
@@ -250,6 +274,11 @@ class Transaction {
     async abort(tx) {
         // Transaction is given, so check whether this is a nested one.
         if (tx !== undefined) {
+            // Handle snapshots.
+            if (tx instanceof Snapshot) {
+                return this._snapshotManager.abortSnapshot(tx);
+            }
+
             // Make sure transaction is based on this transaction.
             if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
                 throw 'Can only commit open, nested transactions';
@@ -327,7 +356,7 @@ class Transaction {
      * @param {string} key The primary key to associate the value with.
      * @param {*} value The value to write.
      * @param {*} [oldValue] The old value associated with the key to update the indices (if applicable).
-     * @private
+     * @protected
      */
     _put(key, value, oldValue) {
         this._removed.delete(key);
@@ -365,6 +394,7 @@ class Transaction {
      * Internal method for removing a key-value pair.
      * @param {string} key The primary key to delete along with the associated object.
      * @param {*} oldValue The old value associated with the key to update the indices.
+     * @protected
      */
     _remove(key, oldValue) {
         this._removed.add(key);

@@ -13,6 +13,8 @@ class CombinedTransaction {
         this._transactions = transactions;
         /** @type {Map.<Transaction,function()>} */
         this._flushable = new Map();
+        /** @type {Map.<Transaction,function()>} */
+        this._preprocessing = [];
 
         // Update members.
         this._dependency = this;
@@ -68,16 +70,27 @@ class CombinedTransaction {
      * To be called when a transaction is flushable to the persistent state.
      * Triggers combined flush as soon as all transactions are ready.
      * @param {Transaction} tx Transaction to be reported flushable.
-     * @param {function()} callback A callback to be called after the transaction is flushed.
+     * @param {function()} [callback] A callback to be called after the transaction is flushed.
+     * @param {function():Promise} [preprocessing] A callback to be called right before the transaction is flushed.
      * @returns {Promise.<boolean>} Whether the flushing has been triggered.
      */
-    async onFlushable(tx, callback=null) {
+    async onFlushable(tx, callback=null, preprocessing=null) {
         // Save as flushable and prepare and flush only if all are flushable.
         // Afterwards call the callbacks to cleanup the ObjectStores' transaction stacks.
         this._flushable.set(tx, callback);
+        if (preprocessing !== null) {
+            this._preprocessing.push(preprocessing);
+        }
 
         // All are flushable, so go ahead.
         if (this._transactions.every(tx => this._flushable.has(tx))) {
+            // Allow to prepare final flush.
+            const preprocessings = [];
+            for (const f of this._preprocessing) {
+                preprocessings.push(f);
+            }
+            await Promise.all(preprocessings);
+
             await JungleDB.commitCombined(this);
             for (const value of this._flushable.values()) {
                 value();

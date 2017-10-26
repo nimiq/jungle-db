@@ -41,6 +41,12 @@ class ObjectStore {
          * @type {Set.<number|string>}
          */
         this._closedBaseStates = new Set();
+
+        /**
+         * The set of currently open snapshots.
+         * @type {Set.<Snapshot>}
+         */
+        this._snapshotManager = new SnapshotManager();
     }
 
     /** @type {JungleDB} */
@@ -322,6 +328,11 @@ class ObjectStore {
      */
     async abort(tx) {
         if (!this.__backend.connected) throw 'JungleDB is not connected';
+
+        if (tx instanceof Snapshot) {
+            return this._snapshotManager.abortSnapshot(tx);
+        }
+
         if (!(tx instanceof Transaction) || tx.state !== Transaction.STATE.OPEN || !this._txBaseStates.has(tx.id)) {
             throw 'Can only abort open transactions';
         }
@@ -414,11 +425,16 @@ class ObjectStore {
             };
 
             if (tx.dependency === null) {
+                // If we apply to the backend, update the snapshots.
+                if (baseState === ObjectStore.BACKEND_ID) {
+                    await this._snapshotManager.applyTx(tx);
+                }
                 await backend._apply(tx);
                 cleanup();
                 return true;
             } else {
-                return await tx.dependency.onFlushable(tx, cleanup);
+                // We apply to the backend, so also update snapshots before the flush.
+                return await tx.dependency.onFlushable(tx, cleanup, () => this._snapshotManager.applyTx(tx));
             }
         } else {
             // Check both ends of the stack.
@@ -491,6 +507,20 @@ class ObjectStore {
         this._txBaseStates.set(tx.id, this._currentStateId);
         this._openTransactions.get(this._currentStateId).add(tx.id);
         return tx;
+    }
+
+    /**
+     * Creates an in-memory snapshot of the current state.
+     * This snapshot only maintains the differences between the state at the time of the snapshot
+     * and the current state.
+     * To stop maintaining the snapshot, it has to be aborted.
+     * @returns {Snapshot}
+     */
+    snapshot() {
+        if (this._currentStateId !== ObjectStore.BACKEND_ID) {
+            return this._currentState.snapshot();
+        }
+        return this._snapshotManager.createSnapshot(this, this._currentState);
     }
 
     /**
