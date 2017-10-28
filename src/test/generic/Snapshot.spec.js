@@ -111,18 +111,6 @@ describe('Snapshot', () => {
         })().then(done, done.fail);
     });
 
-    it('is not possible on uncommitted transactions', (done) => {
-        (async function () {
-            const tx = objectStore.transaction();
-            try {
-                await tx.snapshot();
-                expect(true).toBe(false);
-            } catch(e) {
-                expect(true).toBe(true);
-            }
-        })().then(done, done.fail);
-    });
-
     it('can inherit transactions', (done) => {
         (async function () {
             const tx1 = objectStore.transaction();
@@ -147,7 +135,66 @@ describe('Snapshot', () => {
             for (let i=0; i<11; ++i) {
                 expect(await snap.get(`key${i}`)).toBe(`value${i}`);
             }
-            
+
+            await snap.abort();
+        })().then(done, done.fail);
+    });
+
+    it('can implicitly inherit transactions', (done) => {
+        (async function () {
+            const tx1 = objectStore.transaction();
+
+            await tx1.put('key10', 'value10');
+
+            const snap = tx1.snapshot();
+            await tx1.abort();
+
+            for (let i=0; i<11; ++i) {
+                expect(await snap.get(`key${i}`)).toBe(`value${i}`);
+            }
+
+            const tx3 = objectStore.transaction();
+            await tx3.remove('key0');
+            await tx3.remove('key2');
+            await tx3.put('key1', 'test');
+            await tx3.put('key2', 'test');
+            await tx3.commit();
+
+            for (let i=0; i<11; ++i) {
+                expect(await snap.get(`key${i}`)).toBe(`value${i}`);
+            }
+
+            await snap.abort();
+        })().then(done, done.fail);
+    });
+
+    it('can implicitly inherit nested transactions', (done) => {
+        (async function () {
+            const tx1 = objectStore.transaction();
+            await tx1.put('key10', 'value10');
+
+            const tx2 = tx1.transaction();
+            await tx2.put('key11', 'value11');
+
+            const snap = tx2.snapshot();
+            await tx2.abort();
+            await tx1.abort();
+
+            for (let i=0; i<12; ++i) {
+                expect(await snap.get(`key${i}`)).toBe(`value${i}`);
+            }
+
+            const tx3 = objectStore.transaction();
+            await tx3.remove('key0');
+            await tx3.remove('key2');
+            await tx3.put('key1', 'test');
+            await tx3.put('key2', 'test');
+            await tx3.commit();
+
+            for (let i=0; i<12; ++i) {
+                expect(await snap.get(`key${i}`)).toBe(`value${i}`);
+            }
+
             await snap.abort();
         })().then(done, done.fail);
     });

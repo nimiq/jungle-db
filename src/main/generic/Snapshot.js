@@ -23,11 +23,14 @@ class Snapshot extends Transaction {
      * This is useful, if we have a transaction/snapshot to a previous state, which we do not want to commit.
      * Then, we can still base our snapshot on this earlier state although the current backend is already ahead.
      * @param {Transaction} tx A transaction or snapshot containing changes that have already been applied.
-     * @returns {Promise} The promise resolves after applying the transaction.
      * @protected
      */
     inherit(tx) {
-        return super._apply(tx);
+        if (!(tx instanceof Transaction)) {
+            throw 'Can only inherit transactions';
+        }
+
+        return super._applySync(tx);
     }
 
     /**

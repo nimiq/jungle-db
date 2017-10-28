@@ -118,8 +118,20 @@ class Transaction {
         // First handle snapshots.
         await this._snapshotManager.applyTx(tx, this);
 
+        this._applySync(tx);
+    }
+
+    /**
+     * Non-async version of _apply that does not update snapshots.
+     * Internally applies a transaction to the transaction's state.
+     * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
+     * or no changes are applied.
+     * @param {Transaction} tx The transaction to apply.
+     * @protected
+     */
+    _applySync(tx) {
         if (tx._truncated) {
-            await this.truncate();
+            this._truncateSync();
         }
         for (const [key, value] of tx._modified) {
             // If this transaction has key in its originalValues, we use it.
@@ -154,6 +166,14 @@ class Transaction {
      * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
+        return this._truncateSync();
+    }
+
+    /**
+     * Non-async variant to empty the object store.
+     * @protected
+     */
+    _truncateSync() {
         if (this._state !== Transaction.STATE.OPEN) {
             throw 'Transaction already closed';
         }
@@ -738,7 +758,9 @@ class Transaction {
      */
     snapshot() {
         if (this.state !== Transaction.STATE.COMMITTED) {
-            throw 'Can only create snapshots on closed transactions';
+            const snapshot = this._commitBackend.snapshot();
+            snapshot.inherit(this);
+            return snapshot;
         }
         return this._snapshotManager.createSnapshot(this._objectStore, this);
     }

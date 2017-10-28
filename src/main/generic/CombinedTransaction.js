@@ -136,6 +136,17 @@ class CombinedTransaction {
     }
 
     /**
+     * Creates an in-memory snapshot of the current state.
+     * This snapshot only maintains the differences between the state at the time of the snapshot
+     * and the current state.
+     * To stop maintaining the snapshot, it has to be aborted.
+     * @returns {Snapshot}
+     */
+    snapshot() {
+        throw 'Unsupported operation';
+    }
+
+    /**
      * Is used to probe whether a transaction can be committed.
      * This, for example, includes a check whether another transaction has already been committed.
      * @protected
