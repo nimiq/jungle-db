@@ -122,4 +122,33 @@ describe('Snapshot', () => {
             }
         })().then(done, done.fail);
     });
+
+    it('can inherit transactions', (done) => {
+        (async function () {
+            const tx1 = objectStore.transaction();
+
+            await tx1.put('key10', 'value10');
+
+            const snap = objectStore.snapshot();
+            await snap.inherit(tx1);
+            await tx1.abort();
+
+            for (let i=0; i<11; ++i) {
+                expect(await snap.get(`key${i}`)).toBe(`value${i}`);
+            }
+
+            const tx3 = objectStore.transaction();
+            await tx3.remove('key0');
+            await tx3.remove('key2');
+            await tx3.put('key1', 'test');
+            await tx3.put('key2', 'test');
+            await tx3.commit();
+
+            for (let i=0; i<11; ++i) {
+                expect(await snap.get(`key${i}`)).toBe(`value${i}`);
+            }
+            
+            await snap.abort();
+        })().then(done, done.fail);
+    });
 });

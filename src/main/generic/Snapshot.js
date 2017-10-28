@@ -18,6 +18,19 @@ class Snapshot extends Transaction {
     }
 
     /**
+     * A specific set of changes can be assumed to be already applied by providing a Transaction or Snapshot.
+     * These differences will be inherited while the backend of the snapshot remains the current state.
+     * This is useful, if we have a transaction/snapshot to a previous state, which we do not want to commit.
+     * Then, we can still base our snapshot on this earlier state although the current backend is already ahead.
+     * @param {Transaction} tx A transaction or snapshot containing changes that have already been applied.
+     * @returns {Promise} The promise resolves after applying the transaction.
+     * @protected
+     */
+    inherit(tx) {
+        return super._apply(tx);
+    }
+
+    /**
      * Internally applies a transaction to the snapshot state.
      * In contrast to transactions, this tries to reflect the old state in the snapshot.
      * @param {Transaction} tx The transaction to apply.
@@ -179,6 +192,14 @@ class Snapshot extends Transaction {
      * @override
      */
     transaction() {
+        throw 'Unsupported operation on snapshots';
+    }
+
+    /**
+     * Unsupported operation for snapshots.
+     * @override
+     */
+    snapshot() {
         throw 'Unsupported operation on snapshots';
     }
 }
