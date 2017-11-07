@@ -498,11 +498,12 @@ class ObjectStore {
     /**
      * Creates a new transaction, ensuring read isolation
      * on the most recently successfully committed state.
+     * @param {boolean} [enableWatchdog]
      * @returns {Transaction} The transaction object.
      */
-    transaction() {
+    transaction(enableWatchdog = true) {
         if (!this.__backend.connected) throw 'JungleDB is not connected';
-        const tx = new Transaction(this, this._currentState, this);
+        const tx = new Transaction(this, this._currentState, this, enableWatchdog);
         this._transactions.set(tx.id, tx);
         this._txBaseStates.set(tx.id, this._currentStateId);
         this._openTransactions.get(this._currentStateId).add(tx.id);

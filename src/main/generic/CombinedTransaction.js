@@ -129,9 +129,10 @@ class CombinedTransaction {
     /**
      * Creates a new transaction, ensuring read isolation
      * on the most recently successfully committed state.
+     * @param {boolean} [enableWatchdog]
      * @returns {Transaction} The transaction object.
      */
-    transaction() {
+    transaction(enableWatchdog) {
         throw 'Unsupported operation';
     }
 

@@ -737,13 +737,14 @@ class Transaction {
      * This makes the current transaction read-only until all sub-transactions have been closed (committed/aborted).
      * The same semantic for commits applies: Only the first transaction that commits will be applied. Subsequent transactions will be conflicted.
      * This behaviour has one exception: If all nested transactions are closed, the outer transaction returns to a normal state and new nested transactions can again be created and committed.
+     * @param {boolean} [enableWatchdog]
      * @returns {Transaction} The transaction object.
      */
-    transaction() {
+    transaction(enableWatchdog = true) {
         if (this._state !== Transaction.STATE.OPEN && this._state !== Transaction.STATE.NESTED) {
             throw 'Transaction already closed';
         }
-        const tx = new Transaction(this._objectStore, this, this, this._enableWatchdog);
+        const tx = new Transaction(this._objectStore, this, this, enableWatchdog);
         this._nested.add(tx);
         this._state = Transaction.STATE.NESTED;
         return tx;

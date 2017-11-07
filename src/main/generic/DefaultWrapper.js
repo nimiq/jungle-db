@@ -225,13 +225,14 @@ class DefaultWrapper {
     }
 
     /**
+     * @param {boolean} enableWatchdog
      * @returns {Transaction}
      */
-    transaction() {
+    transaction(enableWatchdog = true) {
         if (!this._store.transaction) {
             return undefined;
         }
-        const tx = this._store.transaction();
+        const tx = this._store.transaction(enableWatchdog);
         return new this.constructor(tx);
     }
 }
