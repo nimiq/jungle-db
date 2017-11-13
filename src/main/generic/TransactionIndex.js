@@ -47,7 +47,11 @@ class TransactionIndex extends InMemoryIndex {
      */
     async keys(query=null) {
         const promises = [];
-        promises.push(this._index.keys(query));
+        if (this._objectStore._truncated) {
+            promises.push(new Set());
+        } else {
+            promises.push(this._index.keys(query));
+        }
         promises.push(InMemoryIndex.prototype.keys.call(this, query));
         let [keys, newKeys] = await Promise.all(promises);
         // Remove keys that have been deleted or modified.
@@ -88,7 +92,12 @@ class TransactionIndex extends InMemoryIndex {
      * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async maxKeys(query=null) {
-        let backendKeys = await this._index.maxKeys(query);
+        let backendKeys;
+        if (this._objectStore._truncated) {
+            backendKeys = new Set();
+        } else {
+            backendKeys = await this._index.maxKeys(query);
+        }
 
         // Remove keys that have been deleted or modified.
         let sampleElement = Set.sampleElement(backendKeys);
@@ -157,7 +166,12 @@ class TransactionIndex extends InMemoryIndex {
      * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async minKeys(query=null) {
-        let backendKeys = await this._index.minKeys(query);
+        let backendKeys;
+        if (this._objectStore._truncated) {
+            backendKeys = new Set();
+        } else {
+            backendKeys = await this._index.minKeys(query);
+        }
 
         // Remove keys that have been deleted or modified.
         let sampleElement = Set.sampleElement(backendKeys);

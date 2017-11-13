@@ -11,6 +11,7 @@ describe('Snapshot', () => {
     beforeEach((done) => {
         db = new JDB.JungleDB('test', 1);
         objectStore = db.createObjectStore('testStore');
+        objectStore.createIndex('test', ['a', 'b'], true);
 
         (async function () {
             await db.connect();
@@ -196,6 +197,48 @@ describe('Snapshot', () => {
             }
 
             await snap.abort();
+        })().then(done, done.fail);
+    });
+
+    it('can handle index queries', (done) => {
+        (async function () {
+            const tx1 = objectStore.transaction();
+            await tx1.put('newTest', {
+                'key': 'newTest',
+                'a': {
+                    'b': 123
+                }
+            });
+
+            await tx1.put('newTest1', {
+                'key': 'newTest1',
+                'a': {
+                    'b': 123
+                }
+            });
+
+            await tx1.put('newTest2', {
+                'a': {
+                    'b': 124
+                }
+            });
+
+            await tx1.commit();
+
+            const snap = objectStore.snapshot();
+
+            await objectStore.remove('newTest1');
+
+            const index = snap.index('test');
+            expect(await index.keys(JDB.KeyRange.only(123))).toEqual(new Set(['newTest', 'newTest1']));
+            expect(await index.keys(JDB.KeyRange.lowerBound(123, true))).toEqual(new Set(['newTest2']));
+
+            const values = await snap.values(JDB.Query.eq('test', 123));
+            const expectedKeys = new Set(['newTest', 'newTest1']);
+            for (const value of values) {
+                expect(expectedKeys.delete(value['key'])).toBe(true);
+            }
+            expect(expectedKeys.size).toBe(0);
         })().then(done, done.fail);
     });
 });
