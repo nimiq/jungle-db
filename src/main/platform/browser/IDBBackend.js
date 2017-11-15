@@ -483,7 +483,7 @@ class IDBBackend {
             encodedTx.remove(key);
         }
         for (const [key, value] of tx._modified) {
-            encodedTx.put(this.encode(value), key);
+            encodedTx.put(key, this.encode(value));
         }
         return encodedTx;
     }
