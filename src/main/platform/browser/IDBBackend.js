@@ -407,6 +407,7 @@ class IDBBackend {
 
             idbTx.oncomplete = () => resolve(true);
             idbTx.onerror = reject;
+            idbTx.onabort = reject;
         });
     }
 
