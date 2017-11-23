@@ -87,7 +87,7 @@ class CombinedTransaction {
             // Allow to prepare final flush.
             const preprocessings = [];
             for (const f of this._preprocessing) {
-                preprocessings.push(f);
+                preprocessings.push(f());
             }
             await Promise.all(preprocessings);
 
