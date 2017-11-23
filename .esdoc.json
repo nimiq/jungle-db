@@ -1,11 +1,20 @@
 {
     "source": "./src",
+    "includes": [
+        "^main/platform/browser/JungleDB.js$",
+        "^main/generic/"
+    ],
     "destination": "./dist/doc",
-    "unexportIdentifier": true,
     "plugins": [
         {
-            "name": "esdoc-plugin-transform-html",
-            "option": "./src/doc/transform.js"
+            "name": "esdoc-standard-plugin",
+            "option": {
+                "test": {
+                    "source": "./src/test/"
+                },
+                "unexportedIdentifier": {"enable": true},
+                "accessor": {"access": ["public", "protected"], "autoPrivate": true}
+            }
         }
     ]
 }

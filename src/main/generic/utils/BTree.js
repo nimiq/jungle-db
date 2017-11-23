@@ -479,6 +479,7 @@ class BTree {
      * or the existing entry if present.
      * @param {*} key The unique key for the record.
      * @param {*} rec The record associated with the key.
+     * @param [modified] The optional set of modified nodes (will be updated by the method).
      * @returns {boolean} True if the record was inserted, false if there was already a record with that key.
      */
     insert(key, rec, modified=null) {
@@ -543,6 +544,8 @@ class BTree {
      * In case of successful deletion, the current record and key will be set to the next entry greater or equal.
      * If no record was found, they will be reset to null.
      * @param {*} key The unique key for the record.
+     * @param [modified] The optional set of modified nodes (will be updated by the method).
+     * @param [removed] The optional set of removed nodes (will be updated by the method).
      * @returns {boolean} True if the record was deleted, false if there is no such record.
      */
     remove(key, modified=null, removed=null) {
