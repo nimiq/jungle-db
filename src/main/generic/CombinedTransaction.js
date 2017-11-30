@@ -162,7 +162,7 @@ class CombinedTransaction {
      * @protected
      * @returns {Promise} A promise that resolves upon successful application of the transaction.
      */
-    async _commit() {
+    _commit() {
         return Promise.all(this._transactions.map(tx => tx.commit()));
     }
 

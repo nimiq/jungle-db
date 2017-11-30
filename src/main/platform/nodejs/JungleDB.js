@@ -252,12 +252,14 @@ class JungleDB {
                             return;
                         }
 
-                        functions.forEach(f => f());
-                        resolve(true);
+                        Promise.all(functions.map(f => f())).then(() => {
+                            resolve(true);
+                        });
                     });
                 } else {
-                    functions.forEach(f => f());
-                    resolve(true);
+                    Promise.all(functions.map(f => f())).then(() => {
+                        resolve(true);
+                    });
                 }
             });
         }

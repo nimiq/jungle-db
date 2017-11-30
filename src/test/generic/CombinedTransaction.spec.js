@@ -215,4 +215,24 @@ describe('CombinedTransaction', () => {
             expect(await backend2.get('test')).toBe('successful');
         })().then(done, done.fail);
     });
+
+    it('can instantly read the correct value', (done) => {
+        (async function () {
+            // Create two transactions in different object stores.
+            const tx1 = objectStore1.transaction();
+            const tx2 = objectStore2.transaction();
+            // Add 7 objects.
+            for (let i=0; i<7; ++i) {
+                await tx1.put(`key${i}`, `newvalue${i}`);
+                await tx2.put(`key${i}`, `newvalue${i}`);
+            }
+
+            // Commit both (which should immediately update the backend as well).
+            expect(await tx1.get('key6')).toBe('newvalue6');
+            expect(await tx2.get('key6')).toBe('newvalue6');
+            expect(await JDB.JungleDB.commitCombined(tx1, tx2)).toBe(true);
+            expect(await objectStore2.get('key6')).toBe('newvalue6');
+            expect(await objectStore1.get('key6')).toBe('newvalue6');
+        })().then(done, done.fail);
+    });
 });

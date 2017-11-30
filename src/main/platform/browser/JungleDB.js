@@ -226,13 +226,16 @@ class JungleDB {
                     }
 
                     idbTx.oncomplete = () => {
-                        functions.forEach(f => f());
-                        resolve(true);
+                        Promise.all(functions.map(f => f())).then(() => {
+                            resolve(true);
+                        });
                     };
                     idbTx.onerror = reject;
+                    idbTx.onabort = reject;
                 } else {
-                    functions.forEach(f => f());
-                    resolve(true);
+                    Promise.all(functions.map(f => f())).then(() => {
+                        resolve(true);
+                    });
                 }
             });
         }

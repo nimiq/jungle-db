@@ -298,7 +298,7 @@ class InMemoryBackend {
     /**
      * Returns the necessary information in order to flush a combined transaction.
      * @param {Transaction} tx The transaction that should be applied to this backend.
-     * @returns {Promise.<*|function()>} Either the tableName if this is a native, persistent backend
+     * @returns {Promise.<*|function():Promise>} Either the tableName if this is a native, persistent backend
      * or a function that effectively applies the transaction to non-persistent backends.
      */
     async applyCombined(tx) {
