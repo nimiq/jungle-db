@@ -93,9 +93,18 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
-            const getRequest = this._index(db).getAllKeys(query);
-            getRequest.onsuccess = () => resolve(Set.from(getRequest.result));
-            getRequest.onerror = () => reject(getRequest.error);
+            const results = new Set();
+            const openCursorRequest = this._index(db).openKeyCursor(query);
+            openCursorRequest.onsuccess = event => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    results.add(cursor.primaryKey);
+                    cursor.continue();
+                } else {
+                    resolve(results);
+                }
+            };
+            openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
 

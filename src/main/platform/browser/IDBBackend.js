@@ -188,11 +188,20 @@ class IDBBackend {
         query = IDBTools.convertKeyRange(query);
         const db = this._backend;
         return new Promise((resolve, reject) => {
-            const getRequest = db.transaction([this._tableName], 'readonly')
+            const results = new Set();
+            const openCursorRequest = db.transaction([this._tableName], 'readonly')
                 .objectStore(this._tableName)
-                .getAllKeys(query);
-            getRequest.onsuccess = () => resolve(Set.from(getRequest.result));
-            getRequest.onerror = () => reject(getRequest.error);
+                .openKeyCursor(query);
+            openCursorRequest.onsuccess = event => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    results.add(cursor.primaryKey);
+                    cursor.continue();
+                } else {
+                    resolve(results);
+                }
+            };
+            openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
     }
 

@@ -1,5 +1,5 @@
 describe('PlatformSpecificBackend', () => {
-    let objectStore, db;
+    let objectStore, db, allKeys;
 
     const setEqual = function(actual, expected) {
         return expected.equals(actual);
@@ -9,11 +9,14 @@ describe('PlatformSpecificBackend', () => {
         db = new JDB.JungleDB('test', 1);
         objectStore = db.createObjectStore('testStore');
 
+        allKeys = new Set();
+
         (async function () {
             await db.connect();
             // Add 10 objects.
             for (let i=0; i<10; ++i) {
                 await objectStore.put(`key${i}`, `value${i}`);
+                allKeys.add(`key${i}`);
             }
         })().then(done, done.fail);
 
@@ -158,6 +161,16 @@ describe('PlatformSpecificBackend', () => {
             const tx4 = objectStore.transaction();
             expect(await tx4.get('key0')).toBe(undefined);
             await tx4.abort();
+        })().then(done, done.fail);
+    });
+
+    it('correctly processes keys/values queries', (done) => {
+        (async function () {
+            // Ordering on strings might not be as expected!
+            expect(await objectStore.keys()).toEqual(allKeys);
+            expect(await objectStore.keys(JDB.KeyRange.upperBound('key5'))).toEqual(new Set(['key0', 'key1', 'key2', 'key3', 'key4', 'key5']));
+            expect(await objectStore.keys(JDB.KeyRange.lowerBound('key1', true))).toEqual(allKeys.difference(['key0', 'key1']));
+            expect(await objectStore.keys(JDB.KeyRange.lowerBound('key5', true))).toEqual(new Set(['key6', 'key7', 'key8', 'key9']));
         })().then(done, done.fail);
     });
 
