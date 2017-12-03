@@ -287,7 +287,7 @@ class Transaction {
 
             // Make sure transaction is based on this transaction.
             if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
-                throw 'Can only commit open, nested transactions';
+                throw 'Can only abort open, nested transactions';
             }
             this._nested.delete(tx);
             // If there are no more nested transactions, change back to OPEN state.
@@ -298,6 +298,9 @@ class Transaction {
             return true;
         }
 
+        if (this._state === Transaction.STATE.ABORTED || this._state === Transaction.STATE.CONFLICTED) {
+            return true;
+        }
         if (this._state !== Transaction.STATE.OPEN && this._state !== Transaction.STATE.NESTED) {
             throw 'Transaction already closed';
         }
