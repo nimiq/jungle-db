@@ -134,11 +134,11 @@ class PersistentIndex extends InMemoryIndex {
 
         for (const key of tx._removed) {
             const oldValue = tx._originalValues.get(key);
-            treeTx = super.remove(key, oldValue).merge(treeTx);
+            treeTx = InMemoryIndex.prototype.remove.call(this, key, oldValue).merge(treeTx);
         }
         for (const [key, value] of tx._modified) {
             const oldValue = tx._originalValues.get(key);
-            treeTx = super.put(key, value, oldValue).merge(treeTx);
+            treeTx = InMemoryIndex.prototype.put.call(this, key, value, oldValue).merge(treeTx);
         }
 
         return treeTx;

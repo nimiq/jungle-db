@@ -69,7 +69,7 @@ class TransactionIndex extends InMemoryIndex {
      */
     async values(query=null) {
         const keys = await this.keys(query);
-        return super._retrieveValues(keys);
+        return InMemoryIndex.prototype._retrieveValues.call(this, keys);
     }
 
     /**
@@ -81,7 +81,7 @@ class TransactionIndex extends InMemoryIndex {
      */
     async maxValues(query=null) {
         const keys = await this.maxKeys(query);
-        return super._retrieveValues(keys);
+        return InMemoryIndex.prototype._retrieveValues.call(this, keys);
     }
 
     /**
@@ -155,7 +155,7 @@ class TransactionIndex extends InMemoryIndex {
      */
     async minValues(query=null) {
         const keys = await this.minKeys(query);
-        return super._retrieveValues(keys);
+        return InMemoryIndex.prototype._retrieveValues.call(this, keys);
     }
 
     /**
