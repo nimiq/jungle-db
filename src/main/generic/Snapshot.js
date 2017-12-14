@@ -27,7 +27,7 @@ class Snapshot extends Transaction {
      */
     inherit(tx) {
         if (!(tx instanceof Transaction)) {
-            throw 'Can only inherit transactions';
+            throw new Error('Can only inherit transactions');
         }
 
         return super._applySync(tx);
@@ -42,7 +42,7 @@ class Snapshot extends Transaction {
      */
     async _apply(tx) {
         if (!(tx instanceof Transaction)) {
-            throw 'Can only apply transactions';
+            throw new Error('Can only apply transactions');
         }
         if (tx._truncated) {
             // Need to copy complete old state.
@@ -83,7 +83,7 @@ class Snapshot extends Transaction {
      * @override
      */
     async truncate() {
-        throw 'Unsupported operation on snapshots';
+        throw new Error('Unsupported operation on snapshots');
     }
 
     /**
@@ -92,7 +92,7 @@ class Snapshot extends Transaction {
      * @throws
      */
     async commit(tx) {
-        throw 'Cannot commit snapshots';
+        throw new Error('Cannot commit snapshots');
     }
 
     /**
@@ -114,7 +114,7 @@ class Snapshot extends Transaction {
      * @returns {Promise} A promise that resolves upon successful application of the transaction.
      */
     async _commit(tx) {
-        throw 'Cannot commit snapshots';
+        throw new Error('Cannot commit snapshots');
     }
 
     /**
@@ -125,7 +125,7 @@ class Snapshot extends Transaction {
      */
     async abort(tx) {
         if (this._state !== Transaction.STATE.OPEN) {
-            throw 'Snapshot already closed';
+            throw new Error('Snapshot already closed');
         }
         const result = await this._commitBackend.abort(this);
         if (!result) {
@@ -154,7 +154,7 @@ class Snapshot extends Transaction {
      * @returns {Promise}
      */
     async put(key, value) {
-        throw 'Unsupported operation on snapshots';
+        throw new Error('Unsupported operation on snapshots');
     }
 
     /**
@@ -163,7 +163,7 @@ class Snapshot extends Transaction {
      * @returns {Promise}
      */
     async remove(key) {
-        throw 'Unsupported operation on snapshots';
+        throw new Error('Unsupported operation on snapshots');
     }
 
     /**
@@ -171,7 +171,7 @@ class Snapshot extends Transaction {
      * @override
      */
     createIndex() {
-        throw 'Unsupported operation on snapshots';
+        throw new Error('Unsupported operation on snapshots');
     }
 
     /**
@@ -179,7 +179,7 @@ class Snapshot extends Transaction {
      * @override
      */
     async deleteIndex() {
-        throw 'Unsupported operation on snapshots';
+        throw new Error('Unsupported operation on snapshots');
     }
 
     /**
@@ -195,7 +195,7 @@ class Snapshot extends Transaction {
      * @override
      */
     transaction() {
-        throw 'Unsupported operation on snapshots';
+        throw new Error('Unsupported operation on snapshots');
     }
 
     /**
@@ -203,7 +203,7 @@ class Snapshot extends Transaction {
      * @override
      */
     snapshot() {
-        throw 'Unsupported operation on snapshots';
+        throw new Error('Unsupported operation on snapshots');
     }
 }
 Class.register(Snapshot);

@@ -40,7 +40,7 @@ class SnapshotManager {
      */
     async applyTx(tx, backend) {
         if (!(tx instanceof Transaction)) {
-            throw 'Can only apply transactions';
+            throw new Error('Can only apply transactions');
         }
 
         // First handle snapshots:

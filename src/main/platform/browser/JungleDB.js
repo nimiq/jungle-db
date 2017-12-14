@@ -14,7 +14,7 @@ class JungleDB {
      * @param {function()} [onUpgradeNeeded] A function to be called after upgrades of the structure.
      */
     constructor(name, dbVersion, onUpgradeNeeded) {
-        if (dbVersion <= 0) throw 'The version provided must not be less or equal to 0.';
+        if (dbVersion <= 0) throw new Error('The version provided must not be less or equal to 0');
         this._databaseDir = name;
         this._dbVersion = dbVersion;
         this._onUpgradeNeeded = onUpgradeNeeded;
@@ -123,7 +123,7 @@ class JungleDB {
      * @returns {IObjectStore}
      */
     createObjectStore(tableName, codec=null, persistent=true) {
-        if (this._connected) throw 'Cannot create ObjectStore while connected';
+        if (this._connected) throw new Error('Cannot create ObjectStore while connected');
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
         }
@@ -143,7 +143,7 @@ class JungleDB {
      * @param {string} tableName
      */
     async deleteObjectStore(tableName) {
-        if (this._connected) throw 'Cannot delete ObjectStore while connected';
+        if (this._connected) throw new Error('Cannot delete ObjectStore while connected');
         this._objectStoresToDelete.push(tableName);
     }
 
@@ -242,7 +242,7 @@ class JungleDB {
         txs.push(tx1);
         txs.push(tx2);
         if (!txs.every(tx => tx instanceof Transaction)) {
-            throw 'Invalid arguments supplied';
+            throw new Error('Invalid arguments supplied');
         }
         const ctx = new CombinedTransaction(...txs);
         return ctx.commit();

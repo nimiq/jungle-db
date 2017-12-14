@@ -27,7 +27,7 @@ class IDBBackend {
     /** @type {IDBDatabase} */
     get _backend() {
         if (!this.connected) {
-            throw 'Requires a connected database';
+            throw new Error('Requires a connected database');
         }
         return this._db.backend;
     }
@@ -452,7 +452,7 @@ class IDBBackend {
      * @param {boolean} [multiEntry]
      */
     createIndex(indexName, keyPath, multiEntry=false) {
-        if (this._db.connected) throw 'Cannot create index while connected';
+        if (this._db.connected) throw new Error('Cannot create index while connected');
         keyPath = keyPath || indexName;
         const index = new PersistentIndex(this, indexName, keyPath, multiEntry);
         this._indices.set(indexName, index);
@@ -464,7 +464,7 @@ class IDBBackend {
      * @returns {Promise} The promise resolves after deleting the index.
      */
     async deleteIndex(indexName) {
-        if (this._db.connected) throw 'Cannot delete index while connected';
+        if (this._db.connected) throw new Error('Cannot delete index while connected');
         this._indicesToDelete.push(indexName);
     }
 

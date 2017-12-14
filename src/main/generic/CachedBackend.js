@@ -191,7 +191,7 @@ class CachedBackend {
      * @returns {Promise.<boolean>}
      */
     async commit(tx) {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 
     /**
@@ -199,7 +199,7 @@ class CachedBackend {
      * @param {Transaction} [tx]
      */
     async abort(tx) {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 
     /**
@@ -296,7 +296,7 @@ class CachedBackend {
      * @returns {Transaction} The transaction object.
      */
     transaction() {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 
     /**

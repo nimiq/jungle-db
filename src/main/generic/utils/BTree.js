@@ -104,7 +104,7 @@ class LeafNode extends Node {
      */
     constructor(id, keys=[], records=[]) {
         if (keys.length !== records.length) {
-            throw 'Keys and records must have the same length';
+            throw new Error('Keys and records must have the same length');
         }
         super(id, keys);
         this._records = records;

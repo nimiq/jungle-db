@@ -112,7 +112,7 @@ class Transaction {
      */
     async _apply(tx) {
         if (!(tx instanceof Transaction)) {
-            throw 'Can only apply transactions';
+            throw new Error('Can only apply transactions');
         }
 
         // First handle snapshots.
@@ -175,7 +175,7 @@ class Transaction {
      */
     _truncateSync() {
         if (this._state !== Transaction.STATE.OPEN) {
-            throw 'Transaction already closed';
+            throw new Error('Transaction already closed');
         }
 
         this._truncated = true;
@@ -212,7 +212,7 @@ class Transaction {
         }
 
         if (this._state !== Transaction.STATE.OPEN) {
-            throw 'Transaction already closed or in nested state';
+            throw new Error('Transaction already closed or in nested state');
         }
         if (this._enableWatchdog) {
             clearTimeout(this._watchdog);
@@ -237,7 +237,7 @@ class Transaction {
         if (tx !== undefined) {
             // Make sure transaction is based on this transaction.
             if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
-                throw 'Can only commit open, nested transactions';
+                throw new Error('Can only commit open, nested transactions');
             }
             return !this._nestedCommitted;
         }
@@ -287,7 +287,7 @@ class Transaction {
 
             // Make sure transaction is based on this transaction.
             if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
-                throw 'Can only abort open, nested transactions';
+                throw new Error('Can only abort open, nested transactions');
             }
             this._nested.delete(tx);
             // If there are no more nested transactions, change back to OPEN state.
@@ -302,7 +302,7 @@ class Transaction {
             return true;
         }
         if (this._state !== Transaction.STATE.OPEN && this._state !== Transaction.STATE.NESTED) {
-            throw 'Transaction already closed';
+            throw new Error('Transaction already closed');
         }
         if (this._state === Transaction.STATE.NESTED) {
             await Promise.all(Array.from(this._nested).map(tx => tx.abort()));
@@ -347,7 +347,7 @@ class Transaction {
      */
     async put(key, value) {
         if (this._state !== Transaction.STATE.OPEN) {
-            throw 'Transaction already closed';
+            throw new Error('Transaction already closed');
         }
 
         const oldValue = await this.get(key);
@@ -384,7 +384,7 @@ class Transaction {
      */
     async remove(key) {
         if (this._state !== Transaction.STATE.OPEN) {
-            throw 'Transaction already closed';
+            throw new Error('Transaction already closed');
         }
 
         const oldValue = await this.get(key);
@@ -717,14 +717,14 @@ class Transaction {
      * This method is not implemented for transactions.
      */
     createIndex() {
-        throw 'Cannot create index in transaction';
+        throw new Error('Cannot create index in transaction');
     }
 
     /**
      * This method is not implemented for transactions.
      */
     async deleteIndex() {
-        throw 'Cannot delete index in transaction';
+        throw new Error('Cannot delete index in transaction');
     }
 
     /**
@@ -745,7 +745,7 @@ class Transaction {
      */
     transaction(enableWatchdog = true) {
         if (this._state !== Transaction.STATE.OPEN && this._state !== Transaction.STATE.NESTED) {
-            throw 'Transaction already closed';
+            throw new Error('Transaction already closed');
         }
         const tx = new Transaction(this._objectStore, this, this, enableWatchdog);
         this._nested.add(tx);

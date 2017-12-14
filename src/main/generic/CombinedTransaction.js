@@ -8,7 +8,7 @@ class CombinedTransaction {
      */
     constructor(...transactions) {
         if (!this.isConsistent(transactions)) {
-            throw 'Given set of transactions violates rules for combined transactions';
+            throw new Error('Given set of transactions violates rules for combined transactions');
         }
         this._transactions = transactions;
         /** @type {Map.<Transaction,function()>} */
@@ -133,7 +133,7 @@ class CombinedTransaction {
      * @returns {Transaction} The transaction object.
      */
     transaction(enableWatchdog) {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 
     /**
@@ -144,7 +144,7 @@ class CombinedTransaction {
      * @returns {Snapshot}
      */
     snapshot() {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 
     /**
@@ -172,7 +172,7 @@ class CombinedTransaction {
      * @protected
      */
     set _backend(backend) {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 
     /**
@@ -198,7 +198,7 @@ class CombinedTransaction {
      * @type {ObjectStore}
      */
     get objectStore() {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 }
 Class.register(CombinedTransaction);

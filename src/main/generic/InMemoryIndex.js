@@ -89,7 +89,7 @@ class InMemoryIndex {
         for (const component of iKey) {
             if (tree.seek(component)) {
                 if (this._unique) {
-                    throw `Uniqueness constraint violated for key ${key} on path ${this._keyPath}`;
+                    throw new Error(`Uniqueness constraint violated for key ${key} on path ${this._keyPath}`);
                 }
                 tree.currentRecord.add(key);
             } else {
@@ -231,7 +231,7 @@ class InMemoryIndex {
      */
     keyStream(callback, ascending=true, query=null) {
         if (!this._unique) {
-            throw 'Unsupported operation for non-unique indices';
+            throw new Error('Unsupported operation for non-unique indices');
         }
 
         // Find lower bound and start from there.
@@ -275,7 +275,7 @@ class InMemoryIndex {
      */
     async valueStream(callback, ascending=true, query=null) {
         if (!this._unique) {
-            throw 'Unsupported operation for non-unique indices';
+            throw new Error('Unsupported operation for non-unique indices');
         }
 
         // Find lower bound and start from there.

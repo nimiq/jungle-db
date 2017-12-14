@@ -397,7 +397,7 @@ class LevelDBBackend {
      * @returns {Promise.<boolean>}
      */
     async commit(tx) {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 
     /**
@@ -406,7 +406,7 @@ class LevelDBBackend {
      * @param {Transaction} [tx]
      */
     async abort(tx) {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 
     /**
@@ -616,7 +616,7 @@ class LevelDBBackend {
      * @param {boolean} [multiEntry]
      */
     createIndex(indexName, keyPath, multiEntry=false) {
-        if (this._db.connected) throw 'Cannot create index while connected';
+        if (this._db.connected) throw new Error('Cannot create index while connected');
         keyPath = keyPath || indexName;
         const index = new PersistentIndex(this, this._db, indexName, keyPath, multiEntry);
         this._indices.set(indexName, index);
@@ -628,7 +628,7 @@ class LevelDBBackend {
      * @returns {Promise} The promise resolves after deleting the index.
      */
     deleteIndex(indexName) {
-        if (this._db.connected) throw 'Cannot delete index while connected';
+        if (this._db.connected) throw new Error('Cannot delete index while connected');
         const index = new PersistentIndex(this, indexName, '');
         return index.destroy();
     }
@@ -652,7 +652,7 @@ class LevelDBBackend {
      * @returns {Transaction} The transaction object.
      */
     transaction() {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 
     /**

@@ -27,7 +27,7 @@ class Query {
             case Query.OPERATORS.WITHIN:
                 return KeyRange.bound(value, value2, false, false);
         }
-        throw 'Unknown operator';
+        throw new Error('Unknown operator');
     }
 
     /**
@@ -160,10 +160,10 @@ class Query {
         // If first argument is an array of queries, this is a combined query.
         if (Array.isArray(arg)) {
             if (arg.some(it => !(it instanceof Query))) {
-                throw 'Invalid query';
+                throw new Error('Invalid query');
             }
             if (Query.COMBINED_OPERATORS.indexOf(op) < 0) {
-                throw 'Unknown operator';
+                throw new Error('Unknown operator');
             }
             this._queryType = Query.Type.COMBINED;
             this._queries = arg;
@@ -178,7 +178,7 @@ class Query {
                 this._queryType = Query.Type.ADVANCED;
                 this._op = op;
             } else {
-                throw 'Unknown operator';
+                throw new Error('Unknown operator');
             }
             this._indexName = arg;
         }

@@ -75,7 +75,7 @@ class ObjectStore {
      * @type {Map.<string,IIndex>}
      */
     get indices() {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.indices;
     }
 
@@ -86,7 +86,7 @@ class ObjectStore {
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
     get(key) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.get(key);
     }
 
@@ -98,7 +98,7 @@ class ObjectStore {
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async put(key, value) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         const tx = this.transaction();
         await tx.put(key, value);
         return tx.commit();
@@ -111,7 +111,7 @@ class ObjectStore {
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async remove(key) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         const tx = this.transaction();
         await tx.remove(key);
         return tx.commit();
@@ -126,7 +126,7 @@ class ObjectStore {
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to the query.
      */
     keys(query=null) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         if (query !== null && query instanceof Query) {
             return query.keys(this._currentState);
         }
@@ -142,7 +142,7 @@ class ObjectStore {
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
     values(query=null) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         if (query !== null && query instanceof Query) {
             return query.values(this._currentState);
         }
@@ -183,7 +183,7 @@ class ObjectStore {
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
     maxValue(query=null) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.maxValue(query);
     }
 
@@ -195,7 +195,7 @@ class ObjectStore {
      * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     maxKey(query=null) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.maxKey(query);
     }
 
@@ -207,7 +207,7 @@ class ObjectStore {
      * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     minKey(query=null) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.minKey(query);
     }
 
@@ -219,7 +219,7 @@ class ObjectStore {
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
     minValue(query=null) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.minValue(query);
     }
 
@@ -231,7 +231,7 @@ class ObjectStore {
      * @returns {Promise.<number>}
      */
     count(query=null) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.count(query);
     }
 
@@ -262,9 +262,9 @@ class ObjectStore {
      * @returns {boolean} Whether a commit will be successful.
      */
     _isCommittable(tx) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         if (!(tx instanceof Transaction) || tx.state !== Transaction.STATE.OPEN || !this._txBaseStates.has(tx.id)) {
-            throw 'Can only commit open transactions';
+            throw new Error('Can only commit open transactions');
         }
 
         const baseState = this._txBaseStates.get(tx.id);
@@ -288,7 +288,7 @@ class ObjectStore {
 
         // Create new layer on stack (might be immediately removed by a state flattening).
         if (this._stateStack.length >= ObjectStore.MAX_STACK_SIZE) {
-            throw 'Transaction stack size exceeded';
+            throw new Error('Transaction stack size exceeded');
         }
         this._stateStack.push(tx);
         this._openTransactions.set(tx.id, new Set());
@@ -308,7 +308,7 @@ class ObjectStore {
      * @protected
      */
     set _backend(backend) {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 
     /**
@@ -327,14 +327,14 @@ class ObjectStore {
      * @protected
      */
     async abort(tx) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
 
         if (tx instanceof Snapshot) {
             return this._snapshotManager.abortSnapshot(tx);
         }
 
         if (!(tx instanceof Transaction) || tx.state !== Transaction.STATE.OPEN || !this._txBaseStates.has(tx.id)) {
-            throw 'Can only abort open transactions';
+            throw new Error('Can only abort open transactions');
         }
         const baseState = this._txBaseStates.get(tx.id);
 
@@ -462,7 +462,7 @@ class ObjectStore {
      * @returns {IIndex} The index associated with the given name.
      */
     index(indexName) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.index(indexName);
     }
 
@@ -502,7 +502,7 @@ class ObjectStore {
      * @returns {Transaction} The transaction object.
      */
     transaction(enableWatchdog = true) {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         const tx = new Transaction(this, this._currentState, this, enableWatchdog);
         this._transactions.set(tx.id, tx);
         this._txBaseStates.set(tx.id, this._currentStateId);
@@ -532,7 +532,7 @@ class ObjectStore {
      * @protected
      */
     async _apply(tx) {
-        throw 'Unsupported operation';
+        throw new Error('Unsupported operation');
     }
 
     /**
@@ -540,7 +540,7 @@ class ObjectStore {
      * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
-        if (!this.__backend.connected) throw 'JungleDB is not connected';
+        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         const tx = this.transaction();
         await tx.truncate();
         return tx.commit();
@@ -553,7 +553,7 @@ class ObjectStore {
     close() {
         // TODO perhaps use a different strategy here
         if (this._stateStack.length > 0) {
-            throw 'Cannot close database while transactions are active';
+            throw new Error('Cannot close database while transactions are active');
         }
         return this.__backend.close();
     }
