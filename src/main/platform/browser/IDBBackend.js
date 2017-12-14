@@ -189,9 +189,8 @@ class IDBBackend {
         const db = this._backend;
         return new Promise((resolve, reject) => {
             const results = new Set();
-            const openCursorRequest = db.transaction([this._tableName], 'readonly')
-                .objectStore(this._tableName)
-                .openCursor(query);
+            const store = db.transaction([this._tableName], 'readonly').objectStore(this._tableName);
+            const openCursorRequest = store.openKeyCursor ? store.openKeyCursor(query) : store.openCursor(query);
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
                 if (cursor) {
@@ -218,9 +217,10 @@ class IDBBackend {
         query = IDBTools.convertKeyRange(query);
         const db = this._backend;
         return new Promise((resolve, reject) => {
-            const openCursorRequest = db.transaction([this._tableName], 'readonly')
-                .objectStore(this._tableName)
-                .openCursor(query, ascending ? 'next' : 'prev');
+            const store = db.transaction([this._tableName], 'readonly').objectStore(this._tableName);
+            const openCursorRequest = store.openKeyCursor
+                ? store.openKeyCursor(query, ascending ? 'next' : 'prev')
+                : store.openCursor(query, ascending ? 'next' : 'prev');
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
                 if (cursor) {
@@ -302,9 +302,8 @@ class IDBBackend {
         query = IDBTools.convertKeyRange(query);
         const db = this._backend;
         return new Promise((resolve, reject) => {
-            const openCursorRequest = db.transaction([this._tableName], 'readonly')
-                .objectStore(this._tableName)
-                .openCursor(query, 'prev');
+            const store = db.transaction([this._tableName], 'readonly').objectStore(this._tableName);
+            const openCursorRequest = store.openKeyCursor ? store.openKeyCursor(query, 'prev') : store.openCursor(query, 'prev');
             openCursorRequest.onsuccess = () => resolve(openCursorRequest.result ? openCursorRequest.result.primaryKey : undefined);
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
@@ -343,9 +342,8 @@ class IDBBackend {
         query = IDBTools.convertKeyRange(query);
         const db = this._backend;
         return new Promise((resolve, reject) => {
-            const openCursorRequest = db.transaction([this._tableName], 'readonly')
-                .objectStore(this._tableName)
-                .openCursor(query, 'next');
+            const store = db.transaction([this._tableName], 'readonly').objectStore(this._tableName);
+            const openCursorRequest = store.openKeyCursor ? store.openKeyCursor(query, 'next') : store.openCursor(query, 'next');
             openCursorRequest.onsuccess = () => resolve(openCursorRequest.result ? openCursorRequest.result.primaryKey : undefined);
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
