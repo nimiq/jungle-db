@@ -1,6 +1,6 @@
 {
   "name": "jungle-db",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "main": "dist/node.js",
   "private": true,
   "scripts": {
