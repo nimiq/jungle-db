@@ -8,8 +8,9 @@ const jasmine = require('gulp-jasmine-livereload-task');
 const merge = require('merge2');
 const source = require('vinyl-source-stream');
 const sourcemaps = require('gulp-sourcemaps');
-const uglify = require('gulp-uglify');
+const uglify = require('gulp-uglify-es').default;
 const util = require('gulp-util');
+const istanbul = require('istanbul-api');
 
 const sources = {
     platform: {
@@ -84,6 +85,51 @@ const babel_loader = {
     presets: ['env']
 };
 
+const uglify_config = {
+    ie8: true,
+    keep_fnames: true,
+    ecma: 8,
+    warnings: true,
+    mangle: {
+        keep_classnames: true,
+        safari10: true
+    },
+    compress: {
+        sequences: false,
+        typeofs: false,
+        keep_infinity: true
+    }
+};
+
+const uglify_babel = {
+    ie8: true,
+    keep_fnames: true,
+    ecma: 5,
+    warnings: true,
+    mangle: {
+        keep_classnames: true,
+        safari10: true
+    },
+    compress: {
+        sequences: false,
+        typeofs: false,
+        keep_infinity: true
+    }
+};
+
+gulp.task('build-istanbul', function () {
+    return new Promise((callback) => {
+        istanbul.instrument.run(istanbul.config.loadObject(), {input: './src/main', output: './.istanbul/src/main'}, callback);
+    });
+});
+
+const BROWSER_SOURCES = [
+    './src/loader/browser/prefix.js.template',
+    ...sources.platform.browser,
+    ...sources.generic,
+    './src/loader/browser/suffix.js.template'
+];
+
 gulp.task('build-web-babel', function () {
     return merge(
         browserify([], {
@@ -108,18 +154,19 @@ gulp.task('build-web-babel', function () {
             .pipe(source('babel.js'))
             .pipe(buffer())
             .pipe(uglify()),
-        gulp.src(['./src/loader/browser/prefix.js.template'].concat(sources.platform.browser).concat(sources.generic).concat(['./src/loader/browser/suffix.js.template']), { base: 'src' })
+        gulp.src(BROWSER_SOURCES, { base: 'src' })
             .pipe(sourcemaps.init())
             .pipe(concat('web.js'))
             .pipe(babel(babel_config)))
         .pipe(sourcemaps.init())
         .pipe(concat('web-babel.js'))
+        .pipe(uglify(uglify_babel))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'));
 });
 
 gulp.task('build-web', function () {
-    return gulp.src(['./src/loader/browser/prefix.js.template'].concat(sources.platform.browser).concat(sources.generic).concat(['./src/loader/browser/suffix.js.template']), { base: 'src' })
+    return gulp.src(BROWSER_SOURCES, { base: 'src' })
         .pipe(sourcemaps.init())
         .pipe(concat('web.js'))
         .pipe(sourcemaps.write('.'))
@@ -127,10 +174,37 @@ gulp.task('build-web', function () {
         .pipe(connect.reload());
 });
 
+gulp.task('build-web-istanbul', ['build-istanbul'], function () {
+    return gulp.src(BROWSER_SOURCES.map(f => f.indexOf('./src/main') === 0 ? `./.istanbul/${f}` : f), { base: 'src' })
+        .pipe(sourcemaps.init({ loadMaps: true }))
+        .pipe(concat('web-istanbul.js'))
+        //.pipe(uglify(uglify_config))
+        .pipe(sourcemaps.write('.'))
+        .pipe(gulp.dest('dist'))
+        .pipe(connect.reload());
+});
+
+const NODE_SOURCES = [
+    './src/loader/nodejs/index.prefix.js',
+    ...sources.generic,
+    ...sources.platform.node,
+    './src/loader/nodejs/index.suffix.js'
+];
+
 gulp.task('build-node', function () {
-    return gulp.src(['./src/loader/nodejs/index.prefix.js'].concat(sources.generic).concat(sources.platform.node).concat(['./src/loader/nodejs/index.suffix.js']), { base: 'src' })
+    return gulp.src(NODE_SOURCES, { base: 'src' })
         .pipe(sourcemaps.init())
         .pipe(concat('node.js'))
+        .pipe(uglify(uglify_config))
+        .pipe(sourcemaps.write('.'))
+        .pipe(gulp.dest('dist'));
+});
+
+gulp.task('build-node-istanbul', ['build-istanbul'], function () {
+    return gulp.src(NODE_SOURCES.map(f => `./.istanbul/${f}`))
+        .pipe(sourcemaps.init())
+        .pipe(concat('node-istanbul.js'))
+        .pipe(uglify(uglify_config))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'));
 });
@@ -153,6 +227,6 @@ gulp.task('watch', ['build-web'], function () {
     return gulp.watch(sources.all, ['build-web']);
 });
 
-gulp.task('build', ['build-web', 'build-node', 'build-web-babel']);
+gulp.task('build', ['build-web', 'build-web-babel', 'build-web-istanbul', 'build-node', 'build-node-istanbul']);
 
 gulp.task('default', ['build']);

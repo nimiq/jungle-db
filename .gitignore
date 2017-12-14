@@ -15,3 +15,5 @@
 *.iml
 /database
 /benchmark/nodejs/db-*
+/.istanbul/
+/coverage/
