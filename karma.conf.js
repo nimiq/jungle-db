@@ -77,7 +77,7 @@ module.exports = function (config) {
         },
 
         sauceLabs: {
-            testName: 'Nimiq Core Tests',
+            testName: 'JungleDB Tests',
             startConnect: false,
             tunnelIdentifier: process.env.TRAVIS_JOB_NUMBER,
             build: process.env.TRAVIS_BUILD_NUMBER,

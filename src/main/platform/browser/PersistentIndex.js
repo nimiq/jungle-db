@@ -94,7 +94,7 @@ class PersistentIndex {
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const results = new Set();
-            const openCursorRequest = this._index(db).openKeyCursor(query);
+            const openCursorRequest = this._index(db).openCursor(query);
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
                 if (cursor) {
@@ -152,7 +152,7 @@ class PersistentIndex {
         return new Promise((resolve, reject) => {
             const results = new Set();
             let maxKey = null;
-            const request = this._index(db).openKeyCursor(query, 'prev');
+            const request = this._index(db).openCursor(query, 'prev');
             request.onsuccess = event => {
                 const cursor = event.target.result;
                 if (maxKey === null) {
@@ -214,7 +214,7 @@ class PersistentIndex {
         return new Promise((resolve, reject) => {
             const results = new Set();
             let maxKey = null;
-            const request = this._index(db).openKeyCursor(query, 'next');
+            const request = this._index(db).openCursor(query, 'next');
             request.onsuccess = event => {
                 const cursor = event.target.result;
                 if (maxKey === null) {
