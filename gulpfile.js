@@ -16,25 +16,28 @@ const sources = {
         browser: [
             './src/main/platform/browser/Class.js',
             './src/main/platform/browser/utils/IDBTools.js',
+            './src/main/platform/browser/utils/LogNative.js',
             './src/main/platform/browser/EncodedTransaction.js',
             './src/main/platform/browser/IDBBackend.js',
             './src/main/platform/browser/JungleDB.js',
             './src/main/platform/browser/PersistentIndex.js'
         ],
         node: [
-            './src/main/platform/nodejs/utils/LevelDBTools.js',
             './src/main/platform/nodejs/utils/IndexCodec.js',
+            './src/main/platform/nodejs/utils/LevelDBTools.js',
+            './src/main/platform/nodejs/utils/LogNative.js',
             './src/main/platform/nodejs/LevelDBBackend.js',
             './src/main/platform/nodejs/JungleDB.js',
             './src/main/platform/nodejs/PersistentIndex.js'
         ]
     },
     generic: [
+        './src/main/generic/utils/ArrayUtils.js',
         './src/main/generic/utils/BTree.js',
+        './src/main/generic/utils/Log.js',
         './src/main/generic/utils/LRUMap.js',
         './src/main/generic/utils/ObjectUtils.js',
         './src/main/generic/utils/Observable.js',
-        './src/main/generic/utils/ArrayUtils.js',
         './src/main/generic/utils/SetUtils.js',
         './src/main/generic/utils/Synchronizer.js',
         './src/main/generic/CachedBackend.js',

@@ -501,7 +501,7 @@ class ObjectStore {
      * @param {boolean} [enableWatchdog]
      * @returns {Transaction} The transaction object.
      */
-    transaction(enableWatchdog = true) {
+    transaction(enableWatchdog=true) {
         if (!this.__backend.connected) throw new Error('JungleDB is not connected');
         const tx = new Transaction(this, this._currentState, this, enableWatchdog);
         this._transactions.set(tx.id, tx);

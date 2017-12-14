@@ -49,11 +49,11 @@ class Transaction {
 
         this._snapshotManager = new SnapshotManager();
 
+        this._startTime = Date.now();
         this._enableWatchdog = enableWatchdog;
         if (this._enableWatchdog) {
             this._watchdog = setTimeout(() => {
-                this.abort();
-                console.error('Watchdog timer aborted transaction', this);
+                Log.w(Transaction, `Violation: tx id ${this._id} (±${this._modified.size+this._removed.size} entries${this._truncated ? ' and truncate' : ''}) took longer than expected (still open after ${Transaction.WATCHDOG_TIMER/1000}s).`);
             }, Transaction.WATCHDOG_TIMER);
         }
     }
@@ -217,12 +217,30 @@ class Transaction {
         if (this._enableWatchdog) {
             clearTimeout(this._watchdog);
         }
+        const commitStart = Date.now();
         if (await this._commitBackend.commit(this)) {
             this._state = Transaction.STATE.COMMITTED;
+            this._performanceCheck(commitStart, 'commit');
+            this._performanceCheck();
             return true;
         } else {
             this._state = Transaction.STATE.CONFLICTED;
+            this._performanceCheck(commitStart, 'commit');
+            this._performanceCheck();
             return false;
+        }
+    }
+
+    /**
+     * @param {number} [startTime]
+     * @param {string} [functionName]
+     * @private
+     */
+    _performanceCheck(startTime=this._startTime, functionName=null) {
+        const executionTime = Date.now() - startTime;
+        functionName = functionName ? ` function '${functionName}'` : '';
+        if (executionTime > Transaction.WATCHDOG_TIMER) {
+            Log.w(Transaction, `Violation: tx id ${this._id}${functionName} (±${this._modified.size+this._removed.size} entries${this._truncated ? ' and truncate' : ''}) took ${(executionTime/1000).toFixed(2)}s.`);
         }
     }
 
@@ -310,8 +328,11 @@ class Transaction {
         if (this._enableWatchdog) {
             clearTimeout(this._watchdog);
         }
+        const abortStart = Date.now();
         await this._commitBackend.abort(this);
         this._state = Transaction.STATE.ABORTED;
+        this._performanceCheck(abortStart, 'abort');
+        this._performanceCheck();
         return true;
     }
 
@@ -774,7 +795,7 @@ class Transaction {
     }
 }
 /** @type {number} Milliseconds to wait until automatically aborting transaction. */
-Transaction.WATCHDOG_TIMER = 10000 /*ms*/;
+Transaction.WATCHDOG_TIMER = 5000 /*ms*/;
 /**
  * The states of a transaction.
  * New transactions are in the state OPEN until they are aborted, committed or a nested transaction is created.
