@@ -109,7 +109,7 @@ class CombinedTransaction {
      */
     async commit() {
         if (this._isCommittable()) {
-            await this._commit();
+            await this._commitBackend();
             return true;
         }
         await this.abort();
@@ -122,8 +122,17 @@ class CombinedTransaction {
      * The optional tx argument is only used internally, in order to abort a transaction on the underlying store.
      * @returns {Promise} The promise resolves after successful abortion of the transaction.
      */
-    async abort() {
-        return Promise.all(this._transactions.map(tx => tx.abort()));
+    abort() {
+        return this._abortBackend();
+    }
+
+    /**
+     * Aborts a transaction on the backend.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     * @override
+     */
+    async _abortBackend() {
+        return (await Promise.all(this._transactions.map(tx => tx._abortBackend()))).every(r => r);
     }
 
     /**
@@ -162,8 +171,18 @@ class CombinedTransaction {
      * @protected
      * @returns {Promise} A promise that resolves upon successful application of the transaction.
      */
-    _commit() {
-        return Promise.all(this._transactions.map(tx => tx.commit()));
+    async _commitBackend() {
+        return (await Promise.all(this._transactions.map(tx => tx._commitBackend()))).every(r => r);
+    }
+
+    /**
+     * Unsupported operation for snapshots.
+     * @protected
+     * @param {Transaction} tx The transaction to be applied.
+     * @returns {Promise} A promise that resolves upon successful application of the transaction.
+     */
+    async _commitInternal(tx) {
+        throw new Error('Cannot commit transactions to a combined transaction');
     }
 
     /**

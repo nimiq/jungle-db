@@ -113,7 +113,17 @@ class Snapshot extends Transaction {
      * @param {Transaction} tx The transaction to be applied.
      * @returns {Promise} A promise that resolves upon successful application of the transaction.
      */
-    async _commit(tx) {
+    async _commitInternal(tx) {
+        throw new Error('Cannot commit snapshots');
+    }
+
+    /**
+     * Commits the transaction to the backend.
+     * @override
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     * @protected
+     */
+    async _commitBackend() {
         throw new Error('Cannot commit snapshots');
     }
 
@@ -123,11 +133,20 @@ class Snapshot extends Transaction {
      * @param [tx]
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
-    async abort(tx) {
+    abort(tx) {
+        return this._abortBackend();
+    }
+
+    /**
+     * Aborts a transaction on the backend.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     * @override
+     */
+    async _abortBackend() {
         if (this._state !== Transaction.STATE.OPEN) {
             throw new Error('Snapshot already closed');
         }
-        const result = await this._commitBackend.abort(this);
+        const result = await this._managingBackend.abort(this);
         if (!result) {
             return false;
         }

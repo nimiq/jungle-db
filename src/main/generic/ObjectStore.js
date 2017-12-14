@@ -250,7 +250,7 @@ class ObjectStore {
             await this.abort(tx);
             return false;
         }
-        await this._commit(tx);
+        await this._commitInternal(tx);
         return true;
     }
 
@@ -274,12 +274,21 @@ class ObjectStore {
     }
 
     /**
+     * Commits the transaction to the backend.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     * @protected
+     */
+    async _commitBackend() {
+        throw new Error('Cannot commit object stores');
+    }
+
+    /**
      * Is used to commit the transaction.
      * @protected
      * @param {Transaction} tx The transaction to be applied.
      * @returns {Promise} A promise that resolves upon successful application of the transaction.
      */
-    async _commit(tx) {
+    async _commitInternal(tx) {
         const baseState = this._txBaseStates.get(tx.id);
         const openTransactions = this._openTransactions.get(baseState);
         openTransactions.delete(tx.id);

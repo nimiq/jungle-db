@@ -61,7 +61,22 @@ class ICommittable {
      * @param {Transaction} tx The transaction to be applied.
      * @returns {Promise} A promise that resolves upon successful application of the transaction.
      */
-    async _commit(tx) {} // eslint-disable-line no-unused-vars
+    async _commitInternal(tx) {} // eslint-disable-line no-unused-vars
+
+    /**
+     * Commits the transaction to the backend.
+     * @abstract
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     * @protected
+     */
+    async _commitBackend() {} // eslint-disable-line no-unused-vars
+
+    /**
+     * Aborts a transaction on the backend.
+     * @abstract
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     */
+    async _abortBackend() {} // eslint-disable-line no-unused-vars
 
     /**
      * Allows to change the backend of a Transaction when the state has been flushed.

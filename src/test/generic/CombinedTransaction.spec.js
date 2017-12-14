@@ -20,6 +20,32 @@ describe('CombinedTransaction', () => {
         })().then(done, done.fail);
     });
 
+    it('commit/abort on individual transactions triggers combined commit/abort', (done) => {
+        (async function () {
+            let tx1 = objectStore1.transaction();
+            let tx2 = objectStore2.transaction();
+            await tx1.remove('key6');
+            await tx2.remove('key6');
+            new JDB.CombinedTransaction(tx1, tx2);
+
+            expect(await tx1.commit()).toBe(true);
+            expect(await tx2.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(await backend1.get('key6')).toBe(undefined);
+            expect(await backend2.get('key6')).toBe(undefined);
+
+            tx1 = objectStore1.transaction();
+            tx2 = objectStore2.transaction();
+            await tx1.remove('key7');
+            await tx2.remove('key7');
+            new JDB.CombinedTransaction(tx1, tx2);
+
+            expect(await tx2.abort()).toBe(true);
+            expect(await tx1.state).toBe(JDB.Transaction.STATE.ABORTED);
+            expect(await backend1.get('key7')).toBe('value7');
+            expect(await backend2.get('key7')).toBe('value7');
+        })().then(done, done.fail);
+    });
+
     it('cannot commit combined transactions from same object store', (done) => {
         (async function () {
             const tx1 = objectStore1.transaction();

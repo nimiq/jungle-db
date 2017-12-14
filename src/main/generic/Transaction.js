@@ -18,18 +18,18 @@ class Transaction {
      * @param {ObjectStore} objectStore The object store this transaction belongs to.
      * @param {IObjectStore} backend The backend on which the transaction is based,
      * i.e., another transaction or the real database.
-     * @param {ICommittable} [commitBackend] The object store managing the transactions,
+     * @param {ICommittable} [managingBackend] The object store managing the transactions,
      * i.e., the ObjectStore object.
      * @param {boolean} [enableWatchdog] If this is is set to true (default),
      * transactions will be automatically aborted if left open for longer than WATCHDOG_TIMER.
      * @protected
      */
-    constructor(objectStore, backend, commitBackend, enableWatchdog=true) {
+    constructor(objectStore, backend, managingBackend, enableWatchdog=true) {
         this._id = Transaction._instanceCount++;
         this._objectStore = objectStore;
         this.__backend = backend;
         /** @type {ICommittable} */
-        this._commitBackend = commitBackend || backend;
+        this._managingBackend = managingBackend || backend;
         this._modified = new Map();
         this._removed = new Set();
         this._originalValues = new Map();
@@ -65,7 +65,7 @@ class Transaction {
 
     /** @type {boolean} */
     get nested() {
-        return this._commitBackend instanceof Transaction;
+        return this._managingBackend instanceof Transaction;
     }
 
     /**
@@ -77,7 +77,7 @@ class Transaction {
 
     /** @type {boolean} */
     get connected() {
-        return this._commitBackend.connected;
+        return this._managingBackend.connected;
     }
 
     /** @type {number} A unique transaction id. */
@@ -207,10 +207,23 @@ class Transaction {
                 await this.abort(tx);
                 return false;
             }
-            await this._commit(tx);
+            await this._commitInternal(tx);
             return true;
         }
 
+        if (this._dependency !== null) {
+            return this._dependency.commit();
+        }
+
+        return this._commitBackend();
+    }
+
+    /**
+     * Commits the transaction to the backend.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     * @protected
+     */
+    async _commitBackend() {
         if (this._state !== Transaction.STATE.OPEN) {
             throw new Error('Transaction already closed or in nested state');
         }
@@ -218,7 +231,7 @@ class Transaction {
             clearTimeout(this._watchdog);
         }
         const commitStart = Date.now();
-        if (await this._commitBackend.commit(this)) {
+        if (await this._managingBackend.commit(this)) {
             this._state = Transaction.STATE.COMMITTED;
             this._performanceCheck(commitStart, 'commit');
             this._performanceCheck();
@@ -259,7 +272,7 @@ class Transaction {
             }
             return !this._nestedCommitted;
         }
-        return this._commitBackend._isCommittable(this);
+        return this._managingBackend._isCommittable(this);
     }
 
     /**
@@ -268,7 +281,7 @@ class Transaction {
      * @param {Transaction} tx The transaction to be applied.
      * @returns {Promise} A promise that resolves upon successful application of the transaction.
      */
-    async _commit(tx) {
+    async _commitInternal(tx) {
         this._nested.delete(tx);
         // Apply nested transaction.
         this._nestedCommitted = true;
@@ -316,6 +329,18 @@ class Transaction {
             return true;
         }
 
+        if (this._dependency !== null) {
+            return this._dependency.abort();
+        }
+
+        return this._abortBackend();
+    }
+
+    /**
+     * Aborts a transaction on the backend.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     */
+    async _abortBackend() {
         if (this._state === Transaction.STATE.ABORTED || this._state === Transaction.STATE.CONFLICTED) {
             return true;
         }
@@ -329,7 +354,7 @@ class Transaction {
             clearTimeout(this._watchdog);
         }
         const abortStart = Date.now();
-        await this._commitBackend.abort(this);
+        await this._managingBackend.abort(this);
         this._state = Transaction.STATE.ABORTED;
         this._performanceCheck(abortStart, 'abort');
         this._performanceCheck();
@@ -783,7 +808,7 @@ class Transaction {
      */
     snapshot() {
         if (this.state !== Transaction.STATE.COMMITTED) {
-            const snapshot = this._commitBackend.snapshot();
+            const snapshot = this._managingBackend.snapshot();
             snapshot.inherit(this);
             return snapshot;
         }
