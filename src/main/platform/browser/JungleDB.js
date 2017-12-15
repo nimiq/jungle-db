@@ -248,5 +248,9 @@ class JungleDB {
         const ctx = new CombinedTransaction(...txs);
         return ctx.commit();
     }
+
+    toString() {
+        return `JungleDB{name=${this._databaseDir}}`;
+    }
 }
 Class.register(JungleDB);

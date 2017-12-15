@@ -271,6 +271,10 @@ class JungleDB {
         const ctx = new CombinedTransaction(...txs);
         return ctx.commit();
     }
+
+    toString() {
+        return `JungleDB{name=${this._databaseDir}}`;
+    }
 }
 /**
  * A LevelDB JSON encoding that can handle Uint8Arrays and Sets.

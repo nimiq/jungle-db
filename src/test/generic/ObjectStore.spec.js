@@ -272,4 +272,25 @@ describe('ObjectStore', () => {
             expect(tx4.state).toBe(JDB.Transaction.STATE.ABORTED);
         })().then(done, done.fail);
     });
+
+    it('throws error when stack size is exceeded', (done) => {
+        (async function () {
+            let txC;
+
+            for (let i=0; i<JDB.ObjectStore.MAX_STACK_SIZE; ++i) {
+                objectStore.transaction();
+                txC = objectStore.transaction();
+                await txC.commit();
+            }
+
+            // Another transaction should throw a detailed error.
+            objectStore.transaction();
+            txC = objectStore.transaction();
+            let threw = false;
+            await txC.commit().catch(() => {
+                threw = true;
+            });
+            expect(threw).toBe(true);
+        })().then(done, done.fail);
+    });
 });

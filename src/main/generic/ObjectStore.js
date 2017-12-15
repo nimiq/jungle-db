@@ -297,6 +297,7 @@ class ObjectStore {
 
         // Create new layer on stack (might be immediately removed by a state flattening).
         if (this._stateStack.length >= ObjectStore.MAX_STACK_SIZE) {
+            Log.e(ObjectStore, `Transaction stack size exceeded ${this.toStringFull()}`);
             throw new Error('Transaction stack size exceeded');
         }
         this._stateStack.push(tx);
@@ -565,6 +566,17 @@ class ObjectStore {
             throw new Error('Cannot close database while transactions are active');
         }
         return this.__backend.close();
+    }
+
+    toStringFull() {
+        return `ObjectStore{
+    stack=[${this._stateStack.map(tx => tx.toStringShort())}],
+    db=${this._db}
+}`;
+    }
+
+    toString() {
+        return `ObjectStore{stackSize=${this._stateStack.length}, db=${this._db}}`;
     }
 }
 /** @type {number} The maximum number of states to stack. */

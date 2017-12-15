@@ -321,5 +321,9 @@ class DummyBackend {
     transaction() {
         throw 'Unsupported operation';
     }
+
+    toString() {
+        return 'DummyBackend{}';
+    }
 }
 JDB.Class.register(DummyBackend);

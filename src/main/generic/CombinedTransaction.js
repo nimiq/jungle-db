@@ -219,5 +219,9 @@ class CombinedTransaction {
     get objectStore() {
         throw new Error('Unsupported operation');
     }
+
+    toString() {
+        return `CombinedTransaction{size=${this._transactions.length}, states=[${this._transactions.map(tx => tx.state)}]}`;
+    }
 }
 Class.register(CombinedTransaction);

@@ -12,7 +12,7 @@ class Transaction {
     /**
      * This constructor should only be called by an ObjectStore object.
      * Our transactions have a watchdog enabled by default,
-     * aborting them after a certain time specified by WATCHDOG_TIMER.
+     * logging a warning after a certain time specified by WATCHDOG_TIMER.
      * This helps to detect unclosed transactions preventing to store the state in
      * the persistent backend.
      * @param {ObjectStore} objectStore The object store this transaction belongs to.
@@ -21,7 +21,7 @@ class Transaction {
      * @param {ICommittable} [managingBackend] The object store managing the transactions,
      * i.e., the ObjectStore object.
      * @param {boolean} [enableWatchdog] If this is is set to true (default),
-     * transactions will be automatically aborted if left open for longer than WATCHDOG_TIMER.
+     * a warning will be logged if left open for longer than WATCHDOG_TIMER.
      * @protected
      */
     constructor(objectStore, backend, managingBackend, enableWatchdog=true) {
@@ -53,7 +53,7 @@ class Transaction {
         this._enableWatchdog = enableWatchdog;
         if (this._enableWatchdog) {
             this._watchdog = setTimeout(() => {
-                Log.w(Transaction, `Violation: tx id ${this._id} (±${this._modified.size+this._removed.size} entries${this._truncated ? ' and truncate' : ''}) took longer than expected (still open after ${Transaction.WATCHDOG_TIMER/1000}s).`);
+                Log.w(Transaction, `Violation: tx id ${this._id} took longer than expected (still open after ${Transaction.WATCHDOG_TIMER/1000}s), ${this.toString()}.`);
             }, Transaction.WATCHDOG_TIMER);
         }
     }
@@ -253,7 +253,7 @@ class Transaction {
         const executionTime = Date.now() - startTime;
         functionName = functionName ? ` function '${functionName}'` : '';
         if (executionTime > Transaction.WATCHDOG_TIMER) {
-            Log.w(Transaction, `Violation: tx id ${this._id}${functionName} (±${this._modified.size+this._removed.size} entries${this._truncated ? ' and truncate' : ''}) took ${(executionTime/1000).toFixed(2)}s.`);
+            Log.w(Transaction, `Violation: tx id ${this._id}${functionName} took ${(executionTime/1000).toFixed(2)}s (${this.toString()}).`);
         }
     }
 
@@ -816,7 +816,11 @@ class Transaction {
     }
 
     toString() {
-        return `${this._id}`;
+        return `Transaction{id=${this._id}, changes=±${this._modified.size+this._removed.size}, truncated=${this._truncated}, objectStore=${this._objectStore}, state=${this._state}, dependency=${this._dependency}}`;
+    }
+
+    toStringShort() {
+        return `Transaction{id=${this._id}, changes=±${this._modified.size+this._removed.size}, truncated=${this._truncated}, state=${this._state}, dependency=${this._dependency}}`;
     }
 }
 /** @type {number} Milliseconds to wait until automatically aborting transaction. */
