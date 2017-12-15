@@ -570,7 +570,7 @@ class ObjectStore {
 
     toStringFull() {
         return `ObjectStore{
-    stack=[${this._stateStack.map(tx => tx.toStringShort())}],
+    stack=[${this._stateStack.map(tx => `{tx=${tx.toStringShort()}, open=${this._openTransactions.get(tx.id) ? this._openTransactions.get(tx.id).size : 0}}`)}],
     db=${this._db}
 }`;
     }
