@@ -50,6 +50,7 @@ class JungleDB {
                 resolve(request.result);
             };
 
+            request.onerror = reject;
             request.onupgradeneeded = event => that._initDB(event);
         });
     }
