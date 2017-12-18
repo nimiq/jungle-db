@@ -34,7 +34,7 @@ class BinaryCodec {
      * @type {{encode: function(val:*):*, decode: function(val:*):*, buffer: boolean, type: string}|void}
      */
     get valueEncoding() {
-        return JDB.JungleDB.JSON_ENCODING;
+        return JungleDB.JSON_ENCODING;
     }
 }
-JDB.Class.register(BinaryCodec);
+Class.register(BinaryCodec);

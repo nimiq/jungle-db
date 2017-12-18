@@ -8,7 +8,7 @@ describe('ObjectStore', () => {
     beforeEach((done) => {
         backend = new DummyBackend();
 
-        objectStore = new JDB.ObjectStore(backend, backend);
+        objectStore = new ObjectStore(backend, backend);
 
         (async function () {
             // Add 10 objects.
@@ -26,7 +26,7 @@ describe('ObjectStore', () => {
             await tx.remove('key0');
             await tx.put('newKey', 'test');
             expect(await tx.commit()).toBe(true);
-            expect(tx.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(tx.state).toBe(Transaction.STATE.COMMITTED);
             expect(await objectStore.get('key0')).toBe(undefined);
             expect(await objectStore.get('newKey')).toBe('test');
         })().then(done, done.fail);
@@ -52,7 +52,7 @@ describe('ObjectStore', () => {
 
             // Commit one transaction.
             expect(await tx1.commit()).toBe(true);
-            expect(tx1.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(tx1.state).toBe(Transaction.STATE.COMMITTED);
 
             // Still ensure read isolation.
             expect(await tx1.get('key0')).toBe(undefined);
@@ -88,7 +88,7 @@ describe('ObjectStore', () => {
 
             // Commit third transaction.
             expect(await tx3.commit()).toBe(true);
-            expect(tx3.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
 
             // Create a fourth transaction, which should be based on tx3.
             const tx4 = objectStore.transaction();
@@ -104,7 +104,7 @@ describe('ObjectStore', () => {
             // Abort second transaction and commit empty fourth transaction.
             expect(await tx2.abort()).toBe(true);
             expect(await tx4.commit()).toBe(true);
-            expect(tx4.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(tx4.state).toBe(Transaction.STATE.COMMITTED);
 
             // Now everything should be in the backend.
             expect(await backend.get('key0')).toBe('someval');
@@ -139,7 +139,7 @@ describe('ObjectStore', () => {
 
             // Commit one transaction.
             expect(await tx1.commit()).toBe(true);
-            expect(tx1.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(tx1.state).toBe(Transaction.STATE.COMMITTED);
 
             // Still ensure read isolation.
             expect(await tx1.get('key0')).toBe(undefined);
@@ -153,7 +153,7 @@ describe('ObjectStore', () => {
 
             // Should not be able to commit tx2.
             expect(await tx2.commit()).toBe(false);
-            expect(tx2.state).toBe(JDB.Transaction.STATE.CONFLICTED);
+            expect(tx2.state).toBe(Transaction.STATE.CONFLICTED);
 
             // tx1 might be flushed by now. No more transactions possible on top of it.
             try {
@@ -192,16 +192,16 @@ describe('ObjectStore', () => {
         (async function () {
             // Create two transactions on the main state.
             const tx1 = objectStore.transaction();
-            expect(tx1.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx1.state).toBe(Transaction.STATE.OPEN);
             const tx2 = tx1.transaction();
-            expect(tx1.state).toBe(JDB.Transaction.STATE.NESTED);
-            expect(tx2.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx1.state).toBe(Transaction.STATE.NESTED);
+            expect(tx2.state).toBe(Transaction.STATE.OPEN);
             const tx3 = tx2.transaction();
-            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
-            expect(tx3.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx2.state).toBe(Transaction.STATE.NESTED);
+            expect(tx3.state).toBe(Transaction.STATE.OPEN);
             const tx4 = tx2.transaction();
-            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
-            expect(tx4.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx2.state).toBe(Transaction.STATE.NESTED);
+            expect(tx4.state).toBe(Transaction.STATE.OPEN);
 
             // Should not be able to commit.
             try {
@@ -219,34 +219,34 @@ describe('ObjectStore', () => {
                 // all ok
             }
 
-            expect(tx1.state).toBe(JDB.Transaction.STATE.NESTED);
-            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
-            expect(tx3.state).toBe(JDB.Transaction.STATE.OPEN);
-            expect(tx4.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx1.state).toBe(Transaction.STATE.NESTED);
+            expect(tx2.state).toBe(Transaction.STATE.NESTED);
+            expect(tx3.state).toBe(Transaction.STATE.OPEN);
+            expect(tx4.state).toBe(Transaction.STATE.OPEN);
 
             expect(await tx3.commit()).toBe(true);
-            expect(tx1.state).toBe(JDB.Transaction.STATE.NESTED);
-            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
-            expect(tx3.state).toBe(JDB.Transaction.STATE.COMMITTED);
-            expect(tx4.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx1.state).toBe(Transaction.STATE.NESTED);
+            expect(tx2.state).toBe(Transaction.STATE.NESTED);
+            expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
+            expect(tx4.state).toBe(Transaction.STATE.OPEN);
 
             expect(await tx4.commit()).toBe(false);
-            expect(tx1.state).toBe(JDB.Transaction.STATE.NESTED);
-            expect(tx2.state).toBe(JDB.Transaction.STATE.OPEN);
-            expect(tx3.state).toBe(JDB.Transaction.STATE.COMMITTED);
-            expect(tx4.state).toBe(JDB.Transaction.STATE.CONFLICTED);
+            expect(tx1.state).toBe(Transaction.STATE.NESTED);
+            expect(tx2.state).toBe(Transaction.STATE.OPEN);
+            expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
+            expect(tx4.state).toBe(Transaction.STATE.CONFLICTED);
 
             expect(await tx2.commit()).toBe(true);
-            expect(tx1.state).toBe(JDB.Transaction.STATE.OPEN);
-            expect(tx2.state).toBe(JDB.Transaction.STATE.COMMITTED);
-            expect(tx3.state).toBe(JDB.Transaction.STATE.COMMITTED);
-            expect(tx4.state).toBe(JDB.Transaction.STATE.CONFLICTED);
+            expect(tx1.state).toBe(Transaction.STATE.OPEN);
+            expect(tx2.state).toBe(Transaction.STATE.COMMITTED);
+            expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
+            expect(tx4.state).toBe(Transaction.STATE.CONFLICTED);
 
             expect(await tx1.abort()).toBe(true);
-            expect(tx1.state).toBe(JDB.Transaction.STATE.ABORTED);
-            expect(tx2.state).toBe(JDB.Transaction.STATE.COMMITTED);
-            expect(tx3.state).toBe(JDB.Transaction.STATE.COMMITTED);
-            expect(tx4.state).toBe(JDB.Transaction.STATE.CONFLICTED);
+            expect(tx1.state).toBe(Transaction.STATE.ABORTED);
+            expect(tx2.state).toBe(Transaction.STATE.COMMITTED);
+            expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
+            expect(tx4.state).toBe(Transaction.STATE.CONFLICTED);
         })().then(done, done.fail);
     });
 
@@ -254,22 +254,22 @@ describe('ObjectStore', () => {
         (async function () {
             // Create two transactions on the main state.
             const tx1 = objectStore.transaction();
-            expect(tx1.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx1.state).toBe(Transaction.STATE.OPEN);
             const tx2 = tx1.transaction();
-            expect(tx1.state).toBe(JDB.Transaction.STATE.NESTED);
-            expect(tx2.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx1.state).toBe(Transaction.STATE.NESTED);
+            expect(tx2.state).toBe(Transaction.STATE.OPEN);
             const tx3 = tx2.transaction();
-            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
-            expect(tx3.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx2.state).toBe(Transaction.STATE.NESTED);
+            expect(tx3.state).toBe(Transaction.STATE.OPEN);
             const tx4 = tx2.transaction();
-            expect(tx2.state).toBe(JDB.Transaction.STATE.NESTED);
-            expect(tx4.state).toBe(JDB.Transaction.STATE.OPEN);
+            expect(tx2.state).toBe(Transaction.STATE.NESTED);
+            expect(tx4.state).toBe(Transaction.STATE.OPEN);
 
             await tx1.abort();
-            expect(tx1.state).toBe(JDB.Transaction.STATE.ABORTED);
-            expect(tx2.state).toBe(JDB.Transaction.STATE.ABORTED);
-            expect(tx3.state).toBe(JDB.Transaction.STATE.ABORTED);
-            expect(tx4.state).toBe(JDB.Transaction.STATE.ABORTED);
+            expect(tx1.state).toBe(Transaction.STATE.ABORTED);
+            expect(tx2.state).toBe(Transaction.STATE.ABORTED);
+            expect(tx3.state).toBe(Transaction.STATE.ABORTED);
+            expect(tx4.state).toBe(Transaction.STATE.ABORTED);
         })().then(done, done.fail);
     });
 
@@ -277,7 +277,7 @@ describe('ObjectStore', () => {
         (async function () {
             let txC;
 
-            for (let i=0; i<JDB.ObjectStore.MAX_STACK_SIZE; ++i) {
+            for (let i=0; i<ObjectStore.MAX_STACK_SIZE; ++i) {
                 objectStore.transaction();
                 txC = objectStore.transaction();
                 await txC.commit();

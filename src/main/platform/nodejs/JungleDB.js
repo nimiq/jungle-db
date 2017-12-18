@@ -281,16 +281,8 @@ class JungleDB {
  * @type {{encode: function(val:*):*, decode: function(val:*):*, buffer: boolean, type: string}}
  */
 JungleDB.JSON_ENCODING = {
-    encode: val => JSON.stringify(val, (k, v) => {
-        if (v instanceof Uint8Array) {
-            return Array.from(v);
-        }
-        if (v instanceof Set) {
-            return Array.from(v);
-        }
-        return v;
-    }),
-    decode: JSON.parse,
+    encode: JSONUtils.stringify,
+    decode: JSONUtils.parse,
     buffer: false,
     type: 'json'
 };

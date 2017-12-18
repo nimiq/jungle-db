@@ -1,6 +1,6 @@
 {
   "name": "jungle-db",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "main": "dist/node.js",
   "private": true,
   "scripts": {
@@ -20,6 +20,8 @@
     "node": ">=7.9.0"
   },
   "dependencies": {
+    "atob": "^2.0.3",
+    "btoa": "^1.1.2",
     "fs": "^0.0.1-security",
     "level-sublevel": "^6.6.1",
     "leveldown": "^1.6.0",

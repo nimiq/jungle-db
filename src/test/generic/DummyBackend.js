@@ -15,7 +15,7 @@ class DummyBackend {
 
         this._codec = codec;
 
-        this._primaryIndex = new JDB.InMemoryIndex(this, undefined, false, true);
+        this._primaryIndex = new InMemoryIndex(this, undefined, false, true);
     }
 
     get committed() {
@@ -87,7 +87,7 @@ class DummyBackend {
      * @returns {Promise.<Array.<*>>}
      */
     async values(query=null) {
-        if (query !== null && query instanceof JDB.Query) {
+        if (query !== null && query instanceof Query) {
             return query.values(this);
         }
         const values = [];
@@ -102,7 +102,7 @@ class DummyBackend {
      * @returns {Promise.<Set.<string>>}
      */
     keys(query=null) {
-        if (query !== null && query instanceof JDB.Query) {
+        if (query !== null && query instanceof Query) {
             return query.keys(this);
         }
         return this._primaryIndex.keys(query);
@@ -278,7 +278,7 @@ class DummyBackend {
      */
     createIndex(indexName, keyPath, multiEntry=false) {
         keyPath = keyPath || indexName;
-        const index = new JDB.InMemoryIndex(this, keyPath, multiEntry);
+        const index = new InMemoryIndex(this, keyPath, multiEntry);
         this._indices.set(indexName, index);
     }
 
@@ -326,4 +326,4 @@ class DummyBackend {
         return 'DummyBackend{}';
     }
 }
-JDB.Class.register(DummyBackend);
+Class.register(DummyBackend);

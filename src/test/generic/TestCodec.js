@@ -40,7 +40,7 @@ class TestCodec {
      * @type {{encode: function(val:*):*, decode: function(val:*):*, buffer: boolean, type: string}|void}
      */
     get valueEncoding() {
-        return JDB.JungleDB.JSON_ENCODING;
+        return JungleDB.JSON_ENCODING;
     }
 }
-JDB.Class.register(TestCodec);
+Class.register(TestCodec);
