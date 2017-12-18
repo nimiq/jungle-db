@@ -4,7 +4,7 @@ describe('ObjectUtils', () => {
         const obj = {
             test: 'success'
         };
-        expect(JDB.ObjectUtils.byKeyPath(obj, 'test')).toEqual('success');
+        expect(ObjectUtils.byKeyPath(obj, 'test')).toEqual('success');
     });
 
     it('correctly retrieves complex properties from objects', () => {
@@ -15,7 +15,7 @@ describe('ObjectUtils', () => {
                 }
             }
         };
-        expect(JDB.ObjectUtils.byKeyPath(obj, 'complex|test|case'.split('|'))).toEqual('success');
+        expect(ObjectUtils.byKeyPath(obj, 'complex|test|case'.split('|'))).toEqual('success');
     });
 
     it('correctly retrieves simple properties from classes', () => {
@@ -29,8 +29,8 @@ describe('ObjectUtils', () => {
             }
         }
         const obj = new Test();
-        expect(JDB.ObjectUtils.byKeyPath(obj, 'test')).toEqual('success');
-        expect(JDB.ObjectUtils.byKeyPath(obj, 'test2')).toEqual('member');
+        expect(ObjectUtils.byKeyPath(obj, 'test')).toEqual('success');
+        expect(ObjectUtils.byKeyPath(obj, 'test2')).toEqual('member');
     });
 
     it('correctly retrieves complex properties from classes', () => {
@@ -46,7 +46,7 @@ describe('ObjectUtils', () => {
             }
         }
         const obj = new Test();
-        expect(JDB.ObjectUtils.byKeyPath(obj, '_privateTest|another'.split('|'))).toEqual('example');
-        expect(JDB.ObjectUtils.byKeyPath(obj, 'test|_privateTest|another'.split('|'))).toEqual('example');
+        expect(ObjectUtils.byKeyPath(obj, '_privateTest|another'.split('|'))).toEqual('example');
+        expect(ObjectUtils.byKeyPath(obj, 'test|_privateTest|another'.split('|'))).toEqual('example');
     });
 });

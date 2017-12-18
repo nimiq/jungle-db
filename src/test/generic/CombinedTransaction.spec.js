@@ -2,10 +2,10 @@ describe('CombinedTransaction', () => {
     let backend1, backend2, objectStore1, objectStore2;
 
     beforeEach((done) => {
-        backend1 = new JDB.InMemoryBackend('');
-        backend2 = new JDB.InMemoryBackend('');
-        objectStore1 = new JDB.ObjectStore(backend1, null);
-        objectStore2 = new JDB.ObjectStore(backend2, null);
+        backend1 = new InMemoryBackend('');
+        backend2 = new InMemoryBackend('');
+        objectStore1 = new ObjectStore(backend1, null);
+        objectStore2 = new ObjectStore(backend2, null);
 
         (async function () {
             // Add 10 objects.
@@ -26,10 +26,10 @@ describe('CombinedTransaction', () => {
             let tx2 = objectStore2.transaction();
             await tx1.remove('key6');
             await tx2.remove('key6');
-            new JDB.CombinedTransaction(tx1, tx2);
+            new CombinedTransaction(tx1, tx2);
 
             expect(await tx1.commit()).toBe(true);
-            expect(await tx2.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(await tx2.state).toBe(Transaction.STATE.COMMITTED);
             expect(await backend1.get('key6')).toBe(undefined);
             expect(await backend2.get('key6')).toBe(undefined);
 
@@ -37,10 +37,10 @@ describe('CombinedTransaction', () => {
             tx2 = objectStore2.transaction();
             await tx1.remove('key7');
             await tx2.remove('key7');
-            new JDB.CombinedTransaction(tx1, tx2);
+            new CombinedTransaction(tx1, tx2);
 
             expect(await tx2.abort()).toBe(true);
-            expect(await tx1.state).toBe(JDB.Transaction.STATE.ABORTED);
+            expect(await tx1.state).toBe(Transaction.STATE.ABORTED);
             expect(await backend1.get('key7')).toBe('value7');
             expect(await backend2.get('key7')).toBe('value7');
         })().then(done, done.fail);
@@ -52,7 +52,7 @@ describe('CombinedTransaction', () => {
             const tx2 = objectStore1.transaction();
             await tx1.remove('key0');
             try {
-                await JDB.JungleDB.commitCombined(tx1, tx2);
+                await JungleDB.commitCombined(tx1, tx2);
                 expect(false).toBe(true);
             } catch (e) {
                 expect(true).toBe(true);
@@ -69,7 +69,7 @@ describe('CombinedTransaction', () => {
             await tx2.remove('key6');
 
             // Commit both (which should immediately update the backend as well).
-            expect(await JDB.JungleDB.commitCombined(tx1, tx2)).toBe(true);
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(true);
             expect(await backend1.get('key6')).toBe(undefined);
             expect(await backend2.get('key6')).toBe(undefined);
         })().then(done, done.fail);
@@ -85,7 +85,7 @@ describe('CombinedTransaction', () => {
             await tx2.remove('key6');
 
             // Commit two of them, which should be successful.
-            expect(await JDB.JungleDB.commitCombined(tx1, tx2)).toBe(true);
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(true);
             // Hence the object store will be updated.
             expect(await objectStore1.get('key6')).toBe(undefined);
             expect(await objectStore2.get('key6')).toBe(undefined);
@@ -117,7 +117,7 @@ describe('CombinedTransaction', () => {
             const tx5 = objectStore2.transaction();
 
             // Commit tx4 and tx1.
-            expect(await JDB.JungleDB.commitCombined(tx1, tx4)).toBe(true);
+            expect(await JungleDB.commitCombined(tx1, tx4)).toBe(true);
             // Hence the object store will be updated.
             expect(await objectStore1.get('key6')).toBe(undefined);
             expect(await objectStore2.get('key6')).toBe(undefined);
@@ -160,7 +160,7 @@ describe('CombinedTransaction', () => {
 
             // Cannot commit combined transactions including a nested transaction.
             try {
-                await JDB.JungleDB.commitCombined(nested, tx2);
+                await JungleDB.commitCombined(nested, tx2);
                 expect(false).toBe(true);
             } catch (e) {
                 expect(true).toBe(true);
@@ -180,7 +180,7 @@ describe('CombinedTransaction', () => {
             expect(await tx3.commit()).toBe(true);
 
             // Commit and fail (not all tx are committable because of conflict).
-            expect(await JDB.JungleDB.commitCombined(tx1, tx2)).toBe(false);
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(false);
             expect(await objectStore1.get('key6')).toBe('value6');
             expect(await objectStore2.get('key6')).toBe('value6');
             expect(await backend1.get('key6')).toBe('value6');
@@ -199,7 +199,7 @@ describe('CombinedTransaction', () => {
             await tx3.remove('key6');
 
             // Commit two transactions.
-            expect(await JDB.JungleDB.commitCombined(tx1, tx3)).toBe(true);
+            expect(await JungleDB.commitCombined(tx1, tx3)).toBe(true);
             // Nothing should be flushed, OS3 should be updated.
             expect(await objectStore1.get('key6')).toBe(undefined);
             expect(await objectStore2.get('key6')).toBe(undefined);
@@ -213,7 +213,7 @@ describe('CombinedTransaction', () => {
             await tx5.put('test', 'successful');
 
             // Next, commit remaining transactions (except tx4) in combination.
-            expect(await JDB.JungleDB.commitCombined(tx4, tx5)).toBe(true);
+            expect(await JungleDB.commitCombined(tx4, tx5)).toBe(true);
             // And everything should be updated, nothing flushed.
             expect(await objectStore1.get('key6')).toBe(undefined);
             expect(await objectStore1.get('test')).toBe('successful');
@@ -256,7 +256,7 @@ describe('CombinedTransaction', () => {
             // Commit both (which should immediately update the backend as well).
             expect(await tx1.get('key6')).toBe('newvalue6');
             expect(await tx2.get('key6')).toBe('newvalue6');
-            expect(await JDB.JungleDB.commitCombined(tx1, tx2)).toBe(true);
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(true);
             expect(await objectStore2.get('key6')).toBe('newvalue6');
             expect(await objectStore1.get('key6')).toBe('newvalue6');
         })().then(done, done.fail);

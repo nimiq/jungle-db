@@ -15,6 +15,7 @@ module.exports = function (config) {
 
         // list of files / patterns to load in the browser
         files: [
+            'src/test/platform/browser/spec.js',
             'dist/web.js',
             'src/test/**/DummyBackend.js',
             'src/test/generic/TestCodec.js',
@@ -114,10 +115,10 @@ module.exports = function (config) {
     for (const version of [57, 58, 59, 60, 61, 62]) sauceLabsConfig('Windows 10', 'chrome', `${version}.0`, 'Chrome', version);
 
     if (process.env.USE_BABEL) {
-        configuration.files[0] = 'dist/web-babel.js';
+        configuration.files[1] = 'dist/web-babel.js';
     }
     if (process.env.USE_ISTANBUL) {
-        configuration.files[0] = 'dist/web-istanbul.js';
+        configuration.files[1] = 'dist/web-istanbul.js';
         configuration.reporters.push('coverage');
         configuration.coverageReporter = {
             reporters: [

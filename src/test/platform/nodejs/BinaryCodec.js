@@ -49,4 +49,4 @@ class BinaryCodec {
         return 'binary';
     }
 }
-JDB.Class.register(BinaryCodec);
+Class.register(BinaryCodec);

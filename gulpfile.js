@@ -35,6 +35,8 @@ const sources = {
     generic: [
         './src/main/generic/utils/ArrayUtils.js',
         './src/main/generic/utils/BTree.js',
+        './src/main/generic/utils/BufferUtils.js',
+        './src/main/generic/utils/JSONUtils.js',
         './src/main/generic/utils/Log.js',
         './src/main/generic/utils/LRUMap.js',
         './src/main/generic/utils/ObjectUtils.js',
@@ -211,7 +213,7 @@ gulp.task('build-node-istanbul', ['build-istanbul'], function () {
 
 gulp.task('test', ['watch'], function () {
     gulp.run(jasmine({
-        files: ['dist/web.js'].concat(sources.test.generic).concat(sources.test.browser)
+        files: ['./src/test/platform/browser/spec.js', 'dist/web.js'].concat(sources.test.generic).concat(sources.test.browser)
     }));
 });
 
