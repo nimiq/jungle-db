@@ -292,10 +292,19 @@ describe('CombinedTransactionPlatform', () => {
             expect(objectStore1._stateStack.length).toBe(2);
             expect(objectStore2._stateStack.length).toBe(2);
 
+            tx1 = objectStore1.transaction();
+            tx2 = objectStore2.transaction();
+            await tx1.remove('key4');
+            await tx2.remove('key4');
+
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(true);
+            expect(objectStore1._stateStack.length).toBe(3);
+            expect(objectStore2._stateStack.length).toBe(3);
+
             await blockingTx1.abort();
 
-            expect(objectStore1._stateStack.length).toBe(2);
-            expect(objectStore2._stateStack.length).toBe(2);
+            expect(objectStore1._stateStack.length).toBe(3);
+            expect(objectStore2._stateStack.length).toBe(3);
 
             await blockingTx2.abort();
 
