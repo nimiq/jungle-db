@@ -261,4 +261,39 @@ describe('CombinedTransaction', () => {
             expect(await objectStore1.get('key6')).toBe('newvalue6');
         })().then(done, done.fail);
     });
+
+    it('does not infinitely stack combined transactions', (done) => {
+        (async function () {
+            const blockingTx1 = objectStore1.transaction();
+            const blockingTx2 = objectStore2.transaction();
+
+            let tx1 = objectStore1.transaction();
+            let tx2 = objectStore2.transaction();
+            await tx1.remove('key6');
+            await tx2.remove('key6');
+
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(true);
+            expect(objectStore1._stateStack.length).toBe(1);
+            expect(objectStore2._stateStack.length).toBe(1);
+
+            tx1 = objectStore1.transaction();
+            tx2 = objectStore2.transaction();
+            await tx1.remove('key5');
+            await tx2.remove('key5');
+
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(true);
+            expect(objectStore1._stateStack.length).toBe(2);
+            expect(objectStore2._stateStack.length).toBe(2);
+
+            await blockingTx1.abort();
+
+            expect(objectStore1._stateStack.length).toBe(2);
+            expect(objectStore2._stateStack.length).toBe(2);
+
+            await blockingTx2.abort();
+
+            expect(objectStore1._stateStack.length).toBe(0);
+            expect(objectStore2._stateStack.length).toBe(0);
+        })().then(done, done.fail);
+    });
 });
