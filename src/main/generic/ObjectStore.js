@@ -47,6 +47,8 @@ class ObjectStore {
          * @type {Set.<Snapshot>}
          */
         this._snapshotManager = new SnapshotManager();
+
+        this._synchronizer = new Synchronizer();
     }
 
     /** @type {JungleDB} */
@@ -365,11 +367,23 @@ class ObjectStore {
      * This internal method applies a transaction to the current state
      * and tries flattening the stack of transactions.
      * @param {Transaction} [tx] An optional transaction to apply to the current state.
-     * @returns {boolean} If a tx is given, this boolean indicates whether the state has been merged.
+     * @returns {Promise.<boolean>} If a tx is given, this boolean indicates whether the state has been merged.
      * If tx is not given, the return value is false and does not convey a meaning.
      * @private
      */
-    async _flattenState(tx) {
+    _flattenState(tx) {
+        return this._synchronizer.push(() => this._flattenStateInternal(tx));
+    }
+
+    /**
+     * This internal method applies a transaction to the current state
+     * and tries flattening the stack of transactions.
+     * @param {Transaction} [tx] An optional transaction to apply to the current state.
+     * @returns {Promise.<boolean>} If a tx is given, this boolean indicates whether the state has been merged.
+     * If tx is not given, the return value is false and does not convey a meaning.
+     * @private
+     */
+    async _flattenStateInternal(tx) {
         // If there is a tx argument, merge it with the current state.
         if (tx && (tx instanceof Transaction)) {
             // Check whether the state can be flattened.
@@ -432,6 +446,8 @@ class ObjectStore {
                 if (statePosition >= 0) {
                     this._stateStack.splice(statePosition, 1);
                 }
+
+                this._flattenState();
             };
 
             if (tx.dependency === null) {
@@ -451,13 +467,13 @@ class ObjectStore {
             // Start with the easy part: The last state.
             // Start flattening at the end.
             while (this._stateStack.length > 0) {
-                if (!(await this._flattenState(this._currentState))) {
+                if (!(await this._flattenStateInternal(this._currentState))) {
                     break;
                 }
             }
             // Then try flattening from the start.
             while (this._stateStack.length > 0) {
-                if (!(await this._flattenState(this._stateStack[0]))) {
+                if (!(await this._flattenStateInternal(this._stateStack[0]))) {
                     break;
                 }
             }
