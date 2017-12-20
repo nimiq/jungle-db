@@ -2,7 +2,7 @@ describe('CombinedTransactionPlatform', () => {
     let jdb, backend1, backend2, objectStore1, objectStore2;
 
     beforeEach((done) => {
-        jdb = new JDB.JungleDB('test', 1);
+        jdb = new JungleDB('test', 1);
         objectStore1 = jdb.createObjectStore('testStore1');
         objectStore2 = jdb.createObjectStore('testStore2');
 
@@ -33,10 +33,10 @@ describe('CombinedTransactionPlatform', () => {
             let tx2 = objectStore2.transaction();
             await tx1.remove('key6');
             await tx2.remove('key6');
-            new JDB.CombinedTransaction(tx1, tx2);
+            new CombinedTransaction(tx1, tx2);
 
             expect(await tx1.commit()).toBe(true);
-            expect(await tx2.state).toBe(JDB.Transaction.STATE.COMMITTED);
+            expect(await tx2.state).toBe(Transaction.STATE.COMMITTED);
             expect(await backend1.get('key6')).toBe(undefined);
             expect(await backend2.get('key6')).toBe(undefined);
 
@@ -44,10 +44,10 @@ describe('CombinedTransactionPlatform', () => {
             tx2 = objectStore2.transaction();
             await tx1.remove('key7');
             await tx2.remove('key7');
-            new JDB.CombinedTransaction(tx1, tx2);
+            new CombinedTransaction(tx1, tx2);
 
             expect(await tx2.abort()).toBe(true);
-            expect(await tx1.state).toBe(JDB.Transaction.STATE.ABORTED);
+            expect(await tx1.state).toBe(Transaction.STATE.ABORTED);
             expect(await backend1.get('key7')).toBe('value7');
             expect(await backend2.get('key7')).toBe('value7');
         })().then(done, done.fail);
@@ -59,7 +59,7 @@ describe('CombinedTransactionPlatform', () => {
             const tx2 = objectStore1.transaction();
             await tx1.remove('key0');
             try {
-                await JDB.JungleDB.commitCombined(tx1, tx2);
+                await JungleDB.commitCombined(tx1, tx2);
                 expect(false).toBe(true);
             } catch (e) {
                 expect(true).toBe(true);
@@ -76,7 +76,7 @@ describe('CombinedTransactionPlatform', () => {
             await tx2.remove('key6');
 
             // Commit both (which should immediately update the backend as well).
-            expect(await JDB.JungleDB.commitCombined(tx1, tx2)).toBe(true);
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(true);
             expect(await backend1.get('key6')).toBe(undefined);
             expect(await backend2.get('key6')).toBe(undefined);
         })().then(done, done.fail);
@@ -92,7 +92,7 @@ describe('CombinedTransactionPlatform', () => {
             await tx2.remove('key6');
 
             // Commit two of them, which should be successful.
-            expect(await JDB.JungleDB.commitCombined(tx1, tx2)).toBe(true);
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(true);
             // Hence the object store will be updated.
             expect(await objectStore1.get('key6')).toBe(undefined);
             expect(await objectStore2.get('key6')).toBe(undefined);
@@ -124,7 +124,7 @@ describe('CombinedTransactionPlatform', () => {
             const tx5 = objectStore2.transaction();
 
             // Commit tx4 and tx1.
-            expect(await JDB.JungleDB.commitCombined(tx1, tx4)).toBe(true);
+            expect(await JungleDB.commitCombined(tx1, tx4)).toBe(true);
             // Hence the object store will be updated.
             expect(await objectStore1.get('key6')).toBe(undefined);
             expect(await objectStore2.get('key6')).toBe(undefined);
@@ -167,7 +167,7 @@ describe('CombinedTransactionPlatform', () => {
 
             // Cannot commit combined transactions including a nested transaction.
             try {
-                await JDB.JungleDB.commitCombined(nested, tx2);
+                await JungleDB.commitCombined(nested, tx2);
                 expect(false).toBe(true);
             } catch (e) {
                 expect(true).toBe(true);
@@ -187,7 +187,7 @@ describe('CombinedTransactionPlatform', () => {
             expect(await tx3.commit()).toBe(true);
 
             // Commit and fail (not all tx are committable because of conflict).
-            expect(await JDB.JungleDB.commitCombined(tx1, tx2)).toBe(false);
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(false);
             expect(await objectStore1.get('key6')).toBe('value6');
             expect(await objectStore2.get('key6')).toBe('value6');
             expect(await backend1.get('key6')).toBe('value6');
@@ -206,7 +206,7 @@ describe('CombinedTransactionPlatform', () => {
             await tx3.remove('key6');
 
             // Commit two transactions.
-            expect(await JDB.JungleDB.commitCombined(tx1, tx3)).toBe(true);
+            expect(await JungleDB.commitCombined(tx1, tx3)).toBe(true);
             // Nothing should be flushed, OS3 should be updated.
             expect(await objectStore1.get('key6')).toBe(undefined);
             expect(await objectStore2.get('key6')).toBe(undefined);
@@ -220,7 +220,7 @@ describe('CombinedTransactionPlatform', () => {
             await tx5.put('test', 'successful');
 
             // Next, commit remaining transactions (except tx4) in combination.
-            expect(await JDB.JungleDB.commitCombined(tx4, tx5)).toBe(true);
+            expect(await JungleDB.commitCombined(tx4, tx5)).toBe(true);
             // And everything should be updated, nothing flushed.
             expect(await objectStore1.get('key6')).toBe(undefined);
             expect(await objectStore1.get('test')).toBe('successful');
@@ -263,7 +263,7 @@ describe('CombinedTransactionPlatform', () => {
             // Commit both (which should immediately update the backend as well).
             expect(await tx1.get('key6')).toBe('newvalue6');
             expect(await tx2.get('key6')).toBe('newvalue6');
-            expect(await JDB.JungleDB.commitCombined(tx1, tx2)).toBe(true);
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(true);
             expect(await objectStore2.get('key6')).toBe('newvalue6');
             expect(await objectStore1.get('key6')).toBe('newvalue6');
         })().then(done, done.fail);

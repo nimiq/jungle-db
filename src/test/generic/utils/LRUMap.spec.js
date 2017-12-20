@@ -1,7 +1,7 @@
 describe('LRUMap', () => {
 
     it('does can store key-value pairs', () => {
-        const lru = new JDB.LRUMap(10);
+        const lru = new LRUMap(10);
 
         // Fill map.
         for (let i=0; i<10; ++i) {
@@ -15,7 +15,7 @@ describe('LRUMap', () => {
     });
 
     it('evicts old entries', () => {
-        const lru = new JDB.LRUMap(2);
+        const lru = new LRUMap(2);
 
         // Fill map.
         for (let i=0; i<3; ++i) {
@@ -29,7 +29,7 @@ describe('LRUMap', () => {
     });
 
     it('does not evict recently accessed entries', () => {
-        const lru = new JDB.LRUMap(2);
+        const lru = new LRUMap(2);
 
         // Fill map.
         for (let i=0; i<3; ++i) {
@@ -46,7 +46,7 @@ describe('LRUMap', () => {
     });
 
     it('has a working iterator', () => {
-        const lru = new JDB.LRUMap(3);
+        const lru = new LRUMap(3);
 
         // Fill map.
         for (let i=0; i<3; ++i) {
@@ -64,7 +64,7 @@ describe('LRUMap', () => {
     });
 
     it('can evict multiple entries', () => {
-        const lru = new JDB.LRUMap(3);
+        const lru = new LRUMap(3);
 
         // Fill map.
         for (let i=0; i<3; ++i) {
@@ -81,7 +81,7 @@ describe('LRUMap', () => {
     });
 
     it('can be cleared', () => {
-        const lru = new JDB.LRUMap(3);
+        const lru = new LRUMap(3);
 
         // Fill map.
         for (let i=0; i<3; ++i) {
@@ -98,7 +98,7 @@ describe('LRUMap', () => {
     });
 
     it('does not exceed maxSize', () => {
-        const lru = new JDB.LRUMap(3);
+        const lru = new LRUMap(3);
 
         lru.access('test');
 

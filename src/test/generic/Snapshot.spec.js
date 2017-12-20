@@ -9,7 +9,7 @@ describe('Snapshot', () => {
     };
 
     beforeEach((done) => {
-        db = new JDB.JungleDB('test', 1);
+        db = new JungleDB('test', 1);
         objectStore = db.createObjectStore('testStore');
         objectStore.createIndex('test', ['a', 'b'], true);
 
@@ -230,10 +230,10 @@ describe('Snapshot', () => {
             await objectStore.remove('newTest1');
 
             const index = snap.index('test');
-            expect(await index.keys(JDB.KeyRange.only(123))).toEqual(new Set(['newTest', 'newTest1']));
-            expect(await index.keys(JDB.KeyRange.lowerBound(123, true))).toEqual(new Set(['newTest2']));
+            expect(await index.keys(KeyRange.only(123))).toEqual(new Set(['newTest', 'newTest1']));
+            expect(await index.keys(KeyRange.lowerBound(123, true))).toEqual(new Set(['newTest2']));
 
-            const values = await snap.values(JDB.Query.eq('test', 123));
+            const values = await snap.values(Query.eq('test', 123));
             const expectedKeys = new Set(['newTest', 'newTest1']);
             for (const value of values) {
                 expect(expectedKeys.delete(value['key'])).toBe(true);

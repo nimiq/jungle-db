@@ -211,7 +211,7 @@ gulp.task('build-node-istanbul', ['build-istanbul'], function () {
 
 gulp.task('test', ['watch'], function () {
     gulp.run(jasmine({
-        files: ['dist/web.js'].concat(sources.test.generic).concat(sources.test.browser)
+        files: ['./src/test/platform/browser/spec.js', 'dist/web.js'].concat(sources.test.generic).concat(sources.test.browser)
     }));
 });
 

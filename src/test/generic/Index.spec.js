@@ -18,7 +18,7 @@ describe('Index', () => {
     it('can access longer keypaths', (done) => {
         (async function () {
             // Write something into an object store.
-            let db = new JDB.JungleDB('indexTest', 1);
+            let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
             st.createIndex('testIndex', 'val');
             st.createIndex('testIndex2', ['a', 'b']);
@@ -28,8 +28,8 @@ describe('Index', () => {
             await st.put('test', {'val': 123, 'a': {'b': 1}});
 
             expect((await st.get('test')).val).toBe(123);
-            expect(await st.keys(JDB.Query.eq('testIndex', 123))).toEqual(new Set(['test']));
-            expect(await st.keys(JDB.Query.eq('testIndex2', 1))).toEqual(new Set(['test']));
+            expect(await st.keys(Query.eq('testIndex', 123))).toEqual(new Set(['test']));
+            expect(await st.keys(Query.eq('testIndex2', 1))).toEqual(new Set(['test']));
 
             await db.destroy();
         })().then(done, done.fail);
@@ -38,7 +38,7 @@ describe('Index', () => {
     it('can handle values not conforming to index', (done) => {
         (async function () {
             // Write something into an object store.
-            let db = new JDB.JungleDB('indexTest', 1);
+            let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
             st.createIndex('depth', ['treeInfo', 'depth']);
 
@@ -66,8 +66,8 @@ describe('Index', () => {
             // Retrieve values at specific depth.
             expect(await st.get('head')).toBe(`${49*10+4}`);
 
-            const atDepth5 = await st.values(JDB.Query.eq('depth', 5));
-            const atDepth15 = await st.values(JDB.Query.eq('depth', 15));
+            const atDepth5 = await st.values(Query.eq('depth', 5));
+            const atDepth15 = await st.values(Query.eq('depth', 15));
 
             let actualJs = new Set();
             for (const obj of atDepth5) {
@@ -84,7 +84,7 @@ describe('Index', () => {
             expect(actualJs).toEqual(expectedJs);
 
             // Retrieve values in depth range for given j.
-            const range = await st.values(JDB.Query.within('depth', 5, 15));
+            const range = await st.values(Query.within('depth', 5, 15));
             const expectedIs = Set.from([5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
             for (let j=0; j<5; ++j) {
                 const actualIs = new Set();
