@@ -163,7 +163,7 @@ class IObjectStore {
      * @param {string} indexName The name of the requested index.
      * @returns {IIndex} The index associated with the given name.
      */
-    async index(indexName) {} // eslint-disable-line no-unused-vars
+    index(indexName) {} // eslint-disable-line no-unused-vars
 
     /**
      * Internally applies a transaction to the store's state.
