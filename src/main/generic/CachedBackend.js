@@ -218,7 +218,6 @@ class CachedBackend {
     /**
      * Internally applies a transaction to the cache's state.
      * @param {Transaction} tx The transaction to apply.
-     * @returns {Promise} The promise resolves after applying the transaction.
      * @protected
      */
     _applyLocally(tx) {

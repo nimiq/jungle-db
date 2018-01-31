@@ -447,7 +447,7 @@ class ObjectStore {
                     this._stateStack.splice(statePosition, 1);
                 }
 
-                this._flattenState();
+                this._flattenState().catch(Log.w.tag(ObjectStore));
             };
 
             if (tx.dependency === null) {
