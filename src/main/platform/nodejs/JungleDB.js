@@ -1,3 +1,4 @@
+const leveldown = require('leveldown');
 const levelup = require('levelup');
 const sublevel = require('level-sublevel');
 
@@ -79,7 +80,7 @@ class JungleDB {
             fs.mkdirSync(this._databaseDir);
         }
 
-        this._db = sublevel(levelup(this._databaseDir, {
+        this._db = sublevel(levelup(leveldown(this._databaseDir), {
             keyEncoding: 'ascii'
         }));
 
