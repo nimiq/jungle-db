@@ -377,4 +377,26 @@ describe('CombinedTransactionPlatform', () => {
             expect(objectStore3._stateStack.length).toBe(0);
         })().then(done, done.fail);
     });
+
+    it('can handle fast incoming combined transactions', (done) => {
+        (async function () {
+            const backend3 = new InMemoryBackend('');
+            const objectStore3 = new ObjectStore(backend3, null);
+
+            let tx1 = objectStore1.transaction();
+            let tx2 = objectStore2.transaction();
+            let tx3 = objectStore3.transaction();
+
+            for (let i = 0; i < ObjectStore.MAX_STACK_SIZE * 2; ++i) {
+                expect(await JungleDB.commitCombined(tx1, tx2, tx3)).toBe(true);
+                tx1 = objectStore1.transaction();
+                tx2 = objectStore2.transaction();
+                tx3 = objectStore3.transaction();
+            }
+
+            expect(objectStore1._stateStack.length).toBe(0);
+            expect(objectStore2._stateStack.length).toBe(0);
+            expect(objectStore3._stateStack.length).toBe(0);
+        })().then(done, done.fail);
+    });
 });
