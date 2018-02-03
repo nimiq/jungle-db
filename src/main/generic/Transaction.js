@@ -16,7 +16,7 @@ class Transaction {
      * This helps to detect unclosed transactions preventing to store the state in
      * the persistent backend.
      * @param {ObjectStore} objectStore The object store this transaction belongs to.
-     * @param {IObjectStore} backend The backend on which the transaction is based,
+     * @param {IObjectStore} parent The backend on which the transaction is based,
      * i.e., another transaction or the real database.
      * @param {ICommittable} [managingBackend] The object store managing the transactions,
      * i.e., the ObjectStore object.
@@ -24,17 +24,17 @@ class Transaction {
      * a warning will be logged if left open for longer than WATCHDOG_TIMER.
      * @protected
      */
-    constructor(objectStore, backend, managingBackend, enableWatchdog=true) {
+    constructor(objectStore, parent, managingBackend, enableWatchdog=true) {
         this._id = Transaction._instanceCount++;
         this._objectStore = objectStore;
-        this.__backend = backend;
+        this._parent = parent;
         /** @type {ICommittable} */
-        this._managingBackend = managingBackend || backend;
+        this._managingBackend = managingBackend || parent;
         this._modified = new Map();
         this._removed = new Set();
         this._originalValues = new Map();
         this._truncated = false;
-        this._indices = TransactionIndex.derive(this, backend);
+        this._indices = TransactionIndex.derive(this, parent);
 
         this._state = Transaction.STATE.OPEN;
 
@@ -295,11 +295,11 @@ class Transaction {
 
     /**
      * Allows to change the backend of a Transaction when the state has been flushed.
-     * @param backend
+     * @param parent
      * @protected
      */
-    set _backend(backend) {
-        this.__backend = backend;
+    _setParent(parent) {
+        this._parent = parent;
     }
 
     /**
@@ -382,7 +382,7 @@ class Transaction {
         if (this._truncated) {
             return undefined;
         }
-        return await this.__backend.get(key);
+        return await this._parent.get(key);
     }
 
     /**
@@ -475,7 +475,7 @@ class Transaction {
         }
         let keys = new Set();
         if (!this._truncated) {
-            keys = await this.__backend.keys(query);
+            keys = await this._parent.keys(query);
         }
         keys = keys.difference(this._removed);
         for (const key of this._modified.keys()) {
@@ -527,7 +527,7 @@ class Transaction {
         if (!this._truncated) {
             let stopped = false;
 
-            await this.__backend.keyStream(key => {
+            await this._parent.keyStream(key => {
                 // Iterate over TxKeys as long as they are smaller (ascending) or larger (descending).
                 while (txIt.hasNext() && ((ascending && txIt.peek() < key) || (!ascending && txIt.peek() > key))) {
                     const currentTxKey = txIt.next();
@@ -593,7 +593,7 @@ class Transaction {
         if (!this._truncated) {
             let stopped = false;
 
-            await this.__backend.valueStream((value, key) => {
+            await this._parent.valueStream((value, key) => {
                 // Iterate over TxKeys as long as they are smaller (ascending) or larger (descending).
                 while (txIt.hasNext() && ((ascending && txIt.peek() < key) || (!ascending && txIt.peek() > key))) {
                     const currentTxKey = txIt.next();
@@ -665,13 +665,13 @@ class Transaction {
         // Take underlying maxKey.
         let maxKey = undefined;
         if (!this._truncated) {
-            maxKey = await this.__backend.maxKey(query);
+            maxKey = await this._parent.maxKey(query);
         }
 
         // If this key has been removed, find next best key.
         while (maxKey !== undefined && this._removed.has(maxKey)) {
             const tmpQuery = KeyRange.upperBound(maxKey, true);
-            maxKey = await this.__backend.maxKey(tmpQuery);
+            maxKey = await this._parent.maxKey(tmpQuery);
 
             // If we get out of the range, stop here.
             if (query !== null && !query.includes(maxKey)) {
@@ -712,13 +712,13 @@ class Transaction {
         // Take underlying minKey.
         let minKey = undefined;
         if (!this._truncated) {
-            minKey = await this.__backend.minKey(query);
+            minKey = await this._parent.minKey(query);
         }
 
         // If this key has been removed, find next best key.
         while (minKey !== undefined && this._removed.has(minKey)) {
             const tmpQuery = KeyRange.lowerBound(minKey, true);
-            minKey = await this.__backend.minKey(tmpQuery);
+            minKey = await this._parent.minKey(tmpQuery);
 
             // If we get out of the range, stop here.
             if (query !== null && !query.includes(minKey)) {

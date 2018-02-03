@@ -15,32 +15,17 @@ class ObjectStore {
      * @param {JungleDB} db The database underlying the backend.
      */
     constructor(backend, db) {
-        this.__backend = backend;
+        this._backend = backend;
         this._db = db;
-        /** @type {Array.<Transaction>} */
+        /** @type {Array.<TransactionInfo>} */
         this._stateStack = [];
+        this._backendInfo = new TransactionInfo(this._backend, null);
         /**
-         * Maps transactions to their base states.
-         * @type {Map.<number|string,number|string>}
-         */
-        this._txBaseStates = new Map();
-        /**
-         * Maps transactions to their base states.
-         * @type {Map.<number|string,IObjectStore>}
+         * Maps transactions to their TransactionInfo objects.
+         * @type {Map.<number|string,TransactionInfo>}
          */
         this._transactions = new Map();
-        this._transactions.set(ObjectStore.BACKEND_ID, this.__backend);
-        /**
-         * Maps base states to their open child transactions.
-         * @type {Map.<number|string,Set.<number>>}
-         */
-        this._openTransactions = new Map();
-        this._openTransactions.set(ObjectStore.BACKEND_ID, new Set());
-        /**
-         * Set of base states already committed to.
-         * @type {Set.<number|string>}
-         */
-        this._closedBaseStates = new Set();
+        this._transactions.set(ObjectStore.BACKEND_ID, this._backendInfo);
 
         /**
          * The set of currently open snapshots.
@@ -58,12 +43,17 @@ class ObjectStore {
 
     /** @type {boolean} */
     get connected() {
-        return this.__backend.connected;
+        return this._backend.connected;
     }
 
     /** @type {IObjectStore} */
     get _currentState() {
-        return this._stateStack.length > 0 ? this._stateStack[this._stateStack.length - 1] : this.__backend;
+        return this._stateStack.length > 0 ? this._stateStack[this._stateStack.length - 1].transaction : this._backend;
+    }
+
+    /** @type {TransactionInfo} */
+    get _currentStateInfo() {
+        return this._stateStack.length > 0 ? this._stateStack[this._stateStack.length - 1] : this._backendInfo;
     }
 
     /** @type {number|string} */
@@ -77,7 +67,7 @@ class ObjectStore {
      * @type {Map.<string,IIndex>}
      */
     get indices() {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.indices;
     }
 
@@ -88,7 +78,7 @@ class ObjectStore {
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
     get(key) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.get(key);
     }
 
@@ -100,7 +90,7 @@ class ObjectStore {
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async put(key, value) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         const tx = this.transaction();
         await tx.put(key, value);
         return tx.commit();
@@ -113,7 +103,7 @@ class ObjectStore {
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async remove(key) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         const tx = this.transaction();
         await tx.remove(key);
         return tx.commit();
@@ -128,7 +118,7 @@ class ObjectStore {
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to the query.
      */
     keys(query=null) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         if (query !== null && query instanceof Query) {
             return query.keys(this._currentState);
         }
@@ -144,7 +134,7 @@ class ObjectStore {
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
     values(query=null) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         if (query !== null && query instanceof Query) {
             return query.values(this._currentState);
         }
@@ -185,7 +175,7 @@ class ObjectStore {
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
     maxValue(query=null) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.maxValue(query);
     }
 
@@ -197,7 +187,7 @@ class ObjectStore {
      * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     maxKey(query=null) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.maxKey(query);
     }
 
@@ -209,7 +199,7 @@ class ObjectStore {
      * @returns {Promise.<string>} A promise of the key relevant to the query.
      */
     minKey(query=null) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.minKey(query);
     }
 
@@ -221,7 +211,7 @@ class ObjectStore {
      * @returns {Promise.<*>} A promise of the object relevant to the query.
      */
     minValue(query=null) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.minValue(query);
     }
 
@@ -233,7 +223,7 @@ class ObjectStore {
      * @returns {Promise.<number>}
      */
     count(query=null) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.count(query);
     }
 
@@ -264,15 +254,15 @@ class ObjectStore {
      * @returns {boolean} Whether a commit will be successful.
      */
     _isCommittable(tx) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
-        if (!(tx instanceof Transaction) || tx.state !== Transaction.STATE.OPEN || !this._txBaseStates.has(tx.id)) {
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
+        if (!(tx instanceof Transaction) || tx.state !== Transaction.STATE.OPEN || !this._transactions.has(tx.id)) {
             throw new Error('Can only commit open transactions');
         }
 
-        const baseState = this._txBaseStates.get(tx.id);
+        const info = this._transactions.get(tx.id);
 
         // Another transaction was already committed.
-        return !this._closedBaseStates.has(baseState);
+        return info.isCommittable();
     }
 
     /**
@@ -291,24 +281,19 @@ class ObjectStore {
      * @returns {Promise} A promise that resolves upon successful application of the transaction.
      */
     async _commitInternal(tx) {
-        const baseState = this._txBaseStates.get(tx.id);
-        const openTransactions = this._openTransactions.get(baseState);
-        openTransactions.delete(tx.id);
-        const numOpenTransactions = openTransactions.size;
-
+        const info = this._transactions.get(tx.id);
 
         // Create new layer on stack (might be immediately removed by a state flattening).
         if (this._stateStack.length >= ObjectStore.MAX_STACK_SIZE) {
             Log.e(ObjectStore, `Transaction stack size exceeded ${this.toStringFull()}`);
             throw new Error('Transaction stack size exceeded');
         }
-        this._stateStack.push(tx);
-        this._openTransactions.set(tx.id, new Set());
-        this._closedBaseStates.add(baseState);
+        this._stateStack.push(info);
+        info.close();
 
         // If this is the last transaction, we push our changes to the underlying layer.
         // This only works if the given transaction does not have dependencies or the current state is the backend.
-        if (numOpenTransactions === 0 && (tx.dependency === null || baseState === ObjectStore.BACKEND_ID)) {
+        if (info.isFlushable()) {
             // The underlying layer *has to be* the last one in our stack.
             await this._flattenState(tx);
         }
@@ -316,19 +301,11 @@ class ObjectStore {
 
     /**
      * Allows to change the backend of a Transaction when the state has been flushed.
-     * @param backend
+     * @param parent
      * @protected
      */
-    set _backend(backend) {
+    _setParent(parent) {
         throw new Error('Unsupported operation');
-    }
-
-    /**
-     * @tyoe {IBackend}
-     * @protected
-     */
-    get _backend() {
-        return this.__backend;
     }
 
     /**
@@ -339,25 +316,20 @@ class ObjectStore {
      * @protected
      */
     async abort(tx) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
 
         if (tx instanceof Snapshot) {
             return this._snapshotManager.abortSnapshot(tx);
         }
 
-        if (!(tx instanceof Transaction) || tx.state !== Transaction.STATE.OPEN || !this._txBaseStates.has(tx.id)) {
+        if (!(tx instanceof Transaction) || tx.state !== Transaction.STATE.OPEN || !this._transactions.has(tx.id)) {
             throw new Error('Can only abort open transactions');
         }
-        const baseState = this._txBaseStates.get(tx.id);
+        const info = this._transactions.get(tx.id);
+        info.abort();
 
-        const openTransactions = this._openTransactions.get(baseState);
-        openTransactions.delete(tx.id);
-        const numOpenTransactions = openTransactions.size;
-        // Cleanup.
-        this._txBaseStates.delete(tx.id);
-        this._transactions.delete(tx.id);
-
-        if (numOpenTransactions === 0) {
+        // If this abortion resolves a conflict, try flattening the state.
+        if (info.parent && info.parent.numOpenChildren === 0) {
             await this._flattenState();
         }
         return true;
@@ -389,12 +361,8 @@ class ObjectStore {
             // Check whether the state can be flattened.
             // For this, the following conditions have to hold:
             // 1. the base state does not have open transactions
-            // 2. the base state is either the backend or neither the base state nor tx have an onFlush callback
-            const baseState = this._txBaseStates.get(tx.id);
-            if (this._openTransactions.get(baseState).size > 0) {
-                return false;
-            }
-            if (tx.dependency !== null && baseState !== ObjectStore.BACKEND_ID) {
+            const info = this._transactions.get(tx.id);
+            if (!info.isFlushable()) {
                 return false;
             }
 
@@ -402,47 +370,14 @@ class ObjectStore {
             // We apply it first and upon successful application, we update transactions.
             // This way, we ensure that intermediate reads still work and that transactions
             // are still consistent even if the application fails.
-            const backend = this._transactions.get(baseState);
+            const backend = info.parent.transaction;
             const cleanup = () => {
                 // Change pointers in child transactions.
-                if (this._openTransactions.has(tx.id)) {
-                    for (const txId of this._openTransactions.get(tx.id)) {
-                        const childTx = this._transactions.get(txId);
-                        childTx._backend = backend;
-                        this._txBaseStates.set(childTx.id, baseState);
-                    }
-                }
-                // If tx is in the state stack (i.e., a closed base state), update its potential closed child.
-                if (this._closedBaseStates.has(tx.id)) {
-                    const index = this._stateStack.indexOf(tx);
-                    if (index + 1 < this._stateStack.length) {
-                        const childTx = this._stateStack[index + 1];
-                        childTx._backend = backend;
-                        this._txBaseStates.set(childTx.id, baseState);
-                    }
-                }
-
-                // Copy relevant baseState data to new base state.
-                // If tx was a closed base state, the new base state also is.
-                // Otherwise remove the base state from the closed states, since we just flushed.
-                if (this._closedBaseStates.has(tx.id)) {
-                    this._closedBaseStates.add(baseState);
-                    this._closedBaseStates.delete(tx.id);
-                } else {
-                    this._closedBaseStates.delete(baseState);
-                }
-                // The open transactions transfer from the tx to the open transactions' new base state.
-                if (this._openTransactions.has(tx.id)) {
-                    this._openTransactions.set(baseState, this._openTransactions.get(tx.id));
-                    this._openTransactions.delete(tx.id);
-                }
-
-                // Cleanup.
-                this._txBaseStates.delete(tx.id);
+                info.flush();
                 this._transactions.delete(tx.id);
 
                 // Look for tx on stack and remove it.
-                const statePosition = this._stateStack.indexOf(tx);
+                const statePosition = this._stateStack.indexOf(info);
                 if (statePosition >= 0) {
                     this._stateStack.splice(statePosition, 1);
                 }
@@ -452,7 +387,7 @@ class ObjectStore {
 
             if (tx.dependency === null) {
                 // If we apply to the backend, update the snapshots.
-                if (baseState === ObjectStore.BACKEND_ID) {
+                if (info.parent.isBackend()) {
                     await this._snapshotManager.applyTx(tx, backend);
                 }
                 await backend._apply(tx);
@@ -473,7 +408,7 @@ class ObjectStore {
             }
             // Then try flattening from the start.
             while (this._stateStack.length > 0) {
-                if (!(await this._flattenStateInternal(this._stateStack[0]))) {
+                if (!(await this._flattenStateInternal(this._stateStack[0].transaction))) {
                     break;
                 }
             }
@@ -488,7 +423,7 @@ class ObjectStore {
      * @returns {IIndex} The index associated with the given name.
      */
     index(indexName) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         return this._currentState.index(indexName);
     }
 
@@ -509,7 +444,7 @@ class ObjectStore {
      * @param {boolean} [multiEntry]
      */
     createIndex(indexName, keyPath, multiEntry=false) {
-        return this.__backend.createIndex(indexName, keyPath, multiEntry);
+        return this._backend.createIndex(indexName, keyPath, multiEntry);
     }
 
     /**
@@ -518,7 +453,7 @@ class ObjectStore {
      * @returns {Promise} The promise resolves after deleting the index.
      */
     deleteIndex(indexName) {
-        return this.__backend.deleteIndex(indexName);
+        return this._backend.deleteIndex(indexName);
     }
 
     /**
@@ -528,11 +463,9 @@ class ObjectStore {
      * @returns {Transaction} The transaction object.
      */
     transaction(enableWatchdog=true) {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         const tx = new Transaction(this, this._currentState, this, enableWatchdog);
-        this._transactions.set(tx.id, tx);
-        this._txBaseStates.set(tx.id, this._currentStateId);
-        this._openTransactions.get(this._currentStateId).add(tx.id);
+        this._transactions.set(tx.id, new TransactionInfo(tx, this._currentStateInfo));
         return tx;
     }
 
@@ -566,7 +499,7 @@ class ObjectStore {
      * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
-        if (!this.__backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
         const tx = this.transaction();
         await tx.truncate();
         return tx.commit();
@@ -581,7 +514,7 @@ class ObjectStore {
         if (this._stateStack.length > 0) {
             throw new Error('Cannot close database while transactions are active');
         }
-        return this.__backend.close();
+        return this._backend.close();
     }
 
     toStringFull() {
@@ -599,3 +532,116 @@ class ObjectStore {
 ObjectStore.MAX_STACK_SIZE = 10;
 ObjectStore.BACKEND_ID = 'backend';
 Class.register(ObjectStore);
+
+class TransactionInfo {
+    /**
+     * @param {Transaction} transaction
+     * @param {TransactionInfo} parentInfo
+     * @param {Array.<TransactionInfo>} children
+     */
+    constructor(transaction, parentInfo, children = []) {
+        this.transaction = transaction;
+        this.children = children;
+        this._parentInfo = parentInfo;
+        this._open = true;
+
+        if (this._parentInfo) {
+            this._parentInfo.addChild(this);
+        }
+    }
+
+    /**
+     * @param {TransactionInfo} transaction
+     */
+    addChild(transaction) {
+        this.children.push(transaction);
+    }
+
+    /**
+     * @param {TransactionInfo} transaction
+     */
+    removeChild(transaction) {
+        const i = this.children.indexOf(transaction);
+        if (i >= 0) {
+            this.children.splice(i, 1);
+        }
+    }
+
+    flush() {
+        if (!this.isBackend()) {
+            const parent = this.parent;
+            this.parent.removeChild(this);
+            for (const /** @type {TransactionInfo} */ child of this.children.slice()) {
+                child.parent = parent;
+            }
+            this.children = [];
+            this._parentInfo = null;
+        }
+    }
+
+    abort() {
+        if (!this.isBackend()) {
+            this.parent.removeChild(this);
+        }
+    }
+
+    close() {
+        this._open = false;
+    }
+
+    /** @type {TransactionInfo} */
+    get parent() {
+        return this._parentInfo;
+    }
+
+    /**
+     * @param {TransactionInfo} parent
+     */
+    set parent(parent) {
+        this.parent.removeChild(this);
+        this._parentInfo = parent;
+        this.parent.addChild(this);
+        this.transaction._setParent(parent.transaction);
+    }
+
+    /** @type {number} */
+    get id() {
+        return this.isBackend() ? ObjectStore.BACKEND_ID : this.transaction.id;
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    isBackend() {
+        return this._parentInfo === null;
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    isOpen() {
+        return this._open;
+    }
+
+    /**
+     * @type {number}
+     */
+    get numOpenChildren() {
+        return this.children.filter(child => child.isOpen()).length;
+    }
+
+
+    /**
+     * @returns {*|boolean}
+     */
+    isCommittable() {
+        return this._parentInfo && this._parentInfo.children.every(child => child.isOpen());
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    isFlushable() {
+        return this.parent && this.parent.numOpenChildren === 0 && (this.transaction.dependency === null || this.parent.isBackend());
+    }
+}

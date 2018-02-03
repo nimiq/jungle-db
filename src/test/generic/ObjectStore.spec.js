@@ -165,7 +165,7 @@ describe('ObjectStore', () => {
 
             // Create another transaction, which should be based on the same backend as tx3.
             const tx4 = objectStore.transaction();
-            expect(tx3.__backend).toBe(tx4.__backend);
+            expect(tx3._parent).toBe(tx4._parent);
             expect(await tx4.get('key0')).toBe(undefined);
             expect(await tx4.get('test')).toBe(undefined);
 

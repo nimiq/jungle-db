@@ -187,10 +187,10 @@ class CombinedTransaction {
 
     /**
      * Allows to change the backend of a Transaction when the state has been flushed.
-     * @param backend
+     * @param parent
      * @protected
      */
-    set _backend(backend) {
+    _setParent(parent) {
         throw new Error('Unsupported operation');
     }
 
