@@ -51,6 +51,7 @@ const sources = {
         './src/main/generic/Query.js',
         './src/main/generic/TransactionIndex.js',
         './src/main/generic/Transaction.js',
+        './src/main/generic/SynchronousTransaction.js',
         './src/main/generic/Snapshot.js',
         './src/main/generic/SnapshotManager.js',
         './src/main/generic/CombinedTransaction.js'

@@ -470,6 +470,22 @@ class ObjectStore {
     }
 
     /**
+     * Creates a new synchronous transaction, ensuring read isolation
+     * on the most recently successfully committed state.
+     *
+     * WARNING: If not all required key-value-pairs are preloaded, the results of any call on a synchronous transaction
+     * might be wrong. Only use synchronous transactions, if unavoidable.
+     * @param {boolean} [enableWatchdog]
+     * @returns {SynchronousTransaction} The synchronous transaction object.
+     */
+    synchronousTransaction(enableWatchdog=true) {
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
+        const tx = new SynchronousTransaction(this, this._currentState, this, enableWatchdog);
+        this._transactions.set(tx.id, new TransactionInfo(tx, this._currentStateInfo));
+        return tx;
+    }
+
+    /**
      * Creates an in-memory snapshot of the current state.
      * This snapshot only maintains the differences between the state at the time of the snapshot
      * and the current state.
