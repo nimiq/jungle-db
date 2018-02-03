@@ -81,10 +81,18 @@ class ICommittable {
     /**
      * Allows to change the backend of a Transaction when the state has been flushed.
      * @abstract
-     * @param backend
+     * @param parent
      * @protected
      */
-    set _backend(backend) {} // eslint-disable-line no-unused-vars
+    _setParent(parent) {} // eslint-disable-line no-unused-vars
+
+    /**
+     * Retrieve a transactions immediate parent.
+     * @abstract
+     * @type {IObjectStore}
+     * @protected
+     */
+    get _parent() {} // eslint-disable-line no-unused-vars
 
     /**
      * Sets a new CombinedTransaction as dependency.

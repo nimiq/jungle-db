@@ -305,4 +305,69 @@ describe('CombinedTransaction', () => {
             expect(objectStore2._stateStack.length).toBe(0);
         })().then(done, done.fail);
     });
+
+    it('does not infinitely stack 3 combined transactions', (done) => {
+        (async function () {
+            const backend3 = new InMemoryBackend('');
+            const objectStore3 = new ObjectStore(backend3, null);
+
+            const blockingTx1 = objectStore1.transaction();
+            const blockingTx2 = objectStore2.transaction();
+            const blockingTx3 = objectStore3.transaction();
+
+            let tx1 = objectStore1.transaction();
+            let tx2 = objectStore2.transaction();
+            let tx3 = objectStore3.transaction();
+            await tx1.remove('key6');
+            await tx2.remove('key6');
+            await tx3.put('key6', 'test');
+
+            expect(await JungleDB.commitCombined(tx1, tx2, tx3)).toBe(true);
+            expect(objectStore1._stateStack.length).toBe(1);
+            expect(objectStore2._stateStack.length).toBe(1);
+            expect(objectStore3._stateStack.length).toBe(1);
+
+            tx1 = objectStore1.transaction();
+            tx2 = objectStore2.transaction();
+            tx3 = objectStore3.transaction();
+            await tx1.remove('key5');
+            await tx2.remove('key5');
+            await tx3.put('key5', 'test');
+
+            expect(await JungleDB.commitCombined(tx1, tx2, tx3)).toBe(true);
+            expect(objectStore1._stateStack.length).toBe(2);
+            expect(objectStore2._stateStack.length).toBe(2);
+            expect(objectStore3._stateStack.length).toBe(2);
+
+            tx1 = objectStore1.transaction();
+            tx2 = objectStore2.transaction();
+            tx3 = objectStore3.transaction();
+            await tx1.remove('key4');
+            await tx2.remove('key4');
+            await tx3.put('key4', 'test');
+
+            expect(await JungleDB.commitCombined(tx1, tx2, tx3)).toBe(true);
+            expect(objectStore1._stateStack.length).toBe(3);
+            expect(objectStore2._stateStack.length).toBe(3);
+            expect(objectStore3._stateStack.length).toBe(3);
+
+            await blockingTx1.abort();
+
+            expect(objectStore1._stateStack.length).toBe(3);
+            expect(objectStore2._stateStack.length).toBe(3);
+            expect(objectStore3._stateStack.length).toBe(3);
+
+            await blockingTx2.abort();
+
+            expect(objectStore1._stateStack.length).toBe(3);
+            expect(objectStore2._stateStack.length).toBe(3);
+            expect(objectStore3._stateStack.length).toBe(3);
+
+            await blockingTx3.abort();
+
+            expect(objectStore1._stateStack.length).toBe(0);
+            expect(objectStore2._stateStack.length).toBe(0);
+            expect(objectStore3._stateStack.length).toBe(0);
+        })().then(done, done.fail);
+    });
 });
