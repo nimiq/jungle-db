@@ -228,4 +228,13 @@ class IObjectStore {
      * @returns {Transaction} The transaction object.
      */
     transaction(enableWatchdog = true) {} // eslint-disable-line no-unused-vars
+
+    /**
+     * Creates a new synchronous transaction, ensuring read isolation
+     * on the most recently successfully committed state.
+     * @abstract
+     * @param {boolean} [enableWatchdog] Boolean allows to disable watchdog timer.
+     * @returns {SynchronousTransaction} The transaction object.
+     */
+    synchronousTransaction(enableWatchdog = true) {} // eslint-disable-line no-unused-vars
 }

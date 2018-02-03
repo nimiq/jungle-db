@@ -800,6 +800,24 @@ class Transaction {
     }
 
     /**
+     * Creates a nested synchronous transaction, ensuring read isolation.
+     * This makes the current transaction read-only until all sub-transactions have been closed (committed/aborted).
+     * The same semantic for commits applies: Only the first transaction that commits will be applied. Subsequent transactions will be conflicted.
+     * This behaviour has one exception: If all nested transactions are closed, the outer transaction returns to a normal state and new nested transactions can again be created and committed.
+     * @param {boolean} [enableWatchdog]
+     * @returns {SynchronousTransaction} The transaction object.
+     */
+    synchronousTransaction(enableWatchdog = true) {
+        if (this._state !== Transaction.STATE.OPEN && this._state !== Transaction.STATE.NESTED) {
+            throw new Error('Transaction already closed');
+        }
+        const tx = new SynchronousTransaction(this._objectStore, this, this, enableWatchdog);
+        this._nested.add(tx);
+        this._state = Transaction.STATE.NESTED;
+        return tx;
+    }
+
+    /**
      * Creates an in-memory snapshot of this state.
      * This snapshot only maintains the differences between the state at the time of the snapshot
      * and the current state.

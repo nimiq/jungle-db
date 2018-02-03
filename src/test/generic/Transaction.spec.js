@@ -160,6 +160,17 @@ describe('Transaction', () => {
         })().then(done, done.fail);
     });
 
+    it('does apply nested synchronous transactions', (done) => {
+        (async function () {
+            const tx1 = tx.synchronousTransaction();
+
+            tx1.putSync('test', 'foobar');
+            expect(await tx.get('test')).toBeUndefined();
+            expect(await tx1.commit()).toBe(true);
+            expect(await tx.get('test')).toBe('foobar');
+        })().then(done, done.fail);
+    });
+
     it('correctly constructs key streams', (done) => {
         (async function () {
             const keys = Array.from(allKeys).sort();
