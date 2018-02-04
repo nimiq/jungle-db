@@ -364,13 +364,6 @@ class SynchronousTransaction extends Transaction {
     /**
      * @override
      */
-    transaction(enableWatchdog = true) {
-        throw new Error('Invalid call on SynchronousTransaction');
-    }
-
-    /**
-     * @override
-     */
     snapshot() {
         throw new Error('Invalid call on SynchronousTransaction');
     }
