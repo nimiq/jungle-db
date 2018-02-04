@@ -78,12 +78,13 @@ class SynchronousTransaction extends Transaction {
      * @private
      */
     _getCached(key, expectPresence=true) {
+        const value = this._cache.get(key);
+
         // Use cache only if the parent is not synchronous.
-        if (this._parent instanceof SynchronousTransaction) {
+        if (!value && this._parent instanceof SynchronousTransaction) {
             return this._parent.getSync(key, expectPresence);
         }
 
-        const value = this._cache.get(key);
         if (expectPresence && !value) {
             throw new Error(`Missing key in cache: ${key}`);
         }
