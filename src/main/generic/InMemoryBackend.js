@@ -6,12 +6,13 @@
  * Transactions opened after the successful commit of another transaction will be based on the
  * new state and hence can be committed again.
  * @implements {IBackend}
+ * @implements {ISynchronousObjectStore}
  */
 class InMemoryBackend {
     constructor(tableName, codec=null) {
         this._cache = new Map();
 
-        /** @type {Map.<string,PersistentIndex>} */
+        /** @type {Map.<string,InMemoryIndex>} */
         this._indices = new Map();
 
         this._primaryIndex = new InMemoryIndex(this, undefined, false, true);
@@ -32,11 +33,37 @@ class InMemoryBackend {
     }
 
     /**
+     * Returns the object stored under the given primary key.
+     * Resolves to undefined if the key is not present in the object store.
+     * @param {string} key The primary key to look for.
+     * @returns {*} The object stored under the given key, or undefined if not present.
+     */
+    getSync(key) {
+        return this.decode(this._cache.get(key), key);
+    }
+
+    /**
      * @param {string} key
      * @returns {Promise.<*>}
      */
-    async get(key) {
-        return this.decode(this._cache.get(key), key);
+    get(key) {
+        return Promise.resolve(this.getSync(key));
+    }
+
+    /**
+     * Inserts or replaces a key-value pair.
+     * @abstract
+     * @param {string} key The primary key to associate the value with.
+     * @param {*} value The value to write.
+     */
+    putSync(key, value) {
+        const oldValue = this.getSync(key);
+        this._cache.set(key, this.encode(value));
+        this._primaryIndex.put(key, value, oldValue);
+
+        for (const index of this._indices.values()) {
+            index.put(key, value, oldValue);
+        }
     }
 
     /**
@@ -44,32 +71,33 @@ class InMemoryBackend {
      * @param {*} value
      * @returns {Promise}
      */
-    async put(key, value) {
-        const oldValue = await this.get(key);
-        this._cache.set(key, this.encode(value));
-        const indexPromises = [
-            this._primaryIndex.put(key, value, oldValue)
-        ];
+    put(key, value) {
+        this.putSync(key, value);
+        return Promise.resolve();
+    }
+
+    /**
+     * Removes the key-value pair of the given key from the object store.
+     * @abstract
+     * @param {string} key The primary key to delete along with the associated object.
+     */
+    removeSync(key) {
+        const oldValue = this.getSync(key);
+        this._cache.delete(key);
+        this._primaryIndex.remove(key, oldValue);
+
         for (const index of this._indices.values()) {
-            indexPromises.push(index.put(key, value, oldValue));
+            index.remove(key, oldValue);
         }
-        return Promise.all(indexPromises);
     }
 
     /**
      * @param {string} key
      * @returns {Promise}
      */
-    async remove(key) {
-        const oldValue = await this.get(key);
-        this._cache.delete(key);
-        const indexPromises = [
-            this._primaryIndex.remove(key, oldValue)
-        ];
-        for (const index of this._indices.values()) {
-            indexPromises.push(index.remove(key, oldValue));
-        }
-        return Promise.all(indexPromises);
+    remove(key) {
+        this.removeSync(key);
+        return Promise.resolve();
     }
 
     /**
@@ -303,6 +331,23 @@ class InMemoryBackend {
      */
     async applyCombined(tx) {
         return () => this._apply(tx);
+    }
+
+    /**
+     * Checks whether an object store implements the ISynchronousObjectStore interface.
+     * @returns {boolean} The transaction object.
+     */
+    isSynchronous() {
+        return true;
+    }
+
+    /**
+     * A check whether a certain key is cached.
+     * @param {string} key The key to check.
+     * @return {boolean} A boolean indicating whether the key is already in the cache.
+     */
+    isCached(key) {
+        return true;
     }
 }
 Class.register(InMemoryBackend);

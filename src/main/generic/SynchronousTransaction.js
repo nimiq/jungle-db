@@ -6,6 +6,7 @@
  * might be wrong. Only use synchronous transactions, if unavoidable.
  * @implements {IObjectStore}
  * @implements {ICommittable}
+ * @implements {ISynchronousObjectStore}
  * @extends {Transaction}
  */
 class SynchronousTransaction extends Transaction {
@@ -36,16 +37,9 @@ class SynchronousTransaction extends Transaction {
      * @param {Array.<string>} keys The keys to preload.
      * @return {Promise}
      */
-    async preload(keys) {
+    preload(keys) {
         keys = keys.filter(key => !this.isCached(key));
-
-        const promises = keys.map(key => Transaction.prototype.get.call(this, key));
-        const values = await Promise.all(promises);
-        for (let i = 0; i < keys.length; ++i) {
-            if (values[i]) {
-                this._cache.set(keys[i], values[i]);
-            }
-        }
+        return Promise.all(keys.map(key => this.get(key)));
     }
 
     /**
@@ -54,7 +48,8 @@ class SynchronousTransaction extends Transaction {
      * @return {boolean} A boolean indicating whether the key is already in the cache.
      */
     isCached(key) {
-        return this._cache.has(key);
+        // This also prevents double caching.
+        return this._cache.has(key) || (this._parent.isSynchronous() ? this._parent.isCached(key) : false);
     }
 
     /**
@@ -62,7 +57,7 @@ class SynchronousTransaction extends Transaction {
      */
     async get(key) {
         // Use cache or ask parent.
-        let value = this._cache.get(key);
+        let value = this.getSync(key, false);
         if (!value) {
             value = await Transaction.prototype.get.call(this, key);
             this._cache.set(key, value);
@@ -81,7 +76,7 @@ class SynchronousTransaction extends Transaction {
         const value = this._cache.get(key);
 
         // Use cache only if the parent is not synchronous.
-        if (!value && this._parent instanceof SynchronousTransaction) {
+        if (!value && this._parent.isSynchronous()) {
             return this._parent.getSync(key, expectPresence);
         }
 
@@ -92,7 +87,7 @@ class SynchronousTransaction extends Transaction {
     }
 
     /**
-     * Returns a promise of the object stored under the given primary key.
+     * Returns the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
      * @param {boolean} [expectPresence] Method throws an error if key is not present in transaction or cache.
@@ -117,13 +112,6 @@ class SynchronousTransaction extends Transaction {
     }
 
     /**
-     * @override
-     */
-    async put(key, value) {
-        throw new Error('Invalid call on SynchronousTransaction');
-    }
-
-    /**
      * Inserts or replaces a key-value pair.
      * @param {string} key The primary key to associate the value with.
      * @param {*} value The value to write.
@@ -141,13 +129,6 @@ class SynchronousTransaction extends Transaction {
         }
 
         this._put(key, value, oldValue);
-    }
-
-    /**
-     * @override
-     */
-    async remove(key) {
-        throw new Error('Invalid call on SynchronousTransaction');
     }
 
     /**
@@ -171,202 +152,17 @@ class SynchronousTransaction extends Transaction {
     /**
      * @override
      */
-    async keys(query=null) {
-        throw new Error('Invalid call on SynchronousTransaction');
-    }
-
-    /**
-     * Returns a promise of a set of keys fulfilling the given query.
-     * If the optional query is not given, it returns all keys in the object store.
-     * If the query is of type KeyRange, it returns all keys of the object store being within this range.
-     * If the query is of type Query, it returns all keys fulfilling the query.
-     * @param {KeyRange} [query] Optional query to check keys against.
-     * @returns {Set.<string>} The set of keys relevant to the query.
-     */
-    keysSync(query=null) {
-        if (query !== null && query instanceof Query) {
-            throw new Error('Invalid call on SynchronousTransaction');
-        }
-        let keys = new Set();
-        for (const key of this._cache.keys()) {
-            if (query === null || query.includes(key)) {
-                keys.add(key);
-            }
-        }
-        for (const key of this._modified.keys()) {
-            if (query === null || query.includes(key)) {
-                keys.add(key);
-            }
-        }
-        return keys;
-    }
-
-    /**
-     * @override
-     */
-    async values(query=null) {
-        throw new Error('Invalid call on SynchronousTransaction');
-    }
-
-    /**
-     * Returns a promise of an array of objects whose primary keys fulfill the given query.
-     * If the optional query is not given, it returns all objects in the object store.
-     * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
-     * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
-     * @param {Query|KeyRange} [query] Optional query to check keys against.
-     * @returns {Array.<*>} The array of objects relevant to the query.
-     */
-    valuesSync(query=null) {
-        if (query !== null && query instanceof Query) {
-            throw new Error('Invalid call on SynchronousTransaction');
-        }
-        const keys = this.keysSync(query);
-        const values = [];
-        for (const key of keys) {
-            values.push(this.getSync(key, true));
-        }
-        return values;
-    }
-
-    /**
-     * @override
-     */
-    async keyStream(callback, ascending=true, query=null) {
-        throw new Error('Invalid call on SynchronousTransaction');
-    }
-
-    /**
-     * @override
-     */
-    async valueStream(callback, ascending=true, query=null) {
-        throw new Error('Invalid call on SynchronousTransaction');
-    }
-
-    /**
-     * @override
-     */
-    async maxValue(query=null) {
-        throw new Error('Invalid call on SynchronousTransaction');
-    }
-
-    /**
-     * Returns a promise of the object whose primary key is maximal for the given range.
-     * If the optional query is not given, it returns the object whose key is maximal.
-     * If the query is of type KeyRange, it returns the object whose primary key is maximal for the given range.
-     * @param {KeyRange} [query] Optional query to check keys against.
-     * @returns {*} The object relevant to the query.
-     */
-    maxValueSync(query=null) {
-        const maxKey = this.maxKeySync(query);
-        return this.getSync(maxKey);
-    }
-
-    /**
-     * Returns a promise of the key being maximal for the given range.
-     * If the optional query is not given, it returns the maximal key.
-     * If the query is of type KeyRange, it returns the key being maximal for the given range.
-     * @param {KeyRange} [query] Optional query to check keys against.
-     * @returns {Promise.<string>} A promise of the key relevant to the query.
-     * @override
-     */
-    async maxKey(query=null) {
-        throw new Error('Invalid call on SynchronousTransaction');
-    }
-
-    /**
-     * Returns a promise of the key being maximal for the given range.
-     * If the optional query is not given, it returns the maximal key.
-     * If the query is of type KeyRange, it returns the key being maximal for the given range.
-     * @param {KeyRange} [query] Optional query to check keys against.
-     * @returns {string} The key relevant to the query.
-     */
-    maxKeySync(query=null) {
-        // Take underlying maxKey.
-        let maxKey = undefined;
-        if (!this._truncated) {
-            for (const key of this._cache.keys()) {
-                // Find better maxKey in modified data.
-                if (!this._removed.has(key) && (query === null || query.includes(key)) && (maxKey === undefined || key > maxKey)) {
-                    maxKey = key;
-                }
-            }
-        }
-
-        for (const key of this._modified.keys()) {
-            // Find better maxKey in modified data.
-            if ((query === null || query.includes(key)) && (maxKey === undefined || key > maxKey)) {
-                maxKey = key;
-            }
-        }
-        return maxKey;
-    }
-
-    /**
-     * @override
-     */
-    async minValue(query=null) {
-        throw new Error('Invalid call on SynchronousTransaction');
-    }
-
-    /**
-     * Returns a promise of the object whose primary key is minimal for the given range.
-     * If the optional query is not given, it returns the object whose key is minimal.
-     * If the query is of type KeyRange, it returns the object whose primary key is minimal for the given range.
-     * @param {KeyRange} [query] Optional query to check keys against.
-     * @returns {*} The object relevant to the query.
-     */
-    minValueSync(query=null) {
-        const minKey = this.minKeySync(query);
-        return this.getSync(minKey, true);
-    }
-
-    /**
-     * @override
-     */
-    async minKey(query=null) {
-        throw new Error('Invalid call on SynchronousTransaction');
-    }
-
-    /**
-     * Returns a promise of the key being minimal for the given range.
-     * If the optional query is not given, it returns the minimal key.
-     * If the query is of type KeyRange, it returns the key being minimal for the given range.
-     * @param {KeyRange} [query] Optional query to check keys against.
-     * @returns {string} The key relevant to the query.
-     */
-    minKeySync(query=null) {
-        // Take underlying minKey.
-        let minKey = undefined;
-        if (!this._truncated) {
-            for (const key of this._cache.keys()) {
-                // Find better maxKey in modified data.
-                if (!this._removed.has(key) && (query === null || query.includes(key)) && (minKey === undefined || key < minKey)) {
-                    minKey = key;
-                }
-            }
-        }
-
-        for (const key of this._modified.keys()) {
-            // Find better maxKey in modified data.
-            if ((query === null || query.includes(key)) && (minKey === undefined || key < minKey)) {
-                minKey = key;
-            }
-        }
-        return minKey;
-    }
-
-    /**
-     * @override
-     */
-    async count(query=null) {
-        throw new Error('Invalid call on SynchronousTransaction');
-    }
-
-    /**
-     * @override
-     */
     snapshot() {
         throw new Error('Invalid call on SynchronousTransaction');
+    }
+
+    /**
+     * Checks whether an object store implements the ISynchronousObjectStore interface.
+     * @override
+     * @returns {boolean} The transaction object.
+     */
+    isSynchronous() {
+        return true;
     }
 
     /**

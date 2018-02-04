@@ -308,6 +308,14 @@ class CachedBackend {
     async applyCombined(tx) {
         return [await this._backend.applyCombined(tx), () => this._applyLocally(tx)];
     }
+
+    /**
+     * Checks whether an object store implements the ISynchronousObjectStore interface.
+     * @returns {boolean} The transaction object.
+     */
+    isSynchronous() {
+        return false;
+    }
 }
 /** @type {number} Maximum number of cached elements. */
 CachedBackend.MAX_CACHE_SIZE = 5000 /*elements*/;

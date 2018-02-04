@@ -680,5 +680,13 @@ class LevelDBBackend {
 
         return batch;
     }
+
+    /**
+     * Checks whether an object store implements the ISynchronousObjectStore interface.
+     * @returns {boolean} The transaction object.
+     */
+    isSynchronous() {
+        return false;
+    }
 }
 Class.register(LevelDBBackend);

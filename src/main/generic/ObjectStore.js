@@ -486,6 +486,14 @@ class ObjectStore {
     }
 
     /**
+     * Checks whether an object store implements the ISynchronousObjectStore interface.
+     * @returns {boolean} The transaction object.
+     */
+    isSynchronous() {
+        return false;
+    }
+
+    /**
      * Creates an in-memory snapshot of the current state.
      * This snapshot only maintains the differences between the state at the time of the snapshot
      * and the current state.
