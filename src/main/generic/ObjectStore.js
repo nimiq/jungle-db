@@ -13,10 +13,12 @@ class ObjectStore {
      * The database is only used to determine the connection status.
      * @param {IBackend} backend The backend underlying this object store.
      * @param {JungleDB} db The database underlying the backend.
+     * @param {string} [name] The name of the object store if existent.
      */
-    constructor(backend, db) {
+    constructor(backend, db, name) {
         this._backend = backend;
         this._db = db;
+        this._name = name;
         /** @type {Array.<TransactionInfo>} */
         this._stateStack = [];
         this._backendInfo = new TransactionInfo(this._backend, null);
@@ -544,12 +546,12 @@ class ObjectStore {
     toStringFull() {
         return `ObjectStore{
     stack=[${this._stateStack.map(tx => `{tx=${tx.toStringShort()}, open=${this._openTransactions.get(tx.id) ? this._openTransactions.get(tx.id).size : 0}}`)}],
-    db=${this._db}
+    db=${this._db}/${this._name ? this._name : 'unnamed'}
 }`;
     }
 
     toString() {
-        return `ObjectStore{stackSize=${this._stateStack.length}, db=${this._db}}`;
+        return `ObjectStore{stackSize=${this._stateStack.length}, db=${this._db}/${this._name ? this._name : 'unnamed'}}`;
     }
 }
 /** @type {number} The maximum number of states to stack. */

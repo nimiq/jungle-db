@@ -132,7 +132,7 @@ class JungleDB {
             ? new IDBBackend(this, tableName, codec)
             : new InMemoryBackend(tableName, codec);
         const cachedBackend = new CachedBackend(backend);
-        const objStore = new ObjectStore(cachedBackend, this);
+        const objStore = new ObjectStore(cachedBackend, this, tableName);
         this._objectStores.set(tableName, objStore);
         this._objectStoreBackends.set(tableName, backend);
         return objStore;
