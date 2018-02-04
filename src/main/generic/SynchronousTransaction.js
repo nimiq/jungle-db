@@ -61,7 +61,13 @@ class SynchronousTransaction extends Transaction {
      * @override
      */
     async get(key) {
-        throw new Error('Invalid call on SynchronousTransaction');
+        // Use cache or ask parent.
+        let value = this._cache.get(key);
+        if (!value) {
+            value = await Transaction.prototype.get.call(this, key);
+            this._cache.set(key, value);
+        }
+        return value;
     }
 
     /**
@@ -72,6 +78,11 @@ class SynchronousTransaction extends Transaction {
      * @private
      */
     _getCached(key, expectPresence=true) {
+        // Use cache only if the parent is not synchronous.
+        if (this._parent instanceof SynchronousTransaction) {
+            return this._parent.getSync(key, expectPresence);
+        }
+
         const value = this._cache.get(key);
         if (expectPresence && !value) {
             throw new Error(`Missing key in cache: ${key}`);
