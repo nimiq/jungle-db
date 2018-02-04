@@ -18,6 +18,13 @@ describe('SynchronousTransaction', () => {
         })().then(done, done.fail);
     });
 
+    afterEach((done) => {
+        if (tx.state === Transaction.STATE.OPEN) {
+            tx.abort().then(done, done.fail);
+        }
+        done();
+    });
+
     it('throws an error if a key is not cached', () => {
         const tx = objectStore.synchronousTransaction();
         expect(() => tx.getSync('key0')).toThrow();
@@ -85,10 +92,6 @@ describe('SynchronousTransaction', () => {
     it('throws errors on async methods', (done) => {
         (async function () {
             let thrown = false;
-            await tx.get('test').catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
-            thrown = false;
             await tx.put('test', 'test').catch(() => { thrown = true; });
             expect(thrown).toBeTruthy();
 
@@ -134,6 +137,21 @@ describe('SynchronousTransaction', () => {
 
             expect(() => tx.transaction()).toThrow();
             expect(() => tx.snapshot()).toThrow();
+        })().then(done, done.fail);
+    });
+
+    it('does apply nested synchronous transactions', (done) => {
+        (async function () {
+            const tx1 = tx.synchronousTransaction();
+
+            // Can retrieve values from underlying transactions.
+            expect(tx1.getSync('key0', false).sub).toBe('value0');
+            expect(tx1.getSync('key3', false)).toBeUndefined();
+
+            tx1.putSync('test', 'foobar');
+            expect(tx.getSync('test', false)).toBeUndefined();
+            expect(await tx1.commit()).toBe(true);
+            expect(tx.getSync('test')).toBe('foobar');
         })().then(done, done.fail);
     });
 });
