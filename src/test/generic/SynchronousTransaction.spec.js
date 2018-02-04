@@ -135,8 +135,22 @@ describe('SynchronousTransaction', () => {
             await tx.count().catch(() => { thrown = true; });
             expect(thrown).toBeTruthy();
 
-            expect(() => tx.transaction()).toThrow();
             expect(() => tx.snapshot()).toThrow();
+        })().then(done, done.fail);
+    });
+
+    it('does apply nested transactions', (done) => {
+        (async function () {
+            const tx1 = tx.transaction();
+
+            // Can retrieve values from underlying transactions.
+            expect((await tx1.get('key0', false)).sub).toBe('value0');
+            expect((await tx1.get('key3', false)).sub).toBe('value3');
+
+            await tx1.put('test', 'foobar');
+            expect(tx.getSync('test', false)).toBeUndefined();
+            expect(await tx1.commit()).toBe(true);
+            expect(tx.getSync('test')).toBe('foobar');
         })().then(done, done.fail);
     });
 
