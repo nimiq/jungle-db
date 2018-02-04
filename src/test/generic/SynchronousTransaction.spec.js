@@ -4,7 +4,9 @@ describe('SynchronousTransaction', () => {
     let tx;
 
     beforeEach((done) => {
-        objectStore = JungleDB.createVolatileObjectStore();
+        // Asynchronous backend.
+        const backend = new DummyBackend();
+        objectStore = new ObjectStore(backend, backend);
         objectStore.createIndex('i');
 
         (async function () {
@@ -36,8 +38,15 @@ describe('SynchronousTransaction', () => {
             await tx.preload(['key0', 'key1', 'test']);
             expect(tx.getSync('key0').sub).toBe('value0');
             expect(tx.getSync('key1').sub).toBe('value1');
-            expect(tx.getSync('key2', false)).toBe(undefined);
-            expect(tx.getSync('test', false)).toBe(undefined);
+            expect(tx.getSync('key2', false)).toBeUndefined();
+            expect(tx.getSync('test', false)).toBeUndefined();
+
+            expect((await tx.get('key0')).sub).toBe('value0');
+            expect((await tx.get('key1')).sub).toBe('value1');
+            expect((await tx.get('key2')).sub).toBe('value2');
+            expect(await tx.get('test')).toBeUndefined();
+
+            expect(tx.getSync('key2').sub).toBe('value2');
         })().then(done, done.fail);
     });
 
@@ -45,96 +54,29 @@ describe('SynchronousTransaction', () => {
         (async function () {
             tx.putSync('key0', { i: 1337, sub: 'test' });
             tx.putSync('key5', { i: 1337, sub: 'test2' });
+            await tx.put('async', { i: 1337, sub: 'test3' });
             tx.removeSync('key3');
             expect(tx.getSync('key0').sub).toBe('test');
             expect(tx.getSync('key5').sub).toBe('test2');
             expect(tx.getSync('key3', false)).toBe(undefined);
+            expect((await tx.get('key0')).sub).toBe('test');
 
             expect(await tx.commit()).toBe(true);
             expect((await objectStore.get('key0')).sub).toBe('test');
             expect((await objectStore.get('key5')).sub).toBe('test2');
             expect((await objectStore.get('key3'))).toBe(undefined);
+            expect((await objectStore.get('async')).sub).toBe('test3');
             /** @type {IIndex} */
             const index = objectStore.index('i');
             expect(await index.count(KeyRange.only(0))).toBe(0);
             expect(await index.count(KeyRange.only(5))).toBe(0);
-            expect(await index.count(KeyRange.only(1337))).toBe(2);
+            expect(await index.count(KeyRange.only(1337))).toBe(3);
             expect(await index.count(KeyRange.only(3))).toBe(0);
         })().then(done, done.fail);
     });
 
-    it('correctly processes keys/values queries', () => {
-        tx.putSync('test1', 'test');
-        // Ordering on strings might not be as expected!
-        expect((new Set(['key0', 'key1', 'key2', 'test1'])).equals(tx.keysSync())).toBe(true);
-        expect((new Set(['key0', 'key1'])).equals(tx.keysSync(KeyRange.upperBound('key1')))).toBe(true);
-        expect((new Set(['key1', 'key2', 'test1'])).equals(tx.keysSync(KeyRange.lowerBound('key1')))).toBe(true);
-        expect((new Set(['key2', 'test1'])).equals(tx.keysSync(KeyRange.lowerBound('key1', true)))).toBe(true);
-
-        expect(tx.valuesSync(KeyRange.only('key2'))).toEqual([tx.getSync('key2')]);
-    });
-
-    it('correctly processes min/max queries', () => {
-        tx.putSync('test1', 'test');
-        expect(tx.minKeySync()).toBe('key0');
-        expect(tx.maxKeySync()).toBe('test1');
-        expect(tx.minKeySync(KeyRange.upperBound('key1'))).toBe('key0');
-        expect(tx.minKeySync(KeyRange.lowerBound('key0', true))).toBe('key1');
-        expect(tx.maxKeySync(KeyRange.upperBound('key1'))).toBe('key1');
-
-        expect(tx.minValueSync().sub).toBe('value0');
-        expect(tx.maxValueSync()).toBe('test');
-        expect(tx.minValueSync(KeyRange.upperBound('key1')).sub).toBe('value0');
-        expect(tx.minValueSync(KeyRange.lowerBound('key0', true)).sub).toBe('value1');
-        expect(tx.maxValueSync(KeyRange.upperBound('key1')).sub).toBe('value1');
-    });
-
-    it('throws errors on async methods', (done) => {
+    it('throws errors on forbidden methods', (done) => {
         (async function () {
-            let thrown = false;
-            await tx.put('test', 'test').catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
-            thrown = false;
-            await tx.remove('test').catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
-            thrown = false;
-            await tx.minValue().catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
-            thrown = false;
-            await tx.maxValue().catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
-            thrown = false;
-            await tx.minKey().catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
-            thrown = false;
-            await tx.maxKey().catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
-            thrown = false;
-            await tx.keys().catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
-            thrown = false;
-            await tx.values().catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
-            thrown = false;
-            await tx.keyStream().catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
-            thrown = false;
-            await tx.valueStream().catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
-            thrown = false;
-            await tx.count().catch(() => { thrown = true; });
-            expect(thrown).toBeTruthy();
-
             expect(() => tx.snapshot()).toThrow();
         })().then(done, done.fail);
     });
@@ -144,8 +86,8 @@ describe('SynchronousTransaction', () => {
             const tx1 = tx.transaction();
 
             // Can retrieve values from underlying transactions.
-            expect((await tx1.get('key0', false)).sub).toBe('value0');
-            expect((await tx1.get('key3', false)).sub).toBe('value3');
+            expect((await tx1.get('key0')).sub).toBe('value0');
+            expect((await tx1.get('key3')).sub).toBe('value3');
 
             await tx1.put('test', 'foobar');
             expect(tx.getSync('test', false)).toBeUndefined();

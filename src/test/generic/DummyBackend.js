@@ -325,5 +325,13 @@ class DummyBackend {
     toString() {
         return 'DummyBackend{}';
     }
+
+    /**
+     * Checks whether an object store implements the ISynchronousObjectStore interface.
+     * @returns {boolean} The transaction object.
+     */
+    isSynchronous() {
+        return false;
+    }
 }
 Class.register(DummyBackend);
