@@ -202,7 +202,7 @@ class JungleDB {
         const backend = persistent
             ? new LevelDBBackend(this, tableName, codec)
             : new InMemoryBackend(tableName, codec);
-        const objStore = new ObjectStore(backend, this);
+        const objStore = new ObjectStore(backend, this, tableName);
         this._objectStores.set(tableName, objStore);
         this._objectStoreBackends.push(backend);
         return objStore;
