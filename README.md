@@ -56,7 +56,7 @@ Developers are free to choose between npm and yarn for managing the dependencies
 	npm install
 	```
 
-### Installation for Developers (using yarn)
+### Installation for Core Developers (using yarn)
 - NodeJs latest version (> 7.9.0)
 - Dependencies: `yarn install`
 - NodeJs dependencies:
@@ -83,7 +83,7 @@ Executing `npm run build` or `yarn build` concatenates all sources into `dist/{w
 
 ## Contribute
 
-If you'd like to contribute to the development of JungleDB please follow our [Code of Conduct](https://github.com/nimiq-network/core/blob/betanet/.github/CONDUCT.md) and [Contributing Guidelines](https://github.com/nimiq-network/core/blob/betanet/.github/CONTRIBUTING.md).
+If you'd like to contribute to the development of JungleDB please follow our [Code of Conduct](https://github.com/nimiq-network/core/blob/master/.github/CODE_OF_CONDUCT.md) and [Contributing Guidelines](https://github.com/nimiq-network/core/blob/master/.github/CONTRIBUTING.md).
 
 ## License
 
