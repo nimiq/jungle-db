@@ -116,7 +116,11 @@ class LevelDBBackend {
                     resolve(undefined);
                     return;
                 }
-                resolve(this.decode(value, key));
+                try {
+                    resolve(this.decode(value, key));
+                } catch(e) {
+                    error(e);
+                }
             });
         });
     }
@@ -314,7 +318,11 @@ class LevelDBBackend {
         return new Promise((resolve, error) => {
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': true, 'limit': 1, 'reverse': true }))
                 .on('data', data => {
-                    resolve(this.decode(data.value, data.key));
+                    try {
+                        resolve(this.decode(data.value, data.key));
+                    } catch(e) {
+                        error(e);
+                    }
                 })
                 .on('error', err => {
                     error(err);
@@ -352,7 +360,11 @@ class LevelDBBackend {
         return new Promise((resolve, error) => {
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': true, 'limit': 1, 'reverse': false }))
                 .on('data', data => {
-                    resolve(this.decode(data.value, data.key));
+                    try {
+                        resolve(this.decode(data.value, data.key));
+                    } catch(e) {
+                        error(e);
+                    }
                 })
                 .on('error', err => {
                     error(err);
