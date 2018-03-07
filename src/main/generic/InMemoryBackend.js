@@ -47,7 +47,11 @@ class InMemoryBackend {
      * @returns {Promise.<*>}
      */
     get(key) {
-        return Promise.resolve(this.getSync(key));
+        try {
+            return Promise.resolve(this.getSync(key));
+        } catch(e) {
+            return Promise.reject(e);
+        }
     }
 
     /**

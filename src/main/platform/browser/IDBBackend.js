@@ -103,7 +103,13 @@ class IDBBackend {
             const getTx = db.transaction([this._tableName])
                 .objectStore(this._tableName)
                 .get(key);
-            getTx.onsuccess = event => resolve(this.decode(event.target.result, key));
+            getTx.onsuccess = event => {
+                try {
+                    resolve(this.decode(event.target.result, key));
+                } catch(e) {
+                    reject(e);
+                }
+            };
             getTx.onerror = reject;
         });
     }
@@ -284,8 +290,12 @@ class IDBBackend {
                 .objectStore(this._tableName)
                 .openCursor(query, 'prev');
             openCursorRequest.onsuccess = event => {
-                const cursor = event.target.result;
-                resolve(cursor ? this.decode(cursor.value, cursor.primaryKey) : undefined);
+                try {
+                    const cursor = event.target.result;
+                    resolve(cursor ? this.decode(cursor.value, cursor.primaryKey) : undefined);
+                } catch(e) {
+                    reject(e);
+                }
             };
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
@@ -324,8 +334,12 @@ class IDBBackend {
                 .objectStore(this._tableName)
                 .openCursor(query, 'next');
             openCursorRequest.onsuccess = event => {
-                const cursor = event.target.result;
-                resolve(cursor ? this.decode(cursor.value, cursor.primaryKey) : undefined);
+                try {
+                    const cursor = event.target.result;
+                    resolve(cursor ? this.decode(cursor.value, cursor.primaryKey) : undefined);
+                } catch(e) {
+                    reject(e);
+                }
             };
             openCursorRequest.onerror = () => reject(openCursorRequest.error);
         });
