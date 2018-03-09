@@ -118,7 +118,7 @@ class LevelDBBackend {
                 }
                 try {
                     resolve(this.decode(value, key));
-                } catch(e) {
+                } catch (e) {
                     error(e);
                 }
             });
@@ -196,7 +196,11 @@ class LevelDBBackend {
             const result = [];
             this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': true }))
                 .on('data', data => {
-                    result.push(this.decode(data.value, data.key));
+                    try {
+                        result.push(this.decode(data.value, data.key));
+                    } catch (e) {
+                        error(e);
+                    }
                 })
                 .on('error', err => {
                     error(err);
@@ -285,10 +289,17 @@ class LevelDBBackend {
             const stream = this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': true, 'reverse': !ascending }));
             let stopped = false;
             stream.on('data', data => {
-                if (!callback(data.value, data.key)) {
+                try {
+                    if (!callback(this.decode(data.value, data.key), data.key)) {
+                        stopped = true;
+                        stream.pause();
+                        stream.destroy();
+                    }
+                } catch (e) {
                     stopped = true;
                     stream.pause();
                     stream.destroy();
+                    error(e);
                 }
             })
             .on('error', err => {
@@ -320,7 +331,7 @@ class LevelDBBackend {
                 .on('data', data => {
                     try {
                         resolve(this.decode(data.value, data.key));
-                    } catch(e) {
+                    } catch (e) {
                         error(e);
                     }
                 })
@@ -362,7 +373,7 @@ class LevelDBBackend {
                 .on('data', data => {
                     try {
                         resolve(this.decode(data.value, data.key));
-                    } catch(e) {
+                    } catch (e) {
                         error(e);
                     }
                 })
@@ -600,7 +611,11 @@ class LevelDBBackend {
         return new Promise((resolve, error) => {
             this._dbBackend.createReadStream({ 'values': true, 'keys': true })
                 .on('data', data => {
-                    func(data.key, this.decode(data.value, data.key));
+                    try {
+                        func(data.key, this.decode(data.value, data.key));
+                    } catch (e) {
+                        error(e);
+                    }
                 })
                 .on('error', err => {
                     error(err);
