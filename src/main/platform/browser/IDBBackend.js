@@ -106,7 +106,7 @@ class IDBBackend {
             getTx.onsuccess = event => {
                 try {
                     resolve(this.decode(event.target.result, key));
-                } catch(e) {
+                } catch (e) {
                     reject(e);
                 }
             };
@@ -169,7 +169,11 @@ class IDBBackend {
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
                 if (cursor) {
-                    results.push(this.decode(cursor.value, cursor.primaryKey));
+                    try {
+                        results.push(this.decode(cursor.value, cursor.primaryKey));
+                    } catch (e) {
+                        reject(e);
+                    }
                     cursor.continue();
                 } else {
                     resolve(results);
@@ -262,10 +266,14 @@ class IDBBackend {
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
                 if (cursor) {
-                    if (callback(cursor.value, cursor.primaryKey)) {
-                        cursor.continue();
-                    } else {
-                        resolve();
+                    try {
+                        if (callback(this.decode(cursor.value, cursor.primaryKey), cursor.primaryKey)) {
+                            cursor.continue();
+                        } else {
+                            resolve();
+                        }
+                    } catch (e) {
+                        reject(e);
                     }
                 } else {
                     resolve();
@@ -293,7 +301,7 @@ class IDBBackend {
                 try {
                     const cursor = event.target.result;
                     resolve(cursor ? this.decode(cursor.value, cursor.primaryKey) : undefined);
-                } catch(e) {
+                } catch (e) {
                     reject(e);
                 }
             };
@@ -337,7 +345,7 @@ class IDBBackend {
                 try {
                     const cursor = event.target.result;
                     resolve(cursor ? this.decode(cursor.value, cursor.primaryKey) : undefined);
-                } catch(e) {
+                } catch (e) {
                     reject(e);
                 }
             };
