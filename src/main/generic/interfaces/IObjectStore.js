@@ -199,16 +199,17 @@ class IObjectStore {
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      */
-    createIndex(indexName, keyPath, multiEntry=false) {} // eslint-disable-line no-unused-vars
+    createIndex(indexName, keyPath, multiEntry=false, upgradeCondition=null) {} // eslint-disable-line no-unused-vars
 
     /**
      * Deletes a secondary index from the object store.
      * @abstract
      * @param indexName
-     * @returns {Promise} The promise resolves after deleting the index.
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      */
-    deleteIndex(indexName) {} // eslint-disable-line no-unused-vars
+    deleteIndex(indexName, upgradeCondition=null) {} // eslint-disable-line no-unused-vars
 
     /**
      * Closes the object store and potential connections.

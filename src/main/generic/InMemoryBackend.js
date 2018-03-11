@@ -284,11 +284,21 @@ class InMemoryBackend {
      * @param {string} indexName
      * @param {string|Array.<string>} [keyPath]
      * @param {boolean} [multiEntry]
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      */
-    createIndex(indexName, keyPath, multiEntry=false) {
+    createIndex(indexName, keyPath, multiEntry=false, upgradeCondition=null) {
         keyPath = keyPath || indexName;
         const index = new InMemoryIndex(this, keyPath, multiEntry);
         this._indices.set(indexName, index);
+    }
+
+    /**
+     * Deletes a secondary index from the object store.
+     * @param indexName
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
+     */
+    deleteIndex(indexName, upgradeCondition=null) {
+        this._indices.delete(indexName);
     }
 
     /**

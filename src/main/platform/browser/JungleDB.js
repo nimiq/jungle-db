@@ -11,7 +11,7 @@ class JungleDB {
      * after modifying the database structure.
      * @param {string} name The name of the database.
      * @param {number} dbVersion The current version of the database.
-     * @param {function()} [onUpgradeNeeded] A function to be called after upgrades of the structure.
+     * @param {function(oldVersion:number, newVersion:number)} [onUpgradeNeeded] A function to be called after upgrades of the structure.
      */
     constructor(name, dbVersion, onUpgradeNeeded) {
         if (dbVersion <= 0) throw new Error('The version provided must not be less or equal to 0');
@@ -51,36 +51,44 @@ class JungleDB {
             };
 
             request.onerror = reject;
-            request.onupgradeneeded = event => that._initDB(event);
+            request.onupgradeneeded = event => that._initDB(event, request);
         });
     }
 
     /**
      * Internal method that is called when a db upgrade is required.
-     * @param {*} event The obupgradeneeded event.
+     * @param {IDBVersionChangeEvent} event The obupgradeneeded event.
+     * @param {IDBRequest} request
      * @returns {Promise.<void>} A promise that resolves after successful completion.
      * @private
      */
-    async _initDB(event) {
+    async _initDB(event, request) {
         const db = event.target.result;
 
         // Delete existing ObjectStores.
-        for (const tableName of this._objectStoresToDelete) {
-            db.deleteObjectStore(tableName);
+        for (const { tableName, upgradeCondition } of this._objectStoresToDelete) {
+            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(event.oldVersion, event.newVersion)) {
+                db.deleteObjectStore(tableName);
+            }
         }
-        delete this._objectStoresToDelete;
+        this._objectStoresToDelete = [];
 
         // Create new ObjectStores.
-        for (const [tableName, objStore] of this._objectStoreBackends) {
-            const IDBobjStore = db.createObjectStore(tableName);
+        for (const [tableName, { backend, upgradeCondition }] of this._objectStoreBackends) {
+            let IDBobjStore;
+            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(event.oldVersion, event.newVersion)) {
+                IDBobjStore = db.createObjectStore(tableName);
+            } else {
+                IDBobjStore = request.transaction.objectStore(tableName);
+            }
             // Create indices.
-            objStore.init(IDBobjStore);
+            backend.init(IDBobjStore, event.oldVersion, event.newVersion);
         }
-        delete this._objectStoreBackends;
+        this._objectStoreBackends.clear();
 
         // Call user defined function if requested.
         if (this._onUpgradeNeeded) {
-            await this._onUpgradeNeeded();
+            await this._onUpgradeNeeded(event.oldVersion, event.newVersion);
         }
     }
 
@@ -121,9 +129,10 @@ class JungleDB {
      * @param {string} tableName The name of the object store.
      * @param {ICodec} [codec] A codec for the object store.
      * @param {boolean} [persistent] If set to false, this object store is not persistent.
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      * @returns {IObjectStore}
      */
-    createObjectStore(tableName, codec=null, persistent=true) {
+    createObjectStore(tableName, codec=null, persistent=true, upgradeCondition=null) {
         if (this._connected) throw new Error('Cannot create ObjectStore while connected');
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
@@ -134,7 +143,7 @@ class JungleDB {
         const cachedBackend = new CachedBackend(backend);
         const objStore = new ObjectStore(cachedBackend, this, tableName);
         this._objectStores.set(tableName, objStore);
-        this._objectStoreBackends.set(tableName, backend);
+        this._objectStoreBackends.set(tableName, { backend, upgradeCondition });
         return objStore;
     }
 
@@ -142,10 +151,11 @@ class JungleDB {
      * Deletes an object store.
      * This method has to be called before connecting to the database.
      * @param {string} tableName
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      */
-    async deleteObjectStore(tableName) {
+    deleteObjectStore(tableName, upgradeCondition=null) {
         if (this._connected) throw new Error('Cannot delete ObjectStore while connected');
-        this._objectStoresToDelete.push(tableName);
+        this._objectStoresToDelete.push({ tableName, upgradeCondition });
     }
 
     /**

@@ -45,17 +45,19 @@ class IJungleDB {
      * @param {string} tableName The name of the object store.
      * @param {ICodec} [codec] A codec for the object store.
      * @param {boolean} [persistent] If set to false, this object store is not persistent.
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      * @returns {IObjectStore}
      */
-    createObjectStore(tableName, codec=null, persistent=true) {} // eslint-disable-line no-unused-vars
+    createObjectStore(tableName, codec=null, persistent=true, upgradeCondition=null) {} // eslint-disable-line no-unused-vars
 
     /**
      * Deletes an object store.
      * This method has to be called before connecting to the database.
      * @abstract
      * @param {string} tableName
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      */
-    async deleteObjectStore(tableName) {} // eslint-disable-line no-unused-vars
+    deleteObjectStore(tableName, upgradeCondition=null) {} // eslint-disable-line no-unused-vars
 
     /**
      * Creates a volatile object store (non-persistent).

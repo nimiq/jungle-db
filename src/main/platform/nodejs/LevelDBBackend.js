@@ -16,6 +16,8 @@ class LevelDBBackend {
         this._tableName = tableName;
         /** @type {Map.<string,PersistentIndex>} */
         this._indices = new Map();
+        this._indicesToCreate = new Map();
+        this._indicesToDelete = [];
 
         this._codec = codec;
     }
@@ -56,9 +58,23 @@ class LevelDBBackend {
      */
     async init() {
         this._dbBackend = this._db.backend.sublevel(this._tableName, { valueEncoding: this._valueEncoding });
-        const indexPromises = [];
-        for (const index of this._indices.values()) {
-            indexPromises.push(index.init());
+
+        let indexPromises = [];
+        // Delete indices.
+        for (const { indexName, upgradeCondition } of this._indicesToDelete) {
+            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(event.oldVersion, event.newVersion)) {
+                const index = new PersistentIndex(this, indexName, '');
+                indexPromises.push(index.destroy());
+            }
+        }
+        this._indicesToDelete = [];
+        await Promise.all(indexPromises);
+
+        indexPromises = [];
+        for (const [indexName, { index, upgradeCondition }] of this._indicesToCreate) {
+            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(event.oldVersion, event.newVersion)) {
+                indexPromises.push(index.init());
+            }
         }
         return Promise.all(indexPromises);
     }
@@ -641,23 +657,24 @@ class LevelDBBackend {
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      */
-    createIndex(indexName, keyPath, multiEntry=false) {
+    createIndex(indexName, keyPath, multiEntry=false, upgradeCondition=null) {
         if (this._db.connected) throw new Error('Cannot create index while connected');
         keyPath = keyPath || indexName;
         const index = new PersistentIndex(this, this._db, indexName, keyPath, multiEntry);
         this._indices.set(indexName, index);
+        this._indicesToCreate.set(indexName, { index, upgradeCondition });
     }
 
     /**
      * Deletes a secondary index from the object store.
      * @param indexName
-     * @returns {Promise} The promise resolves after deleting the index.
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      */
-    deleteIndex(indexName) {
+    deleteIndex(indexName, upgradeCondition=null) {
         if (this._db.connected) throw new Error('Cannot delete index while connected');
-        const index = new PersistentIndex(this, indexName, '');
-        return index.destroy();
+        this._indicesToDelete.push({ indexName, upgradeCondition });
     }
 
     /**

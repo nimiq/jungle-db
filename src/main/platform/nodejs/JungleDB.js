@@ -15,7 +15,7 @@ class JungleDB {
      * after modifying the database structure.
      * @param {string} databaseDir The name of the database.
      * @param {number} dbVersion The current version of the database.
-     * @param {function()} [onUpgradeNeeded] A function to be called after upgrades of the structure.
+     * @param {function(oldVersion:number, newVersion:number)} [onUpgradeNeeded] A function to be called after upgrades of the structure.
      */
     constructor(databaseDir, dbVersion, onUpgradeNeeded) {
         if (dbVersion <= 0) throw new Error('The version provided must not be less or equal to 0');
@@ -128,10 +128,12 @@ class JungleDB {
         // Upgrade database.
         if (this._dbVersion > storedVersion) {
             // Delete object stores, if requested.
-            for (const tableName of this._objectStoresToDelete) {
-                promises.push(LevelDBBackend.truncate(this._db, tableName));
+            for (const { tableName, upgradeCondition } of this._objectStoresToDelete) {
+                if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(event.oldVersion, event.newVersion)) {
+                    promises.push(LevelDBBackend.truncate(this._db, tableName));
+                }
             }
-            delete this._objectStoresToDelete;
+            this._objectStoresToDelete = [];
 
             // The order of the above promises does not matter.
             await Promise.all(promises);
@@ -140,8 +142,9 @@ class JungleDB {
         }
 
         // Create new ObjectStores.
-        for (const objStore of this._objectStoreBackends) {
-            promises.push(objStore.init());
+        for (const { backend, upgradeCondition } of this._objectStoreBackends) {
+            // We do not explicitly create object stores, therefore, we ignore the upgrade condition.
+            promises.push(backend.init(storedVersion, this._dbVersion));
         }
 
         // The order of the above promises does not matter.
@@ -151,7 +154,7 @@ class JungleDB {
         if (this._dbVersion > storedVersion) {
             // Call user defined function if requested.
             if (this._onUpgradeNeeded) {
-                await this._onUpgradeNeeded();
+                await this._onUpgradeNeeded(storedVersion, this._dbVersion);
             }
         }
 
@@ -190,9 +193,10 @@ class JungleDB {
      * @param {string} tableName The name of the object store.
      * @param {ICodec} [codec] A codec for the object store (by default, it is the identity codec with JSON encoding).
      * @param {boolean} [persistent] If set to false, this object store is not persistent.
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      * @returns {IObjectStore}
      */
-    createObjectStore(tableName, codec=null, persistent=true) {
+    createObjectStore(tableName, codec=null, persistent=true, upgradeCondition=null) {
         if (this._connected) throw new Error('Cannot create ObjectStore while connected');
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
@@ -204,7 +208,7 @@ class JungleDB {
             : new InMemoryBackend(tableName, codec);
         const objStore = new ObjectStore(backend, this, tableName);
         this._objectStores.set(tableName, objStore);
-        this._objectStoreBackends.push(backend);
+        this._objectStoreBackends.push({ backend, upgradeCondition });
         return objStore;
     }
 
@@ -212,10 +216,11 @@ class JungleDB {
      * Deletes an object store.
      * This method has to be called before connecting to the database.
      * @param {string} tableName
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      */
-    async deleteObjectStore(tableName) {
+    deleteObjectStore(tableName, upgradeCondition=null) {
         if (this._connected) throw new Error('Cannot delete ObjectStore while connected');
-        this._objectStoresToDelete.push(tableName);
+        this._objectStoresToDelete.push({ tableName, upgradeCondition });
     }
 
     /**

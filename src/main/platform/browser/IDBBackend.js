@@ -15,6 +15,7 @@ class IDBBackend {
         this._tableName = tableName;
         /** @type {Map.<string,IIndex>} */
         this._indices = new Map();
+        this._indicesToCreate = new Map();
         this._indicesToDelete = [];
         this._codec = codec;
     }
@@ -44,20 +45,27 @@ class IDBBackend {
     /**
      * Internal method called by the JungleDB to create the necessary indices during a version upgrade.
      * @param {IDBObjectStore} objectStore The IDBObjectStore object obtained during a version upgrade.
+     * @param {number} oldVersion
+     * @param {number} newVersion
      * @protected
      */
-    init(objectStore) {
+    init(objectStore, oldVersion, newVersion) {
         // Delete indices.
-        for (const indexName of this._indicesToDelete) {
-            objectStore.deleteIndex(indexName);
+        for (const { indexName, upgradeCondition } of this._indicesToDelete) {
+            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(event.oldVersion, event.newVersion)) {
+                objectStore.deleteIndex(indexName);
+            }
         }
-        delete this._indicesToDelete;
+        this._indicesToDelete = [];
 
         // Create indices.
-        for (const [indexName, index] of this._indices) {
-            const keyPath = Array.isArray(index.keyPath) ? index.keyPath.join('.') : index.keyPath;
-            objectStore.createIndex(indexName, keyPath, { unique: false, multiEntry: index.multiEntry});
+        for (const [indexName, { index, upgradeCondition }] of this._indicesToCreate) {
+            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(event.oldVersion, event.newVersion)) {
+                const keyPath = Array.isArray(index.keyPath) ? index.keyPath.join('.') : index.keyPath;
+                objectStore.createIndex(indexName, keyPath, {unique: false, multiEntry: index.multiEntry});
+            }
         }
+        this._indicesToCreate.clear();
     }
 
     /**
@@ -470,22 +478,24 @@ class IDBBackend {
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      */
-    createIndex(indexName, keyPath, multiEntry=false) {
+    createIndex(indexName, keyPath, multiEntry=false, upgradeCondition=null) {
         if (this._db.connected) throw new Error('Cannot create index while connected');
         keyPath = keyPath || indexName;
         const index = new PersistentIndex(this, indexName, keyPath, multiEntry);
         this._indices.set(indexName, index);
+        this._indicesToCreate.set(indexName, { index, upgradeCondition });
     }
 
     /**
      * Deletes a secondary index from the object store.
      * @param indexName
-     * @returns {Promise} The promise resolves after deleting the index.
+     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
      */
-    async deleteIndex(indexName) {
+    deleteIndex(indexName, upgradeCondition=null) {
         if (this._db.connected) throw new Error('Cannot delete index while connected');
-        this._indicesToDelete.push(indexName);
+        this._indicesToDelete.push({ indexName, upgradeCondition });
     }
 
     /**
