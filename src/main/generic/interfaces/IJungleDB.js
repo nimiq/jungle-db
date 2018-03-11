@@ -43,7 +43,7 @@ class IJungleDB {
      * the table does not exist yet.
      * @abstract
      * @param {string} tableName The name of the object store.
-     * @param {ICodec} [options] A codec for the object store.
+     * @param {ICodec} [codec] A codec for the object store.
      * @param {boolean} [persistent] If set to false, this object store is not persistent.
      * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
      * @returns {IObjectStore}
