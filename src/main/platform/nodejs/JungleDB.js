@@ -37,7 +37,7 @@ class JungleDB {
         return new Promise((resolve, reject) => {
             this._db.get('_dbVersion', { valueEncoding: 'ascii' }, (err, value) => {
                 if (err) {
-                    resolve(-1);
+                    resolve(0);
                     return;
                 }
                 resolve(parseInt(value));
@@ -129,7 +129,7 @@ class JungleDB {
         if (this._dbVersion > storedVersion) {
             // Delete object stores, if requested.
             for (const { tableName, upgradeCondition } of this._objectStoresToDelete) {
-                if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(event.oldVersion, event.newVersion)) {
+                if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(storedVersion, this._dbVersion)) {
                     promises.push(LevelDBBackend.truncate(this._db, tableName));
                 }
             }

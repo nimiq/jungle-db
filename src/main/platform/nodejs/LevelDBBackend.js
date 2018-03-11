@@ -54,15 +54,17 @@ class LevelDBBackend {
 
     /**
      * Initialises the persisted indices of the object store.
+     * @param {number} oldVersion
+     * @param {number} newVersion
      * @returns {Promise.<Array.<PersistentIndex>>} The list of indices.
      */
-    async init() {
+    async init(oldVersion, newVersion) {
         this._dbBackend = this._db.backend.sublevel(this._tableName, { valueEncoding: this._valueEncoding });
 
         let indexPromises = [];
         // Delete indices.
         for (const { indexName, upgradeCondition } of this._indicesToDelete) {
-            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(event.oldVersion, event.newVersion)) {
+            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(oldVersion, newVersion)) {
                 const index = new PersistentIndex(this, indexName, '');
                 indexPromises.push(index.destroy());
             }
@@ -72,7 +74,7 @@ class LevelDBBackend {
 
         indexPromises = [];
         for (const [indexName, { index, upgradeCondition }] of this._indicesToCreate) {
-            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(event.oldVersion, event.newVersion)) {
+            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(oldVersion, newVersion)) {
                 indexPromises.push(index.init());
             }
         }

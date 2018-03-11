@@ -80,7 +80,7 @@ describe('JungleDB', () => {
         let upgradeCall = { called: false, oldVersion: null, newVersion: null };
         async function connect(version) {
             // Write something into an object store.
-            let db = new JungleDB('test', version, (oldVersion, newVersion) => {
+            let db = new JungleDB('testme', version, (oldVersion, newVersion) => {
                 upgradeCall = { called: true, oldVersion: oldVersion, newVersion: newVersion };
             });
 
@@ -118,7 +118,7 @@ describe('JungleDB', () => {
             expect(store.index('by_author')).toBeTruthy();
             expect(store.index('by_year')).toBeFalsy();
             expect(db.getObjectStore('magazines')).toBeFalsy();
-            db.close();
+            await db.close();
 
             // No changes with same version.
             upgradeCall = { called: false, oldVersion: null, newVersion: null };
@@ -131,7 +131,7 @@ describe('JungleDB', () => {
             expect(store.index('by_author')).toBeTruthy();
             expect(store.index('by_year')).toBeFalsy();
             expect(db.getObjectStore('magazines')).toBeFalsy();
-            db.close();
+            await db.close();
 
             // Upgrade to 2.
             upgradeCall = { called: false, oldVersion: null, newVersion: null };
@@ -146,7 +146,7 @@ describe('JungleDB', () => {
             expect(store.index('by_author')).toBeTruthy();
             expect(store.index('by_year')).toBeTruthy();
             expect(db.getObjectStore('magazines')).toBeFalsy();
-            db.close();
+            await db.close();
 
             // Upgrade to 3.
             upgradeCall = { called: false, oldVersion: null, newVersion: null };
@@ -164,7 +164,7 @@ describe('JungleDB', () => {
             expect(magazines).toBeTruthy();
             expect(magazines.index('by_publisher')).toBeTruthy();
             expect(magazines.index('by_frequency')).toBeTruthy();
-            db.close();
+            await db.close();
 
             await db.destroy();
 
@@ -184,7 +184,7 @@ describe('JungleDB', () => {
             expect(magazines).toBeTruthy();
             expect(magazines.index('by_publisher')).toBeTruthy();
             expect(magazines.index('by_frequency')).toBeTruthy();
-            db.close();
+            await db.close();
 
             await db.destroy();
         })().then(done, done.fail);
