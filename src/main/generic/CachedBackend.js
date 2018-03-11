@@ -267,7 +267,7 @@ class CachedBackend {
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
-     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
+     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
      */
     createIndex(indexName, keyPath, multiEntry=false, upgradeCondition=null) {
         return this._backend.createIndex(indexName, keyPath, multiEntry, upgradeCondition);
@@ -276,7 +276,7 @@ class CachedBackend {
     /**
      * Deletes a secondary index from the object store.
      * @param indexName
-     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
+     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
      */
     deleteIndex(indexName, upgradeCondition=null) {
         return this._backend.deleteIndex(indexName, upgradeCondition);

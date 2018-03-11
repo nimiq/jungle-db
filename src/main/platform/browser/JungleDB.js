@@ -129,7 +129,7 @@ class JungleDB {
      * @param {string} tableName The name of the object store.
      * @param {ICodec} [codec] A codec for the object store.
      * @param {boolean} [persistent] If set to false, this object store is not persistent.
-     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
+     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
      * @returns {IObjectStore}
      */
     createObjectStore(tableName, codec=null, persistent=true, upgradeCondition=null) {
@@ -151,7 +151,7 @@ class JungleDB {
      * Deletes an object store.
      * This method has to be called before connecting to the database.
      * @param {string} tableName
-     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
+     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
      */
     deleteObjectStore(tableName, upgradeCondition=null) {
         if (this._connected) throw new Error('Cannot delete ObjectStore while connected');

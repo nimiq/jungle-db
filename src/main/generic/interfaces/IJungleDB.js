@@ -43,9 +43,9 @@ class IJungleDB {
      * the table does not exist yet.
      * @abstract
      * @param {string} tableName The name of the object store.
-     * @param {ICodec} [codec] A codec for the object store.
+     * @param {ICodec} [codec] A codec for the object store or an options object.
      * @param {boolean} [persistent] If set to false, this object store is not persistent.
-     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
+     * @param {?(function(oldVersion:number, newVersion:number):boolean|boolean)} [upgradeCondition]
      * @returns {IObjectStore}
      */
     createObjectStore(tableName, codec=null, persistent=true, upgradeCondition=null) {} // eslint-disable-line no-unused-vars
@@ -55,7 +55,7 @@ class IJungleDB {
      * This method has to be called before connecting to the database.
      * @abstract
      * @param {string} tableName
-     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
+     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
      */
     deleteObjectStore(tableName, upgradeCondition=null) {} // eslint-disable-line no-unused-vars
 

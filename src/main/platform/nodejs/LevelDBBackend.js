@@ -659,7 +659,7 @@ class LevelDBBackend {
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
      * @param {boolean} [multiEntry]
-     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
+     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
      */
     createIndex(indexName, keyPath, multiEntry=false, upgradeCondition=null) {
         if (this._db.connected) throw new Error('Cannot create index while connected');
@@ -672,7 +672,7 @@ class LevelDBBackend {
     /**
      * Deletes a secondary index from the object store.
      * @param indexName
-     * @param {?function(oldVersion:number, newVersion:number):boolean|boolean} [upgradeCondition]
+     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
      */
     deleteIndex(indexName, upgradeCondition=null) {
         if (this._db.connected) throw new Error('Cannot delete index while connected');
