@@ -198,18 +198,17 @@ class IObjectStore {
      * @abstract
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
-     * @param {boolean} [multiEntry]
-     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
+     * @param {{multiEntry:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|boolean} [options] An options object (for deprecated usage: multiEntry boolean).
      */
-    createIndex(indexName, keyPath, multiEntry=false, upgradeCondition=null) {} // eslint-disable-line no-unused-vars
+    createIndex(indexName, keyPath, options=false) {} // eslint-disable-line no-unused-vars
 
     /**
      * Deletes a secondary index from the object store.
      * @abstract
      * @param indexName
-     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
+     * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
      */
-    deleteIndex(indexName, upgradeCondition=null) {} // eslint-disable-line no-unused-vars
+    deleteIndex(indexName, options={}) {} // eslint-disable-line no-unused-vars
 
     /**
      * Closes the object store and potential connections.

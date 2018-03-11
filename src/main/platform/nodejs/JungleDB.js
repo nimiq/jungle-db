@@ -191,12 +191,14 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
-     * @param {ICodec} [codec] A codec for the object store (by default, it is the identity codec with JSON encoding).
-     * @param {boolean} [persistent] If set to false, this object store is not persistent.
-     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
+     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|ICodec} [options] An options object (for deprecated usage: A codec for the object store).
+     * @param {boolean} [persistentArg] If set to false, this object store is not persistent.
      * @returns {IObjectStore}
      */
-    createObjectStore(tableName, codec=null, persistent=true, upgradeCondition=null) {
+    createObjectStore(tableName, options=null, persistentArg=true) {
+        let { codec = null, persistent = persistentArg, upgradeCondition = null } = (typeof options === 'object' && options !== null) ? options : {};
+        if (typeof options !== 'object' && options !== null) codec = options;
+
         if (this._connected) throw new Error('Cannot create ObjectStore while connected');
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
@@ -216,9 +218,11 @@ class JungleDB {
      * Deletes an object store.
      * This method has to be called before connecting to the database.
      * @param {string} tableName
-     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
+     * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
      */
-    deleteObjectStore(tableName, upgradeCondition=null) {
+    deleteObjectStore(tableName, options={}) {
+        let { upgradeCondition = null } = options || {};
+
         if (this._connected) throw new Error('Cannot delete ObjectStore while connected');
         this._objectStoresToDelete.push({ tableName, upgradeCondition });
     }

@@ -281,12 +281,14 @@ class InMemoryBackend {
     }
 
     /**
-     * @param {string} indexName
-     * @param {string|Array.<string>} [keyPath]
-     * @param {boolean} [multiEntry]
-     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
+     * @param {string} indexName The name of the index.
+     * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
+     * @param {{multiEntry:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|boolean} [options] An options object (for deprecated usage: multiEntry boolean).
      */
-    createIndex(indexName, keyPath, multiEntry=false, upgradeCondition=null) {
+    createIndex(indexName, keyPath, options=false) {
+        let { multiEntry = false, upgradeCondition = null } = (typeof options === 'object' && options !== null) ? options : {};
+        if (typeof options !== 'object' && options !== null) multiEntry = options;
+
         keyPath = keyPath || indexName;
         const index = new InMemoryIndex(this, keyPath, multiEntry);
         this._indices.set(indexName, index);
@@ -295,9 +297,11 @@ class InMemoryBackend {
     /**
      * Deletes a secondary index from the object store.
      * @param indexName
-     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
+     * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
      */
-    deleteIndex(indexName, upgradeCondition=null) {
+    deleteIndex(indexName, options={}) {
+        let { upgradeCondition = null } = options || {};
+
         this._indices.delete(indexName);
     }
 

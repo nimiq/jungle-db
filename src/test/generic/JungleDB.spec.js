@@ -76,7 +76,7 @@ describe('JungleDB', () => {
         })().then(done, done.fail);
     });
 
-    it('can use advanced upgrade methods', (done) => {
+    it('can use advanced upgrade methods (new signatures)', (done) => {
         let upgradeCall = { called: false, oldVersion: null, newVersion: null };
         async function connect(version) {
             // Write something into an object store.
@@ -84,20 +84,20 @@ describe('JungleDB', () => {
                 upgradeCall = { called: true, oldVersion: oldVersion, newVersion: newVersion };
             });
 
-            const store = db.createObjectStore('books', undefined, undefined, (oldVersion) => oldVersion < 1);
-            const titleIndex = store.createIndex('by_title', 'title', undefined, (oldVersion) => oldVersion < 1);
-            const authorIndex = store.createIndex('by_author', 'author', undefined, (oldVersion) => oldVersion < 1);
+            const store = db.createObjectStore('books', { upgradeCondition: (oldVersion) => oldVersion < 1 });
+            const titleIndex = store.createIndex('by_title', 'title', { upgradeCondition: (oldVersion) => oldVersion < 1 });
+            const authorIndex = store.createIndex('by_author', 'author', { upgradeCondition: (oldVersion) => oldVersion < 1 });
 
             if (version >= 2) {
                 // Version 2 introduces a new index of books by year.
-                const yearIndex = store.createIndex('by_year', 'year', undefined, (oldVersion) => oldVersion < 2);
+                const yearIndex = store.createIndex('by_year', 'year', { upgradeCondition: (oldVersion) => oldVersion < 2 });
             }
 
             if (version >= 3) {
                 // Version 3 introduces a new object store for magazines with two indexes.
-                const magazines = db.createObjectStore('magazines', undefined, undefined, (oldVersion) => oldVersion < 3);
-                const publisherIndex = magazines.createIndex('by_publisher', 'publisher', undefined, (oldVersion) => oldVersion < 3);
-                const frequencyIndex = magazines.createIndex('by_frequency', 'frequency', undefined, (oldVersion) => oldVersion < 3);
+                const magazines = db.createObjectStore('magazines', { upgradeCondition: (oldVersion) => oldVersion < 3 });
+                const publisherIndex = magazines.createIndex('by_publisher', 'publisher', { upgradeCondition: (oldVersion) => oldVersion < 3 });
+                const frequencyIndex = magazines.createIndex('by_frequency', 'frequency', { upgradeCondition: (oldVersion) => oldVersion < 3 });
             }
 
             await db.connect();

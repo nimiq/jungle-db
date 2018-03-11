@@ -443,19 +443,23 @@ class ObjectStore {
      * Moreover, it is only executed on database version updates or on first creation.
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
-     * @param {boolean} [multiEntry]
-     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
+     * @param {{multiEntry:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|boolean} [options] An options object (for deprecated usage: multiEntry boolean).
      */
-    createIndex(indexName, keyPath, multiEntry=false, upgradeCondition=null) {
-        return this._backend.createIndex(indexName, keyPath, multiEntry, upgradeCondition);
+    createIndex(indexName, keyPath, options=false) {
+        let { multiEntry = false, upgradeCondition = null } = (typeof options === 'object' && options !== null) ? options : {};
+        if (typeof options !== 'object' && options !== null) multiEntry = options;
+
+        return this._backend.createIndex(indexName, keyPath, { multiEntry, upgradeCondition });
     }
 
     /**
      * Deletes a secondary index from the object store.
      * @param indexName
-     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
+     * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
      */
-    deleteIndex(indexName, upgradeCondition=null) {
+    deleteIndex(indexName, options={}) {
+        let { upgradeCondition = null } = options || {};
+
         return this._backend.deleteIndex(indexName, upgradeCondition);
     }
 
