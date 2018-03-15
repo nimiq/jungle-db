@@ -242,10 +242,14 @@ class IDBBackend {
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
                 if (cursor) {
-                    if (callback(cursor.primaryKey)) {
-                        cursor.continue();
-                    } else {
-                        resolve();
+                    try {
+                        if (callback(cursor.primaryKey)) {
+                            cursor.continue();
+                        } else {
+                            resolve();
+                        }
+                    } catch (e) {
+                        reject(e);
                     }
                 } else {
                     resolve();

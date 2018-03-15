@@ -72,7 +72,11 @@ class PersistentIndex {
             request.onsuccess = event => {
                 const cursor = event.target.result;
                 if (cursor) {
-                    results.push(this._objectStore.decode(cursor.value, cursor.primaryKey));
+                    try {
+                        results.push(this._objectStore.decode(cursor.value, cursor.primaryKey));
+                    } catch (e) {
+                        reject(e);
+                    }
                     cursor.continue();
                 } else {
                     resolve(results);
@@ -130,7 +134,11 @@ class PersistentIndex {
                 }
                 // Only iterate until key changes.
                 if (cursor && maxKey === cursor.key) {
-                    results.push(this._objectStore.decode(cursor.value, cursor.primaryKey));
+                    try {
+                        results.push(this._objectStore.decode(cursor.value, cursor.primaryKey));
+                    } catch (e) {
+                        reject(e);
+                    }
                     cursor.continue();
                 } else {
                     resolve(results);
@@ -193,7 +201,11 @@ class PersistentIndex {
                 }
                 // Only iterate until key changes.
                 if (cursor && maxKey === cursor.key) {
-                    results.push(this._objectStore.decode(cursor.value, cursor.primaryKey));
+                    try {
+                        results.push(this._objectStore.decode(cursor.value, cursor.primaryKey));
+                    } catch (e) {
+                        reject(e);
+                    }
                     cursor.continue();
                 } else {
                     resolve(results);

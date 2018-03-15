@@ -273,10 +273,14 @@ class LevelDBBackend {
             const stream = this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': false, 'keys': true, 'reverse': !ascending }));
             let stopped = false;
             stream.on('data', data => {
-                if (!callback(data)) {
-                    stopped = true;
-                    stream.pause();
-                    stream.destroy();
+                try {
+                    if (!callback(data)) {
+                        stopped = true;
+                        stream.pause();
+                        stream.destroy();
+                    }
+                } catch (e) {
+                    error(e);
                 }
             })
             .on('error', err => {
