@@ -133,7 +133,7 @@ class JungleDB {
      */
     createObjectStore(tableName, options=null, persistentArg=true) {
         let { codec = null, persistent = persistentArg, upgradeCondition = null } = (typeof options === 'object' && options !== null) ? options : {};
-        if (typeof options !== 'object' && options !== null) codec = options;
+        if (typeof options === 'object' && options !== null && 'encode' in options && 'decode' in options) codec = options;
 
         if (this._connected) throw new Error('Cannot create ObjectStore while connected');
         if (this._objectStores.has(tableName)) {
