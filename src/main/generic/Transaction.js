@@ -5,6 +5,7 @@
  * Other transactions based on the same state will end up in a conflicted state if committed.
  * Transactions opened after the successful commit of another transaction will be based on the
  * new state and hence can be committed again.
+ * Transactions do *not* check unique constraints of secondary indices before commiting them.
  * @implements {IObjectStore}
  * @implements {ICommittable}
  */
@@ -197,6 +198,8 @@ class Transaction {
      * If there was no other transaction committed that was based on the same state,
      * it will be successful and change the transaction's state to COMMITTED (returning true).
      * Otherwise, the state will be CONFLICTED and the method will return false.
+     *
+     * Note that transactions may fail since secondary index constraints are *not* checked in transactions.
      * @param {Transaction} [tx] The transaction to be applied, only used internally.
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
