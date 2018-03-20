@@ -137,7 +137,7 @@ class PersistentIndex {
      * @returns {Promise.<?Array>}
      */
     async put(key, value, oldValue, tx) {
-        const internalTx = tx || new Transaction(null, this._indexBackend);
+        const internalTx = tx || new Transaction(null, this._indexBackend, this._indexBackend, false);
         const oldIKey = this._indexKey(key, oldValue);
         const newIKey = this._indexKey(key, value);
 
@@ -158,7 +158,7 @@ class PersistentIndex {
      * @returns {Promise.<Transaction>}
      */
     async remove(key, oldValue, tx) {
-        const internalTx = tx || new Transaction(null, this._indexBackend);
+        const internalTx = tx || new Transaction(null, this._indexBackend, this._indexBackend, false);
 
         if (oldValue !== undefined) {
             const iKey = this._indexKey(key, oldValue);
@@ -254,7 +254,7 @@ class PersistentIndex {
      * @protected
      */
     async _apply(tx) {
-        const internalTx = new Transaction(null, this._indexBackend);
+        const internalTx = new Transaction(null, this._indexBackend, this._indexBackend, false);
 
         if (tx._truncated) {
             await internalTx.truncate();
