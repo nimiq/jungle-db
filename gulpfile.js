@@ -18,15 +18,14 @@ const sources = {
             './src/main/platform/browser/Class.js',
             './src/main/platform/browser/utils/IDBTools.js',
             './src/main/platform/browser/utils/LogNative.js',
-            './src/main/platform/browser/EncodedTransaction.js',
             './src/main/platform/browser/IDBBackend.js',
             './src/main/platform/browser/JungleDB.js',
             './src/main/platform/browser/PersistentIndex.js'
         ],
         node: [
-            './src/main/platform/nodejs/utils/IndexCodec.js',
             './src/main/platform/nodejs/utils/LevelDBTools.js',
             './src/main/platform/nodejs/utils/LogNative.js',
+            './src/main/platform/nodejs/utils/GenericValueEncoding.js',
             './src/main/platform/nodejs/LevelDBBackend.js',
             './src/main/platform/nodejs/JungleDB.js',
             './src/main/platform/nodejs/PersistentIndex.js'
@@ -43,6 +42,7 @@ const sources = {
         './src/main/generic/utils/Observable.js',
         './src/main/generic/utils/SetUtils.js',
         './src/main/generic/utils/Synchronizer.js',
+        './src/main/generic/utils/EncodedTransaction.js',
         './src/main/generic/CachedBackend.js',
         './src/main/generic/InMemoryIndex.js',
         './src/main/generic/InMemoryBackend.js',

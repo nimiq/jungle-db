@@ -52,7 +52,15 @@ class EncodedTransaction {
     put(key, value) {
         this._removed.delete(key);
         this._modified.set(key, value);
+    }
 
+    /**
+     * Get a value from the encoded transaction.
+     * @param {string} key The key.
+     * @return {*} value The value.
+     */
+    get(key) {
+        return this._modified.get(key);
     }
 
     /**

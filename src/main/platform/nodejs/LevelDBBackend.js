@@ -32,34 +32,18 @@ class LevelDBBackend {
     }
 
     /**
-     * Extends a batch operation with a tree transaction.
-     * @param {Array} batch
-     * @param {LevelDBBackend} backend The index backend.
-     * @param {TreeTransaction} treeTx The tree transaction.
-     */
-    static extendBatch(batch, backend, treeTx) {
-        // Shortcut if treeTx is null or undefined.
-        if (!treeTx) {
-            return;
-        }
-
-        batch.push({key: '_root', value: backend.encode(treeTx.root.id), type: 'put', prefix: backend._dbBackend, valueEncoding: backend._valueEncoding});
-        for (const node of treeTx.removed) {
-            batch.push({key: ''+node.id, type: 'del', prefix: backend._dbBackend, valueEncoding: backend._valueEncoding});
-        }
-        for (const node of treeTx.modified) {
-            batch.push({key: ''+node.id, value: backend.encode(node.toJSON()), type: 'put', prefix: backend._dbBackend, valueEncoding: backend._valueEncoding});
-        }
-    }
-
-    /**
      * Initialises the persisted indices of the object store.
      * @param {number} oldVersion
      * @param {number} newVersion
+     * @param {*} [keyEncoding]
      * @returns {Promise.<Array.<PersistentIndex>>} The list of indices.
      */
-    async init(oldVersion, newVersion) {
-        this._dbBackend = this._db.backend.sublevel(this._tableName, { valueEncoding: this._valueEncoding });
+    async init(oldVersion, newVersion, keyEncoding) {
+        const encoding = { valueEncoding: this._valueEncoding };
+        if (keyEncoding) {
+            encoding.keyEncoding = keyEncoding;
+        }
+        this._dbBackend = this._db.backend.sublevel(this._tableName, encoding);
 
         let indexPromises = [];
         // Delete indices.
@@ -74,9 +58,8 @@ class LevelDBBackend {
 
         indexPromises = [];
         for (const [indexName, { index, upgradeCondition }] of this._indicesToCreate) {
-            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(oldVersion, newVersion)) {
-                indexPromises.push(index.init());
-            }
+            indexPromises.push(index.init(oldVersion, newVersion,
+                upgradeCondition === null || upgradeCondition === true || upgradeCondition(oldVersion, newVersion)));
         }
         return Promise.all(indexPromises);
     }
@@ -151,11 +134,11 @@ class LevelDBBackend {
      */
     async put(key, value) {
         const oldValue = await this.get(key);
-        const batch = [];
+        let batch = [];
 
         batch.push({key: key, value: this.encode(value), type: 'put'});
         for (const index of this._indices.values()) {
-            LevelDBBackend.extendBatch(batch, index.backend, index.put(key, value, oldValue));
+            batch = batch.concat(await index.put(key, value, oldValue));
         }
 
         return new Promise((resolve, error) => {
@@ -180,11 +163,11 @@ class LevelDBBackend {
         if (oldValue === undefined) {
             return Promise.resolve();
         }
-        const batch = [];
+        let batch = [];
 
         batch.push({key: key, type: 'del'});
         for (const index of this._indices.values()) {
-            LevelDBBackend.extendBatch(batch, index.backend, index.remove(key, oldValue));
+            batch = batch.concat(await index.remove(key, oldValue));
         }
 
         return new Promise((resolve, error) => {
@@ -478,22 +461,7 @@ class LevelDBBackend {
      * @protected
      */
     async _apply(tx) {
-        let batch = [];
-
-        if (tx._truncated) {
-            batch = await this._truncate();
-        }
-
-        for (const key of tx._removed) {
-            batch.push({key: key, type: 'del'});
-        }
-        for (const [key, value] of tx._modified) {
-            batch.push({key: key, value: this.encode(value), type: 'put'});
-        }
-
-        for (const index of this._indices.values()) {
-            LevelDBBackend.extendBatch(batch, index.backend, await index._apply(tx));
-        }
+        let batch = await this.applyCombined(tx);
 
         return new Promise((resolve, error) => {
             this._dbBackend.batch(batch, err => {
@@ -505,6 +473,32 @@ class LevelDBBackend {
                 resolve(true);
             });
         });
+    }
+
+    /**
+     * Returns the necessary information in order to flush a combined transaction.
+     * @param {Transaction} tx The transaction that should be applied to this backend.
+     * @returns {Promise.<Array>} An array containing the batch operations.
+     */
+    async applyCombined(tx) {
+        let batch = [];
+
+        if (tx._truncated) {
+            batch = await this._truncate();
+        }
+
+        for (const key of tx._removed) {
+            batch.push({key: key, type: 'del', prefix: this._dbBackend, valueEncoding: this._valueEncoding});
+        }
+        for (const [key, value] of tx._modified) {
+            batch.push({key: key, value: this.encode(value), type: 'put', prefix: this._dbBackend, valueEncoding: this._valueEncoding});
+        }
+
+        for (const index of this._indices.values()) {
+            batch = batch.concat(await index._apply(tx));
+        }
+
+        return batch;
     }
 
     /**
@@ -707,32 +701,6 @@ class LevelDBBackend {
      */
     transaction() {
         throw new Error('Unsupported operation');
-    }
-
-    /**
-     * Returns the necessary information in order to flush a combined transaction.
-     * @param {Transaction} tx The transaction that should be applied to this backend.
-     * @returns {Promise.<Array>} An array containing the batch operations.
-     */
-    async applyCombined(tx) {
-        let batch = [];
-
-        if (tx._truncated) {
-            batch = await this._truncate();
-        }
-
-        for (const key of tx._removed) {
-            batch.push({key: key, type: 'del', prefix: this._dbBackend, valueEncoding: this._valueEncoding});
-        }
-        for (const [key, value] of tx._modified) {
-            batch.push({key: key, value: this.encode(value), type: 'put', prefix: this._dbBackend, valueEncoding: this._valueEncoding});
-        }
-
-        for (const index of this._indices.values()) {
-            LevelDBBackend.extendBatch(batch, index.backend, await index._apply(tx));
-        }
-
-        return batch;
     }
 
     /**

@@ -9,7 +9,7 @@ class ObjectUtils {
      * { 'a': { 'b': 'key' } }
      * @param {Object} obj The JS object to access.
      * @param {string|Array.<string>} path The key path to access.
-     * @returns {*} The value at the given path or undefined if the path does not exist..
+     * @returns {*} The value at the given path or undefined if the path does not exist.
      */
     static byKeyPath(obj, path) {
         if (!Array.isArray(path)) {
