@@ -1,4 +1,4 @@
-const JDB = require('../../dist/node.js');
+const JDB = require('../../dist/leveldb.js');
 
 const db = new JDB.JungleDB('./database', 1);
 const st = db.createObjectStore('testTable');

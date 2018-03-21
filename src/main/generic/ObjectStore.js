@@ -112,6 +112,47 @@ class ObjectStore {
     }
 
     /**
+     * Returns the object stored under the given primary key.
+     * Resolves to undefined if the key is not present in the object store.
+     * @param {string} key The primary key to look for.
+     * @returns {*} The object stored under the given key, or undefined if not present.
+     */
+    getSync(key) {
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._currentState.isSynchronous()) throw new Error('Only works on synchronous backends');
+        return this._currentState.getSync(key);
+    }
+
+    /**
+     * Inserts or replaces a key-value pair.
+     * @param {string} key The primary key to associate the value with.
+     * @param {*} value The value to write.
+     */
+    putSync(key, value) {
+        throw new Error('Cannot put synchronously');
+    }
+
+    /**
+     * Removes the key-value pair of the given key from the object store.
+     * @abstract
+     * @param {string} key The primary key to delete along with the associated object.
+     */
+    removeSync(key) {
+        throw new Error('Cannot remove synchronously');
+    }
+
+    /**
+     * A check whether a certain key is cached.
+     * @param {string} key The key to check.
+     * @return {boolean} A boolean indicating whether the key is already in the cache.
+     */
+    isCached(key) {
+        if (!this._backend.connected) throw new Error('JungleDB is not connected');
+        if (!this._currentState.isSynchronous()) throw new Error('Only works on synchronous backends');
+        return this._currentState.isCached(key);
+    }
+
+    /**
      * Returns a promise of a set of keys fulfilling the given query.
      * If the optional query is not given, it returns all keys in the object store.
      * If the query is of type KeyRange, it returns all keys of the object store being within this range.
@@ -471,6 +512,10 @@ class ObjectStore {
      */
     transaction(enableWatchdog=true) {
         if (!this._backend.connected) throw new Error('JungleDB is not connected');
+
+        // Prefer synchronous transactions.
+        if (this._backend.isSynchronous()) return this.synchronousTransaction(enableWatchdog);
+
         const tx = new Transaction(this, this._currentState, this, enableWatchdog);
         this._transactions.set(tx.id, new TransactionInfo(tx, this._currentStateInfo));
         return tx;
@@ -497,7 +542,7 @@ class ObjectStore {
      * @returns {boolean} The transaction object.
      */
     isSynchronous() {
-        return false;
+        return this._backend.isSynchronous();
     }
 
     /**

@@ -34,6 +34,37 @@ class BenchmarkUtils {
 
     /**
      * @param {ObjectStore} objectStore
+     * @param {number} entryCount
+     * @param {number} entrySize
+     * @param {number} [batchSize]
+     * @param {boolean} [sync]
+     * @param {Array.<string>} [keys]
+     * @param {Stats} [stats]
+     * @returns {Promise.<void>}
+     */
+    static async fillObjectStoreWithIndex(objectStore, entryCount, entrySize, batchSize=1, sync=false, keys=null, indexKeys=null, stats=null) {
+        const randomData = [];
+        for (let i=0; i<entryCount; ++i) {
+            randomData.push({
+                index: indexKeys ? indexKeys[i] : String(i),
+                data: RandomGenerator.generateRandomData(entrySize)
+            });
+        }
+        const putEntry = async (transaction, index) => {
+            const key = keys ? keys[index] : String(index);
+            const data = randomData[index];
+            await transaction.put(key, data);
+        };
+        const totalTime =
+            (await BenchmarkUtils.performBatchOperation(objectStore, entryCount, batchSize, sync, putEntry)).totalTime;
+        if (stats) {
+            stats.addWrites(entryCount, entryCount*entrySize, totalTime);
+        }
+    }
+
+
+    /**
+     * @param {ObjectStore} objectStore
      * @param {number} totalCount
      * @param {number} batchSize
      * @param {boolean} sync
@@ -163,7 +194,8 @@ class BenchmarkUtils {
             console.log(`%c${str}`, 'color: teal; font-weight: bold;');
         } else {
             // node
-            console.log('\x1b[36m%s\x1b[0m', str);
+            // console.log('\x1b[36m%s\x1b[0m', str);
+            console.log(str);
         }
     }
 }

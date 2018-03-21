@@ -30,8 +30,8 @@ class BenchmarkReadFromMultiple extends Benchmark {
         this._batchSize = batchSize;
         this._sync = sync;
         this._entryKeys = BenchmarkUtils.createRandomKeys(databaseEntryCount);
-        this.description = `${BenchmarkReadFromMultiple.NAME}, ${databaseEntryCount} entries in database, `
-            + `read ${readCount} entries, ${totalEntrySize} Bytes per entry, ${numberTables} tables, batch size ${batchSize}, `
+        this.description = `${BenchmarkReadFromMultiple.NAME},${databaseEntryCount} entries,`
+            + `read ${readCount} entries,${totalEntrySize} B/entry,${numberTables} tables,${batchSize} ops/tx,`
             + `${this._sync? '' : 'a'}sync`;
     }
 

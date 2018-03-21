@@ -1,6 +1,5 @@
-const leveldown = require('leveldown');
-const levelup = require('levelup');
-const sublevel = require('level-sublevel');
+const lmdb = require('node-lmdb');
+const fs = require('fs');
 
 /**
  * @implements {IJungleDB}
@@ -16,9 +15,9 @@ class JungleDB {
      * @param {string} databaseDir The name of the database.
      * @param {number} dbVersion The current version of the database.
      * @param {function(oldVersion:number, newVersion:number)} [onUpgradeNeeded] A function to be called after upgrades of the structure.
-     * @param {object} [options]
+     * @param {{maxDbs:?number, maxDbSize:number}} options
      */
-    constructor(databaseDir, dbVersion, onUpgradeNeeded) {
+    constructor(databaseDir, dbVersion, onUpgradeNeeded, options = {}) {
         if (dbVersion <= 0) throw new Error('The version provided must not be less or equal to 0');
         this._databaseDir = databaseDir.endsWith('/') ? databaseDir : `${databaseDir}/`;
         this._dbVersion = dbVersion;
@@ -27,63 +26,34 @@ class JungleDB {
         this._objectStores = new Map();
         this._objectStoreBackends = [];
         this._objectStoresToDelete = [];
+
+        if (!options.maxDbSize) throw new Error('maxDbSize is a required option');
+        this._options = options;
     }
 
     /**
-     * Returns a promise of the current database version.
-     * @returns {Promise.<number>} The promise for the database version.
-     * @private
-     */
-    _readDBVersion() {
-        return new Promise((resolve, reject) => {
-            this._db.get('_dbVersion', { valueEncoding: 'ascii' }, (err, value) => {
-                if (err) {
-                    resolve(0);
-                    return;
-                }
-                resolve(parseInt(value));
-            });
-        });
-    }
-
-    /**
-     * Writes a new database version to the db.
-     * @returns {Promise} A promise that resolves after successfully writing the database version.
-     * @private
-     */
-    _writeDBVersion(version) {
-        return new Promise((resolve, reject) => {
-            this._db.put('_dbVersion', `${version}`, { valueEncoding: 'ascii' }, err => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                resolve();
-            });
-        });
-    }
-
-    /** The underlying LevelDB. */
-    get backend() {
-        return this._db;
-    }
-
-    /**
-     * Connects to the indexedDB.
+     * Connects to the lmdb.
      * @returns {Promise} A promise resolving on successful connection.
      */
     connect() {
         if (this._db) return Promise.resolve(this._db);
 
-        const fs = require('fs');
         // Ensure existence of directory.
         if (!fs.existsSync(this._databaseDir)){
             fs.mkdirSync(this._databaseDir);
         }
 
-        this._db = sublevel(levelup(leveldown(this._databaseDir), {
-            keyEncoding: 'ascii'
-        }));
+        this._db = new lmdb.Env();
+        this._db.open({
+            path: this._databaseDir,
+            mapSize: this._options.maxDbSize,
+            maxDbs: this._options.maxDbs || 3 // default
+        });
+
+        this._mainDb = this._db.openDbi({
+            name: null,
+            create: true
+        });
 
         return this._initDB();
     }
@@ -95,17 +65,37 @@ class JungleDB {
     close() {
         if (this._connected) {
             this._connected = false;
-            return new Promise((resolve, error) => {
-                this._db.close(err => {
-                    if (err) {
-                        error(err);
-                        return;
-                    }
-                    resolve();
-                });
-            });
+            this._mainDb.close();
+            this._db.close();
         }
         return Promise.resolve();
+    }
+
+    /**
+     * Returns a promise of the current database version.
+     * @returns {number} The database version.
+     * @private
+     */
+    _readDBVersion() {
+        const tx = this._db.beginTxn({ readOnly: true });
+        const version = tx.getNumber(this._mainDb, '_dbVersion') || 0;
+        tx.commit();
+        return version;
+    }
+
+    /**
+     * Writes a new database version to the db.
+     * @private
+     */
+    _writeDBVersion(version) {
+        const tx = this._db.beginTxn();
+        tx.putNumber(this._mainDb, '_dbVersion', version);
+        tx.commit();
+    }
+
+    /** The underlying LMDB. */
+    get backend() {
+        return this._db;
     }
 
     /**
@@ -114,7 +104,25 @@ class JungleDB {
      */
     async destroy() {
         await this.close();
-        return LevelDBBackend.destroy(this._databaseDir);
+        JungleDB._deleteFolderRecursive(this._databaseDir);
+    }
+
+    /**
+     * @param {string} path
+     * @private
+     */
+    static _deleteFolderRecursive(path) {
+        if (fs.existsSync(path)) {
+            fs.readdirSync(path).forEach((file, index) => {
+                const curPath = `${path}/${file}`;
+                if (fs.lstatSync(curPath).isDirectory()) { // recurse
+                    JungleDB._deleteFolderRecursive(curPath);
+                } else { // delete file
+                    fs.unlinkSync(curPath);
+                }
+            });
+            fs.rmdirSync(path);
+        }
     }
 
     /**
@@ -124,32 +132,26 @@ class JungleDB {
      * @private
      */
     async _initDB() {
-        const storedVersion = await this._readDBVersion();
-        let promises = [];
+        const storedVersion = this._readDBVersion();
         // Upgrade database.
         if (this._dbVersion > storedVersion) {
             // Delete object stores, if requested.
             for (const { tableName, upgradeCondition } of this._objectStoresToDelete) {
                 if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(storedVersion, this._dbVersion)) {
-                    promises.push(LevelDBBackend.truncate(this._db, tableName));
+                    LMDBBackend.truncate(this._db, tableName);
                 }
             }
             this._objectStoresToDelete = [];
 
             // The order of the above promises does not matter.
-            await Promise.all(promises);
-            await this._writeDBVersion(this._dbVersion);
-            promises = [];
+            this._writeDBVersion(this._dbVersion);
         }
 
         // Create new ObjectStores.
         for (const { backend, upgradeCondition } of this._objectStoreBackends) {
             // We do not explicitly create object stores, therefore, we ignore the upgrade condition.
-            promises.push(backend.init(storedVersion, this._dbVersion));
+            backend.init(storedVersion, this._dbVersion);
         }
-
-        // The order of the above promises does not matter.
-        await Promise.all(promises);
 
         // Upgrade database (part 2).
         if (this._dbVersion > storedVersion) {
@@ -205,9 +207,8 @@ class JungleDB {
             return this._objectStores.get(tableName);
         }
 
-        // LevelDB already implements a LRU cache. so we don't need to cache it.
         const backend = persistent
-            ? new LevelDBBackend(this, tableName, codec)
+            ? new LMDBBackend(this, tableName, codec)
             : new InMemoryBackend(tableName, codec);
         const objStore = new ObjectStore(backend, this, tableName);
         this._objectStores.set(tableName, objStore);
@@ -243,35 +244,29 @@ class JungleDB {
         // If tx1 is a CombinedTransaction, flush it to the database.
         if (tx1 instanceof CombinedTransaction) {
             const functions = [];
-            let batch = [];
+            /** @type {Array.<Transaction>} */
+            const lmdbTransactions = [];
 
             const infos = await Promise.all(tx1.transactions.map(tx => tx.objectStore._backend.applyCombined(tx)));
             for (const info of infos) {
                 if (typeof info === 'function') {
                     functions.push(info);
                 } else {
-                    batch = batch.concat(info);
+                    lmdbTransactions.push(info);
                 }
             }
 
-            return new Promise((resolve, error) => {
-                if (batch.length > 0) {
-                    tx1.backend.backend.batch(batch, err => {
-                        if (err) {
-                            error(err);
-                            return;
-                        }
+            if (lmdbTransactions.length > 0) {
+                const txn = tx1.backend.backend.beginTxn();
 
-                        Promise.all(functions.map(f => f())).then(() => {
-                            resolve(true);
-                        });
-                    });
-                } else {
-                    Promise.all(functions.map(f => f())).then(() => {
-                        resolve(true);
-                    });
+                for (const tx of lmdbTransactions) {
+                    tx.objectStore._backend.applySync(tx, txn);
                 }
-            });
+
+                txn.commit();
+            }
+            await Promise.all(functions.map(f => f()));
+            return true;
         }
         txs.push(tx1);
         txs.push(tx2);
@@ -286,14 +281,29 @@ class JungleDB {
         return `JungleDB{name=${this._databaseDir}}`;
     }
 }
+/** @enum {number} */
+JungleDB.Encoding = {
+    STRING: 0,
+    NUMBER: 1,
+    BOOLEAN: 2,
+    BINARY: 3
+};
 /**
- * A LevelDB JSON encoding that can handle Uint8Arrays and Sets.
- * @type {{encode: function(val:*):*, decode: function(val:*):*, buffer: boolean, type: string}}
+ * A LMDB JSON encoding that can handle Uint8Arrays and Sets.
+ * @type {{encode: function(val:*):*, decode: function(val:*):*, encoding: JungleDB.Encoding}}
  */
 JungleDB.JSON_ENCODING = {
     encode: JSONUtils.stringify,
     decode: JSONUtils.parse,
-    buffer: false,
-    type: 'json'
+    encoding: JungleDB.Encoding.STRING
+};
+/**
+ * A LMDB binary encoding.
+ * @type {{encode: function(val:*):*, decode: function(val:*):*, encoding: JungleDB.Encoding}}
+ */
+JungleDB.BINARY_ENCODING = {
+    encode: x => x,
+    decode: x => x,
+    encoding: JungleDB.Encoding.BINARY
 };
 Class.register(JungleDB);

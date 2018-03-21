@@ -1,10 +1,10 @@
 /**
- * This class implements a persistent index for LevelDB.
+ * This class implements a persistent index for LMDB.
  */
-class PersistentIndex {
+class PersistentIndex extends LMDBBackend {
     /**
-     * Creates a new PersistentIndex for a LevelDB backend.
-     * @param {LevelDBBackend} objectStore The underlying LevelDB backend.
+     * Creates a new PersistentIndex for a LMDB backend.
+     * @param {LMDBBackend} objectStore The underlying LMDB backend.
      * @param {JungleDB} db The underlying JungleDB.
      * @param {string} indexName The index name.
      * @param {string|Array.<string>} [keyPath] The key path of the indexed attribute.
@@ -13,10 +13,11 @@ class PersistentIndex {
      * @param {boolean} [unique] Whether there is a unique constraint on the attribute.
      */
     constructor(objectStore, db, indexName, keyPath, multiEntry=false, unique=false) {
-        this._prefix = `_${objectStore.tableName}-${indexName}`;
-        this._indexBackend = new LevelDBBackend(db, this._prefix);
+        const prefix = `_${objectStore.tableName}-${indexName}`;
+        super(db, prefix, undefined, { keyEncoding: GenericValueEncoding });
+        this._prefix = prefix;
 
-        /** @type {LevelDBBackend} */
+        /** @type {LMDBBackend} */
         this._objectStore = objectStore;
         this._indexName = indexName;
         this._keyPath = keyPath;
@@ -24,41 +25,9 @@ class PersistentIndex {
         this._unique = unique;
     }
 
-    /** The levelDB backend. */
+    /** The LMDB backend. */
     get backend() {
-        return this._indexBackend;
-    }
-
-    /**
-     * Reinitialises the index.
-     * @returns {Promise} The promise resolves after emptying the index.
-     */
-    truncate() {
-        return this._indexBackend.truncate();
-    }
-
-    /**
-     * Returns batch operations to reinitialise the index.
-     * @returns {Promise.<Array>} The promise contains the batch operations.
-     */
-    async _truncate() {
-        return LevelDBBackend._truncate(this._indexBackend._dbBackend);
-    }
-
-    /**
-     * Closes the connection to the index database.
-     * @returns {Promise} The promise resolves after closing the object store.
-     */
-    close() {
-        return this._indexBackend.close();
-    }
-
-    /**
-     * Fully deletes the database of the index.
-     * @returns {Promise} The promise resolves after deleting the database.
-     */
-    destroy() {
-        return this._indexBackend.destroy();
+        return this;
     }
 
     /**
@@ -80,16 +49,16 @@ class PersistentIndex {
      * A helper method to insert a primary-secondary key pair into the tree.
      * @param {string} primaryKey The primary key.
      * @param {*} iKeys The indexed key.
-     * @param {Transaction} tx The transaction in which to track the changes.
+     * @param txn
      * @throws if the uniqueness constraint is violated.
      */
-    async _insert(primaryKey, iKeys, tx) {
+    _insert(primaryKey, iKeys, txn) {
         if (!this._multiEntry || !Array.isArray(iKeys)) {
             iKeys = [iKeys];
         }
 
         for (const secondaryKey of iKeys) {
-            let pKeys = await tx.get(secondaryKey);
+            let pKeys = super._get(txn, secondaryKey);
             if (this._unique) {
                 if (pKeys !== undefined) {
                     throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
@@ -99,7 +68,7 @@ class PersistentIndex {
                 pKeys = pKeys || [];
                 pKeys.push(primaryKey);
             }
-            await tx.put(secondaryKey, pKeys);
+            super._put(txn, secondaryKey, pKeys);
         }
     }
 
@@ -107,21 +76,21 @@ class PersistentIndex {
      * A helper method to remove a primary-secondary key pair from the tree.
      * @param {string} primaryKey The primary key.
      * @param {*} iKeys The indexed key.
-     * @param {Transaction} tx The transaction in which to track the changes.
+     * @param txn
      */
-    async _remove(primaryKey, iKeys, tx) {
+    _remove(primaryKey, iKeys, txn) {
         if (!this._multiEntry || !Array.isArray(iKeys)) {
             iKeys = [iKeys];
         }
         // Remove all keys.
         for (const secondaryKey of iKeys) {
-            let pKeys = await tx.get(secondaryKey);
+            let pKeys = super._get(txn, secondaryKey);
             if (pKeys) {
                 if (!this._unique && pKeys.length > 1) {
                     pKeys.splice(pKeys.indexOf(primaryKey), 1);
-                    await tx.put(secondaryKey, pKeys);
+                    super._put(txn, secondaryKey, pKeys);
                 } else {
-                    await tx.remove(secondaryKey);
+                    super._remove(txn, secondaryKey);
                 }
             }
         }
@@ -133,52 +102,45 @@ class PersistentIndex {
      * @param {string} key The primary key of the pair.
      * @param {*} value The value of the pair. The indexed key will be extracted from this.
      * @param {*} [oldValue] The old value associated with the primary key.
-     * @param {Transaction} [tx] The transaction in which to track the changes.
-     * @returns {Promise.<?Array>}
+     * @param txn
      */
-    async put(key, value, oldValue, tx) {
-        const internalTx = tx || new Transaction(null, this._indexBackend, this._indexBackend, false);
+    put(key, value, oldValue, txn) {
         const oldIKey = this._indexKey(key, oldValue);
         const newIKey = this._indexKey(key, value);
 
         if (oldIKey !== undefined) {
-            await this._remove(key, oldIKey, internalTx);
+            this._remove(key, oldIKey, txn);
         }
         if (newIKey !== undefined) {
-            await this._insert(key, newIKey, internalTx);
+            this._insert(key, newIKey, txn);
         }
-        return tx ? null : this._indexBackend.applyCombined(internalTx);
     }
 
     /**
      * Removes a key-value pair from the index.
      * @param {string} key The primary key of the pair.
      * @param {*} oldValue The old value of the pair. The indexed key will be extracted from this.
-     * @param {Transaction} [tx] The transaction in which to track the changes.
-     * @returns {Promise.<Transaction>}
+     * @param txn
      */
-    async remove(key, oldValue, tx) {
-        const internalTx = tx || new Transaction(null, this._indexBackend, this._indexBackend, false);
-
+    remove(key, oldValue, txn) {
         const iKey = this._indexKey(key, oldValue);
         if (iKey !== undefined) {
-            await this._remove(key, iKey, internalTx);
+            this._remove(key, iKey, txn);
         }
-        return tx ? null : this._indexBackend.applyCombined(internalTx);
     }
 
     /**
      * A helper method to retrieve the values corresponding to a set of keys.
      * @param {Array.<string|Array.<string>>} results The set of keys to get the corresponding values for.
-     * @returns {Promise.<Array.<*>>} A promise of the array of values.
+     * @returns {Array.<*>} The array of values.
      * @protected
      */
-    async _retrieveValues(results) {
-        const valuePromises = [];
+    _retrieveValues(results) {
+        const values = [];
         for (const key of this._retrieveKeys(results)) {
-            valuePromises.push(this._objectStore.get(key));
+            values.push(this._objectStore.getSync(key));
         }
-        return Promise.all(valuePromises);
+        return values;
     }
 
     /**
@@ -202,74 +164,26 @@ class PersistentIndex {
     }
 
     /**
-     * Initialises the persistent index by validating the version numbers
-     * and loading the InMemoryIndex from the database.
-     * @param {number} oldVersion
-     * @param {number} newVersion
-     * @param {boolean} isUpgrade
-     * @returns {Promise.<PersistentIndex>} A promise of the fully initialised index.
-     */
-    async init(oldVersion, newVersion, isUpgrade) {
-        await this._indexBackend.init(oldVersion, newVersion, GenericValueEncoding);
-
-        // Initialise the index on first construction.
-        if (isUpgrade) {
-            const tx = new EncodedTransaction(this._indexBackend.tableName);
-            await this._objectStore.valueStream((value, primaryKey) => {
-                const keyPathValue = ObjectUtils.byKeyPath(value, this._keyPath);
-                if (keyPathValue !== undefined) {
-                    // Support for multi entry secondary key paths.
-                    let iKeys = keyPathValue;
-                    if (!this._multiEntry || !Array.isArray(iKeys)) {
-                        iKeys = [iKeys];
-                    }
-
-                    for (const secondaryKey of iKeys) {
-                        let pKeys = tx.get(secondaryKey);
-                        if (this._unique) {
-                            if (pKeys !== undefined) {
-                                throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
-                            }
-                            pKeys = primaryKey;
-                        } else {
-                            pKeys = pKeys || [];
-                            pKeys.push(primaryKey);
-                        }
-                        tx.put(secondaryKey, pKeys);
-                    }
-                }
-            });
-            await this._indexBackend._apply(tx);
-        }
-
-        return this;
-    }
-
-    /**
      * Internally applies a transaction to the store's state.
      * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
      * or no changes are applied.
      * @param {Transaction} tx The transaction to apply.
-     * @returns {Promise.<Array>} The promise resolves after applying the transaction.
-     * @protected
+     * @param txn
+     * @override
      */
-    async _apply(tx) {
-        const internalTx = new Transaction(null, this._indexBackend, this._indexBackend, false);
-
+    applySync(tx, txn) {
         if (tx._truncated) {
-            await internalTx.truncate();
+            this._truncate(txn);
         }
 
         for (const key of tx._removed) {
             const oldValue = tx._originalValues.get(key);
-            await this.remove(key, oldValue, internalTx);
+            this.remove(key, oldValue, txn);
         }
         for (const [key, value] of tx._modified) {
             const oldValue = tx._originalValues.get(key);
-            await this.put(key, value, oldValue, internalTx);
+            this.put(key, value, oldValue, txn);
         }
-
-        return this._indexBackend.applyCombined(internalTx);
     }
 
     /**
@@ -308,7 +222,7 @@ class PersistentIndex {
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
     async values(query=null) {
-        const results = await this._indexBackend.values(query);
+        const results = await LMDBBackend.prototype.values.call(this, query);
         return this._retrieveValues(values);
     }
 
@@ -320,7 +234,7 @@ class PersistentIndex {
      * @returns {Promise.<Set.<string>>} A promise of the set of primary keys relevant to the query.
      */
     async keys(query=null) {
-        const results = await this._indexBackend.values(query);
+        const results = await LMDBBackend.prototype.values.call(this, query);
         return Set.from(this._retrieveKeys(results));
     }
 
@@ -332,7 +246,7 @@ class PersistentIndex {
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async maxValues(query=null) {
-        const result = await this._indexBackend.maxValue(query);
+        const results = await this.maxValue(query);
         return this._retrieveValues([result]);
     }
 
@@ -344,7 +258,7 @@ class PersistentIndex {
      * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async maxKeys(query=null) {
-        return Set.from(await this._indexBackend.maxValue(query));
+        return Set.from(await this.maxValue(query));
     }
 
     /**
@@ -355,7 +269,7 @@ class PersistentIndex {
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async minValues(query=null) {
-        const result = await this._indexBackend.minValue(query);
+        const result = await this.minValue(query);
         return this._retrieveValues([result]);
     }
 
@@ -367,7 +281,7 @@ class PersistentIndex {
      * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async minKeys(query=null) {
-        return Set.from(await this._indexBackend.minValue(query));
+        return Set.from(await this.minValue(query));
     }
 
     /**
@@ -378,8 +292,33 @@ class PersistentIndex {
      * @returns {Promise.<number>}
      */
     async count(query=null) {
-        const results = await this._indexBackend.values(query);
+        const results = await LMDBBackend.prototype.values.call(this, query);
         return this._retrieveKeys(results).length;
+    }
+
+    /**
+     * Initialises the persistent index by validating the version numbers
+     * and loading the InMemoryIndex from the database.
+     * @param {number} oldVersion
+     * @param {number} newVersion
+     * @param {boolean} isUpgrade
+     * @returns {PersistentIndex} The fully initialised index.
+     */
+    init(oldVersion, newVersion, isUpgrade) {
+        super.init(oldVersion, newVersion, GenericValueEncoding);
+
+        // Initialise the index on first construction.
+        if (isUpgrade) {
+            const txn = this._env.beginTxn();
+
+            this._objectStore._readStream((value, primaryKey) => {
+                this.put(primaryKey, value, undefined, txn);
+            });
+
+            txn.commit();
+        }
+
+        return this;
     }
 }
 Class.register(PersistentIndex);

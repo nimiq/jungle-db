@@ -128,8 +128,8 @@ class InMemoryIndex {
      */
     remove(key, oldValue) {
         const treeTx = this._tree.transaction();
-        if (oldValue !== undefined) {
-            const iKey = this._indexKey(key, oldValue);
+        const iKey = this._indexKey(key, oldValue);
+        if (iKey !== undefined) {
             this._remove(key, iKey, treeTx);
         }
         return treeTx;

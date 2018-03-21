@@ -12,8 +12,9 @@ class JungleDB {
      * @param {string} name The name of the database.
      * @param {number} dbVersion The current version of the database.
      * @param {function(oldVersion:number, newVersion:number)} [onUpgradeNeeded] A function to be called after upgrades of the structure.
+     * @param {object} [options]
      */
-    constructor(name, dbVersion, onUpgradeNeeded) {
+    constructor(name, dbVersion, onUpgradeNeeded, options) {
         if (dbVersion <= 0) throw new Error('The version provided must not be less or equal to 0');
         this._databaseDir = name;
         this._dbVersion = dbVersion;
