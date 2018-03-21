@@ -1,5 +1,4 @@
 if (typeof(require) !== 'undefined') {
-    JDB = require('../../dist/node.js');
     Stats = require('./Stats.js');
     BenchmarkUtils = require('./BenchmarkUtils.js');
 }
@@ -10,19 +9,37 @@ class Benchmark {
      * @param {number} benchmarkVersion
      * @param {Array.<string>} tableNames
      */
-    constructor(name, benchmarkVersion = 1, tableNames = ['default']) {
+    constructor(name, benchmarkVersion = 1, tableNames = ['default'], indices = {}) {
         this.name = name;
         this._databaseName = `db-${name}`;
         this._tableNames = tableNames;
         this._objectStores = [];
+        this._indices = indices;
         this._benchmarkVersion = benchmarkVersion;
         this._db = null;
+
+        this._jdbOptions = {};
+        this._jdb = null;
+    }
+
+    setJDB(customJDB, options) {
+        this._jdb = customJDB;
+        this._jdbOptions = options || {};
+    }
+
+    get jdb() {
+        return this._jdb ? this._jdb : JDB;
     }
 
     async _init() {
-        this._db = new JDB.JungleDB(this._databaseName, this._benchmarkVersion);
+        this._db = new this.jdb.JungleDB(this._databaseName, this._benchmarkVersion, undefined, this._jdbOptions);
         for (const tableName of this._tableNames) {
-            this._objectStores.push(this._db.createObjectStore(tableName));
+            const store = this._db.createObjectStore(tableName);
+            this._objectStores.push(store);
+            if (this._indices[tableName]) {
+                const { name, keyPath } = this._indices[tableName];
+                store.createIndex(name, keyPath);
+            }
         }
         await this._db.connect();
     }
@@ -56,7 +73,6 @@ class Benchmark {
      * @returns {Promise.<Stats>}
      */
     async run(count = 2) {
-        BenchmarkUtils.logColored(`\n\nRun benchmark ${this.description || this.name}:`);
         await this._init();
         const stats = [];
         for (let i=0; i<count; ++i) {
@@ -64,8 +80,6 @@ class Benchmark {
             const startTime = Date.now();
             await this._benchmark(runStats); // eslint-disable-line no-await-in-loop
             const elapsedTime = Date.now() - startTime;
-            console.log(`Run ${i+1} took ${elapsedTime/1000} seconds.`);
-            console.log(runStats.toString());
             stats.push(runStats);
             if (i<count-1) {
                 // if another run follows, reset the benchmark
@@ -74,7 +88,7 @@ class Benchmark {
         }
         await this._finalCleanup();
         const averageStats = Stats.averageStats(stats);
-        BenchmarkUtils.logColored(averageStats.toString());
+        BenchmarkUtils.logColored(`${this.description || this.name},${averageStats.totalTime()}`);
         return averageStats;
     }
 }

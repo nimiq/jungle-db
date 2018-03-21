@@ -4,10 +4,11 @@ if (typeof(require) !== 'undefined') {
     BenchmarkRead = require('./BenchmarkRead.js');
     BenchmarkDelete = require('./BenchmarkDelete.js');
     BenchmarkReadFromMultiple = require('./BenchmarkReadFromMultiple.js');
+    BenchmarkReadIndex = require('./BenchmarkReadIndex.js');
 }
 
 class BenchmarkRunner {
-    static async runBenchmarks(benchmarkUi = null) {
+    static async runBenchmarks(benchmarkUi = null, customJDB = null, options = {}) {
         if (benchmarkUi) {
             for (const benchmarkDescription of BenchmarkRunner.BenchmarkDescriptions) {
                 const type = benchmarkDescription.benchmark.NAME;
@@ -25,9 +26,10 @@ class BenchmarkRunner {
                 let result;
                 try {
                     const benchmark = new benchmarkDescription.benchmark(params);
+                    benchmark.setJDB(customJDB, options);
                     result = await benchmark.run(); // eslint-disable-line no-await-in-loop
-                } catch(e) {
-                    console.log('\nSkipped invalid configuration', params, 'because of error', e);
+                } catch (e) {
+                    // console.log('\nSkipped invalid configuration', params, 'because of error', e);
                     result = null;
                 }
                 if (benchmarkUi) {
@@ -103,7 +105,7 @@ BenchmarkRunner.BenchmarkDescriptions = [
         entryCount: [100, 500, 1000, 10000],
         entrySize: [100, 1000, 100000],
         batchSize: [1, 100, 500],
-        sync: [true, false]
+        sync: [true]
     },
     {
         benchmark: BenchmarkOverwrite,
@@ -111,7 +113,7 @@ BenchmarkRunner.BenchmarkDescriptions = [
         overwriteCount: [1000, 10000],
         entrySize: [10, 100, 1000],
         batchSize: [1, 10, 100, 1000],
-        sync: [true, false]
+        sync: [true]
     },
     {
         benchmark: BenchmarkRead,
@@ -119,7 +121,7 @@ BenchmarkRunner.BenchmarkDescriptions = [
         readCount: [10, 100, 1000],
         entrySize: [100, 1000, 1000000],
         batchSize: [1, 10, 100],
-        sync: [true, false]
+        sync: [true]
     },
     {
         benchmark: BenchmarkDelete,
@@ -127,7 +129,7 @@ BenchmarkRunner.BenchmarkDescriptions = [
         deleteCount: [10, 100, 1000],
         entrySize: [100, 1000],
         batchSize: [1, 10, 100],
-        sync: [true, false]
+        sync: [true]
     },
     {
         benchmark: BenchmarkReadFromMultiple,
@@ -136,7 +138,23 @@ BenchmarkRunner.BenchmarkDescriptions = [
         totalEntrySize: [100, 1000],
         numberTables: [1, 2, 3],
         batchSize: [1, 10, 100],
-        sync: [true, false]
+        sync: [true]
+    },
+    {
+        benchmark: BenchmarkReadIndex,
+        databaseEntryCount: [100, 500, 1000],
+        readCount: [10, 100, 1000],
+        entrySize: [100, 1000, 1000000],
+        batchSize: [1, 10, 100],
+        sync: [true]
+    },
+    {
+        benchmark: BenchmarkReadIndex,
+        databaseEntryCount: [100000],
+        readCount: [10, 100, 1000],
+        entrySize: [100, 1000],
+        batchSize: [1, 10, 100],
+        sync: [true]
     }
 ];
 

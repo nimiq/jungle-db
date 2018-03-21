@@ -6,7 +6,7 @@ describe('PlatformSpecificBackend', () => {
     };
 
     beforeEach((done) => {
-        db = new JungleDB('test', 1);
+        db = new JungleDB('test', 1, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
         objectStore = db.createObjectStore('testStore');
 
         allKeys = new Set();

@@ -153,7 +153,8 @@ class SynchronousTransaction extends Transaction {
      * @override
      */
     snapshot() {
-        throw new Error('Invalid call on SynchronousTransaction');
+        if (!this._objectStore.isSynchronous()) throw new Error('Invalid call on SynchronousTransaction');
+        return super.snapshot();
     }
 
     /**

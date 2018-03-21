@@ -1,0 +1,12 @@
+{
+  "spec_dir": "src/test",
+  "spec_files": [
+    "generic/**/*.[sS]pec.js",
+    "backend/lmdb/**/*.[sS]pec.js"
+  ],
+  "helpers": [
+    "backend/lmdb/spec.js"
+  ],
+  "stopSpecOnExpectationFailure": false,
+  "random": false
+}

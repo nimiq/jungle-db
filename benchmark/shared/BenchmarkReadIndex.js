@@ -4,7 +4,7 @@ if (typeof(require) !== 'undefined') {
     RandomGenerator = require('./RandomGenerator.js');
 }
 
-class BenchmarkRead extends Benchmark {
+class BenchmarkReadIndex extends Benchmark {
     /**
      * A Benchmark where random, already existing database entries get read.
      * @param databaseEntryCount
@@ -18,14 +18,17 @@ class BenchmarkRead extends Benchmark {
             || (batchSize===1 && !sync)) { // we ignore this setting as it is the same as batchSize 1 with sync
             throw('Illegal parameter combination.');
         }
-        super(BenchmarkRead.NAME, BenchmarkRead.VERSION, [BenchmarkRead.TABLE_NAME]);
+        const indices = {};
+        indices[BenchmarkReadIndex.TABLE_NAME] = { name: 'index', keyPath: 'index' };
+        super(BenchmarkReadIndex.NAME, BenchmarkReadIndex.VERSION, [BenchmarkReadIndex.TABLE_NAME], indices);
         this._databaseEntryCount = databaseEntryCount;
         this._readCount = readCount;
         this._entrySize = entrySize;
         this._batchSize = batchSize;
         this._sync = sync;
         this._entryKeys = BenchmarkUtils.createRandomKeys(databaseEntryCount);
-        this.description = `${BenchmarkRead.NAME},${databaseEntryCount} entries,`
+        this._indexKeys = BenchmarkUtils.createRandomKeys(databaseEntryCount);
+        this.description = `${BenchmarkReadIndex.NAME},${databaseEntryCount} entries,`
             + `read ${readCount} entries,${entrySize} B/entry,${batchSize} ops/tx,`
             + `${this._sync? '' : 'a'}sync`;
     }
@@ -34,22 +37,23 @@ class BenchmarkRead extends Benchmark {
     async _init() {
         await super._init();
         // fill up the database
-        const objectStore = this._db.getObjectStore(BenchmarkRead.TABLE_NAME);
-        await BenchmarkUtils.fillObjectStore(objectStore, this._databaseEntryCount, this._entrySize, 1000, false,
-            this._entryKeys);
+        const objectStore = this._db.getObjectStore(BenchmarkReadIndex.TABLE_NAME);
+        await BenchmarkUtils.fillObjectStoreWithIndex(objectStore, this._databaseEntryCount, this._entrySize, 1000, false,
+            this._entryKeys, this._indexKeys);
     }
 
 
     async _benchmark(stats) {
         const readKeys = [];
         for (let i=0; i<this._readCount; ++i) {
-            readKeys.push(RandomGenerator.getRandomEntry(this._entryKeys));
+            readKeys.push(RandomGenerator.getRandomEntry(this._indexKeys));
         }
         const readOperation = (transaction, index) => {
             const key = readKeys[index];
-            return transaction.get(key);
+            const i = transaction.index('index');
+            return i.values(this.jdb.KeyRange.only(key));
         };
-        const objectStore = this._db.getObjectStore(BenchmarkRead.TABLE_NAME);
+        const objectStore = this._db.getObjectStore(BenchmarkReadIndex.TABLE_NAME);
         const result = await BenchmarkUtils.performBatchOperation(objectStore, this._readCount, this._batchSize,
             this._sync, readOperation);
         if (!result.results.every(entry => !!entry)) {
@@ -58,10 +62,10 @@ class BenchmarkRead extends Benchmark {
         stats.addReads(this._readCount, this._readCount * this._entrySize, result.totalTime);
     }
 }
-BenchmarkRead.NAME = 'benchmark-read';
-BenchmarkRead.TABLE_NAME = 'default';
-BenchmarkRead.VERSION = 1;
+BenchmarkReadIndex.NAME = 'benchmark-read-index';
+BenchmarkReadIndex.TABLE_NAME = 'default';
+BenchmarkReadIndex.VERSION = 1;
 
 if (typeof(module) !== 'undefined') {
-    module.exports = BenchmarkRead;
+    module.exports = BenchmarkReadIndex;
 }

@@ -25,8 +25,8 @@ class BenchmarkDelete extends Benchmark {
         this._batchSize = batchSize;
         this._sync = sync;
         this._entryKeys = BenchmarkUtils.createRandomKeys(databaseEntryCount);
-        this.description = `${BenchmarkDelete.NAME}, ${databaseEntryCount} entries in database, `
-            + `delete ${deleteCount} entries, ${entrySize} Bytes per entry, batch size ${batchSize}, `
+        this.description = `${BenchmarkDelete.NAME},${databaseEntryCount} entries,`
+            + `delete ${deleteCount} entries,${entrySize} B/entry,${batchSize} ops/tx,`
             + `${this._sync? '' : 'a'}sync`;
     }
 

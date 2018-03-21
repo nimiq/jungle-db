@@ -196,6 +196,10 @@ class Stats {
         }
     }
 
+    totalTime() {
+        return `${this.writeTimePerRun + this.readTimePerRun},${Stats._getTimeString(this.writeTimePerRun + this.readTimePerRun)}`;
+    }
+
     toString() {
         let result = '';
         if (this.writes > 0) {

@@ -3,31 +3,32 @@ class GenericValueEncoding {
         const binary = new Uint8Array(9);
         const dv = new DataView(binary.buffer);
         dv.setUint8(0, GenericValueEncoding.Type.INTEGER);
-        dv.setUint32(1, Math.floor(value / Math.pow(2, 32)), true);
-        dv.setUint32(5, value, true);
+        dv.setUint32(1, Math.floor(value / Math.pow(2, 32)));
+        dv.setUint32(5, value);
         return binary;
     }
     static _decodeInteger(binary) {
         const dv = new DataView(binary.buffer);
-        return dv.getUint32(1, true) * Math.pow(2, 32) + dv.getUint32(5, true);
+        return dv.getUint32(1) * Math.pow(2, 32) + dv.getUint32(5);
     }
 
-    static _fromString(string) {
-        const buf = new Uint8Array(string.length);
+    static _encodeString(string, type = GenericValueEncoding.Type.STRING) {
+        const buf = new Uint8Array(string.length + 1);
+        buf[0] = type;
         for (let i = 0; i < string.length; ++i) {
-            buf[i] = string.charCodeAt(i);
+            buf[i + 1] = string.charCodeAt(i);
         }
         return buf;
     }
-    static _toString(buffer) {
-        return String.fromCharCode.apply(null, buffer);
+    static _decodeString(buffer) {
+        return String.fromCharCode.apply(null, buffer.subarray(1));
     }
 
     static _encodeOther(obj) {
-        return String.fromCharCode(GenericValueEncoding.Type.JSON) + JungleDB.JSON_ENCODING.encode(obj);
+        return GenericValueEncoding._encodeString(JungleDB.JSON_ENCODING.encode(obj), GenericValueEncoding.Type.JSON);
     }
     static _decodeOther(buffer) {
-        return JungleDB.JSON_ENCODING.decode(buffer.substring(1));
+        return JungleDB.JSON_ENCODING.decode(GenericValueEncoding._decodeString(buffer));
     }
 
     static _encodeBuffer(buffer) {
@@ -42,36 +43,33 @@ class GenericValueEncoding {
 
     static encode(data) {
         if (Number.isInteger(data)) {
-            return GenericValueEncoding._toString(GenericValueEncoding._encodeInteger(data));
+            return GenericValueEncoding._encodeInteger(data);
         }
         if (typeof data === 'string') {
-            return String.fromCharCode(GenericValueEncoding.Type.STRING) + data;
+            return this._encodeString(data);
         }
         if (data instanceof Uint8Array) {
-            return GenericValueEncoding._toString(GenericValueEncoding._encodeBuffer(data));
+            return GenericValueEncoding._encodeBuffer(data);
         }
         return GenericValueEncoding._encodeOther(data);
     }
 
     static decode(data) {
-        const type = data.charCodeAt(0);
+        const type = data[0];
         switch (type) {
             case GenericValueEncoding.Type.INTEGER:
-                return GenericValueEncoding._decodeInteger(GenericValueEncoding._fromString(data));
+                return GenericValueEncoding._decodeInteger(data);
             case GenericValueEncoding.Type.STRING:
-                return data.substring(1);
+                return GenericValueEncoding._decodeString(data);
             case GenericValueEncoding.Type.BUFFER:
-                return GenericValueEncoding._decodeBuffer(GenericValueEncoding._fromString(data));
+                return GenericValueEncoding._decodeBuffer(data);
             default:
                 return GenericValueEncoding._decodeOther(data);
         }
     }
 
-    static get buffer() {
-        return false;
-    }
-    static get type() {
-        return 'generic-value-codec';
+    static get encoding() {
+        return JungleDB.Encoding.BINARY;
     }
 }
 /** @enum {number} */

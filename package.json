@@ -1,6 +1,6 @@
 {
   "name": "jungle-db",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "main": "dist/leveldb.js",
   "private": true,
   "scripts": {
@@ -9,6 +9,7 @@
     "esdoc": "esdoc",
     "test": "jasmine && gulp test",
     "test-leveldb": "jasmine",
+    "test-lmdb": "jasmine --config=spec/support/lmdb-jasmine.json",
     "test-indexeddb": "gulp test",
     "lint": "gulp eslint",
     "postinstall": "gulp build"
@@ -25,7 +26,8 @@
     "fs": "^0.0.1-security",
     "level-sublevel": "^6.6.1",
     "leveldown": "^2.1.1",
-    "levelup": "^2.0.0"
+    "levelup": "^2.0.0",
+    "node-lmdb": "^0.4.13"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",

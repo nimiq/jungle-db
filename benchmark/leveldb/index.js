@@ -3,6 +3,7 @@ process.on('uncaughtException', function(err){
     process.exit();
 });
 
+const JDB = require('../../dist/leveldb.js');
 const BenchmarkRunner = require('../shared/BenchmarkRunner.js');
 
-BenchmarkRunner.runBenchmarks().then(() => console.log('\nBenchmarks finished.'));
+BenchmarkRunner.runBenchmarks(undefined, JDB).then(() => console.log('\nBenchmarks finished.'));

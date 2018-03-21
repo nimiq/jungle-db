@@ -5,7 +5,7 @@ describe('JungleDB', () => {
 
         const db = new JungleDB('test', 1, () => {
             called = true;
-        });
+        }, { maxDbSize: 1024*1024*100, maxDbs: 10 });
 
         db.connect().then(() => {
             expect(called).toBe(true);
@@ -19,7 +19,7 @@ describe('JungleDB', () => {
         (async function () {
             let db = new JungleDB('test', 1, () => {
                 called = true;
-            });
+            }, { maxDbSize: 1024*1024*100, maxDbs: 10 });
             await db.connect();
             expect(called).toBe(true);
             expect(db._dbVersion).toBe(1);
@@ -28,7 +28,7 @@ describe('JungleDB', () => {
             called = false;
             db = new JungleDB('test', 1, () => {
                 called = true;
-            });
+            }, { maxDbSize: 1024*1024*100, maxDbs: 10 });
             await db.connect();
             expect(called).toBe(false);
             expect(db._dbVersion).toBe(1);
@@ -37,7 +37,7 @@ describe('JungleDB', () => {
             called = false;
             db = new JungleDB('test', 2, () => {
                 called = true;
-            });
+            }, { maxDbSize: 1024*1024*100, maxDbs: 10 });
             await db.connect();
             expect(called).toBe(true);
             expect(db._dbVersion).toBe(2);
@@ -48,27 +48,27 @@ describe('JungleDB', () => {
     it('can create and delete object stores', (done) => {
         (async function () {
             // Write something into an object store.
-            let db = new JungleDB('test', 1);
+            let db = new JungleDB('test', 1, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
             let st = db.createObjectStore('testStore');
             await db.connect();
             await st.put('test', 'succeeded');
             await db.close();
 
             // And test whether it is still there.
-            db = new JungleDB('test', 1);
+            db = new JungleDB('test', 1, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
             st = db.createObjectStore('testStore');
             await db.connect();
             expect(await st.get('test')).toBe('succeeded');
             await db.close();
 
             // Delete it now.
-            db = new JungleDB('test', 2);
+            db = new JungleDB('test', 2, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
             await db.deleteObjectStore('testStore');
             await db.connect();
             await db.close();
 
             // And check that is has been deleted.
-            db = new JungleDB('test', 3);
+            db = new JungleDB('test', 3, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
             st = db.createObjectStore('testStore');
             await db.connect();
             expect(await st.get('test')).toBe(undefined);
@@ -82,7 +82,7 @@ describe('JungleDB', () => {
             // Write something into an object store.
             let db = new JungleDB('testme', version, (oldVersion, newVersion) => {
                 upgradeCall = { called: true, oldVersion: oldVersion, newVersion: newVersion };
-            });
+            }, { maxDbSize: 1024*1024*100, maxDbs: 10 });
 
             const store = db.createObjectStore('books', { upgradeCondition: (oldVersion) => oldVersion < 1 });
             const titleIndex = store.createIndex('by_title', 'title', { upgradeCondition: (oldVersion) => oldVersion < 1 });

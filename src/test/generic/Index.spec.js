@@ -18,7 +18,7 @@ describe('Index', () => {
     it('can access longer keypaths', (done) => {
         (async function () {
             // Write something into an object store.
-            let db = new JungleDB('indexTest', 1);
+            let db = new JungleDB('indexTest', 1, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
             let st = db.createObjectStore('testStore');
             st.createIndex('testIndex', 'val');
             st.createIndex('testIndex2', ['a', 'b']);
@@ -38,7 +38,7 @@ describe('Index', () => {
     it('can handle values not conforming to index', (done) => {
         (async function () {
             // Write something into an object store.
-            let db = new JungleDB('indexTest', 1);
+            let db = new JungleDB('indexTest', 1, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
             let st = db.createObjectStore('testStore');
             st.createIndex('depth', ['treeInfo', 'depth']);
 
