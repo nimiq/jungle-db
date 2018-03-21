@@ -1,4 +1,5 @@
-const JDB = require('../../../../dist/node.js');
+const JDB = require('../../../../dist/leveldb.js');
+
 for(let i in JDB) global[i] = JDB[i];
 global.JDB = JDB;
 

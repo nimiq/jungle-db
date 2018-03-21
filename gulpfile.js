@@ -13,22 +13,22 @@ const util = require('gulp-util');
 const istanbul = require('istanbul-api');
 
 const sources = {
-    platform: {
-        browser: [
-            './src/main/platform/browser/Class.js',
-            './src/main/platform/browser/utils/IDBTools.js',
-            './src/main/platform/browser/utils/LogNative.js',
-            './src/main/platform/browser/IDBBackend.js',
-            './src/main/platform/browser/JungleDB.js',
-            './src/main/platform/browser/PersistentIndex.js'
+    backend: {
+        indexeddb: [
+            './src/main/backend/indexeddb/Class.js',
+            './src/main/backend/indexeddb/utils/IDBTools.js',
+            './src/main/backend/indexeddb/utils/LogNative.js',
+            './src/main/backend/indexeddb/IDBBackend.js',
+            './src/main/backend/indexeddb/JungleDB.js',
+            './src/main/backend/indexeddb/PersistentIndex.js'
         ],
-        node: [
-            './src/main/platform/nodejs/utils/LevelDBTools.js',
-            './src/main/platform/nodejs/utils/LogNative.js',
-            './src/main/platform/nodejs/utils/GenericValueEncoding.js',
-            './src/main/platform/nodejs/LevelDBBackend.js',
-            './src/main/platform/nodejs/JungleDB.js',
-            './src/main/platform/nodejs/PersistentIndex.js'
+        leveldb: [
+            './src/main/backend/leveldb/utils/LevelDBTools.js',
+            './src/main/backend/leveldb/utils/LogNative.js',
+            './src/main/backend/leveldb/utils/GenericValueEncoding.js',
+            './src/main/backend/leveldb/LevelDBBackend.js',
+            './src/main/backend/leveldb/JungleDB.js',
+            './src/main/backend/leveldb/PersistentIndex.js'
         ]
     },
     generic: [
@@ -61,10 +61,10 @@ const sources = {
             './src/test/generic/DummyBackend.js',
             './src/test/generic/**/*.spec.js'
         ],
-        browser: [
+        indexeddb: [
             './src/test/generic/TestCodec.js',
-            './src/test/platform/browser/BinaryCodec.js',
-            './src/test/platform/browser/**/*.spec.js'
+            './src/test/backend/indexeddb/BinaryCodec.js',
+            './src/test/backend/indexeddb/**/*.spec.js'
         ]
     },
     all: [
@@ -126,14 +126,14 @@ gulp.task('build-istanbul', function () {
     });
 });
 
-const BROWSER_SOURCES = [
-    './src/loader/browser/prefix.js.template',
-    ...sources.platform.browser,
+const INDEXEDDB_SOURCES = [
+    './src/loader/indexeddb/prefix.js.template',
+    ...sources.backend.indexeddb,
     ...sources.generic,
-    './src/loader/browser/suffix.js.template'
+    './src/loader/indexeddb/suffix.js.template'
 ];
 
-gulp.task('build-web-babel', function () {
+gulp.task('build-indexeddb-babel', function () {
     return merge(
         browserify([], {
             require: [
@@ -157,56 +157,56 @@ gulp.task('build-web-babel', function () {
             .pipe(source('babel.js'))
             .pipe(buffer())
             .pipe(uglify()),
-        gulp.src(BROWSER_SOURCES, { base: 'src' })
+        gulp.src(INDEXEDDB_SOURCES, { base: 'src' })
             .pipe(sourcemaps.init())
-            .pipe(concat('web.js'))
+            .pipe(concat('indexeddb.js'))
             .pipe(babel(babel_config)))
         .pipe(sourcemaps.init())
-        .pipe(concat('web-babel.js'))
+        .pipe(concat('indexeddb-babel.js'))
         .pipe(uglify(uglify_babel))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'));
 });
 
-gulp.task('build-web', function () {
-    return gulp.src(BROWSER_SOURCES, { base: 'src' })
+gulp.task('build-indexeddb', function () {
+    return gulp.src(INDEXEDDB_SOURCES, { base: 'src' })
         .pipe(sourcemaps.init())
-        .pipe(concat('web.js'))
+        .pipe(concat('indexeddb.js'))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'))
         .pipe(connect.reload());
 });
 
-gulp.task('build-web-istanbul', ['build-istanbul'], function () {
-    return gulp.src(BROWSER_SOURCES.map(f => f.indexOf('./src/main') === 0 ? `./.istanbul/${f}` : f), { base: 'src' })
+gulp.task('build-indexeddb-istanbul', ['build-istanbul'], function () {
+    return gulp.src(INDEXEDDB_SOURCES.map(f => f.indexOf('./src/main') === 0 ? `./.istanbul/${f}` : f), { base: 'src' })
         .pipe(sourcemaps.init({ loadMaps: true }))
-        .pipe(concat('web-istanbul.js'))
+        .pipe(concat('indexeddb-istanbul.js'))
         //.pipe(uglify(uglify_config))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'))
         .pipe(connect.reload());
 });
 
-const NODE_SOURCES = [
-    './src/loader/nodejs/index.prefix.js',
+const LEVELDB_SOURCES = [
+    './src/loader/leveldb/index.prefix.js',
     ...sources.generic,
-    ...sources.platform.node,
-    './src/loader/nodejs/index.suffix.js'
+    ...sources.backend.leveldb,
+    './src/loader/leveldb/index.suffix.js'
 ];
 
-gulp.task('build-node', function () {
-    return gulp.src(NODE_SOURCES, { base: 'src' })
+gulp.task('build-leveldb', function () {
+    return gulp.src(LEVELDB_SOURCES, { base: 'src' })
         .pipe(sourcemaps.init())
-        .pipe(concat('node.js'))
+        .pipe(concat('leveldb.js'))
         .pipe(uglify(uglify_config))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'));
 });
 
-gulp.task('build-node-istanbul', ['build-istanbul'], function () {
-    return gulp.src(NODE_SOURCES.map(f => `./.istanbul/${f}`))
+gulp.task('build-leveldb-istanbul', ['build-istanbul'], function () {
+    return gulp.src(LEVELDB_SOURCES.map(f => `./.istanbul/${f}`))
         .pipe(sourcemaps.init())
-        .pipe(concat('node-istanbul.js'))
+        .pipe(concat('leveldb-istanbul.js'))
         .pipe(uglify(uglify_config))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'));
@@ -214,7 +214,7 @@ gulp.task('build-node-istanbul', ['build-istanbul'], function () {
 
 gulp.task('test', ['watch'], function () {
     gulp.run(jasmine({
-        files: ['./src/test/platform/browser/spec.js', 'dist/web.js'].concat(sources.test.generic).concat(sources.test.browser)
+        files: ['./src/test/backend/indexeddb/spec.js', 'dist/indexeddb.js'].concat(sources.test.generic).concat(sources.test.indexeddb)
     }));
 });
 
@@ -226,10 +226,10 @@ gulp.task('eslint', function () {
         .pipe(eslint.failAfterError());
 });
 
-gulp.task('watch', ['build-web'], function () {
-    return gulp.watch(sources.all, ['build-web']);
+gulp.task('watch', ['build-indexeddb'], function () {
+    return gulp.watch(sources.all, ['build-indexeddb']);
 });
 
-gulp.task('build', ['build-web', 'build-web-babel', 'build-web-istanbul', 'build-node', 'build-node-istanbul']);
+gulp.task('build', ['build-indexeddb', 'build-indexeddb-babel', 'build-indexeddb-istanbul', 'build-leveldb', 'build-leveldb-istanbul']);
 
 gulp.task('default', ['build']);
