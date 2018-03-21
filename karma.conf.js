@@ -15,13 +15,13 @@ module.exports = function (config) {
 
         // list of files / patterns to load in the browser
         files: [
-            'src/test/platform/browser/spec.js',
-            'dist/web.js',
+            'src/test/backend/indexeddb/spec.js',
+            'dist/indexeddb.js',
             'src/test/**/DummyBackend.js',
             'src/test/generic/TestCodec.js',
-            'src/test/platform/browser/BinaryCodec.js',
+            'src/test/backend/indexeddb/BinaryCodec.js',
             'src/test/generic/**/*.spec.js',
-            'src/test/platform/browser/**/*.spec.js'
+            'src/test/backend/indexeddb/**/*.spec.js'
         ],
 
 
@@ -115,10 +115,10 @@ module.exports = function (config) {
     for (const version of [57, 58, 59, 60, 61, 62]) sauceLabsConfig('Windows 10', 'chrome', `${version}.0`, 'Chrome', version);
 
     if (process.env.USE_BABEL) {
-        configuration.files[1] = 'dist/web-babel.js';
+        configuration.files[1] = 'dist/indexeddb-babel.js';
     }
     if (process.env.USE_ISTANBUL) {
-        configuration.files[1] = 'dist/web-istanbul.js';
+        configuration.files[1] = 'dist/indexeddb-istanbul.js';
         configuration.reporters.push('coverage');
         configuration.coverageReporter = {
             reporters: [

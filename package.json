@@ -1,15 +1,15 @@
 {
   "name": "jungle-db",
   "version": "0.4.3",
-  "main": "dist/node.js",
+  "main": "dist/leveldb.js",
   "private": true,
   "scripts": {
     "prepare": "gulp build",
     "build": "gulp build",
     "esdoc": "esdoc",
     "test": "jasmine && gulp test",
-    "test-node": "jasmine",
-    "test-browser": "gulp test",
+    "test-leveldb": "jasmine",
+    "test-indexeddb": "gulp test",
     "lint": "gulp eslint",
     "postinstall": "gulp build"
   },

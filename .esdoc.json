@@ -1,7 +1,7 @@
 {
     "source": "./src",
     "includes": [
-        "^main/platform/browser/JungleDB.js$",
+        "^main/backend/indexeddb/JungleDB.js$",
         "^main/generic/"
     ],
     "destination": "./dist/doc",
