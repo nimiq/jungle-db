@@ -39,6 +39,7 @@ class BenchmarkUtils {
      * @param {number} [batchSize]
      * @param {boolean} [sync]
      * @param {Array.<string>} [keys]
+     * @param {Array.<string>} [indexKeys]
      * @param {Stats} [stats]
      * @returns {Promise.<void>}
      */

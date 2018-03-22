@@ -26,7 +26,7 @@ class BenchmarkRead extends Benchmark {
         this._sync = sync;
         this._entryKeys = BenchmarkUtils.createRandomKeys(databaseEntryCount);
         this.description = `${BenchmarkRead.NAME},${databaseEntryCount} entries,`
-            + `read ${readCount} entries,${entrySize} B/entry,${batchSize} ops/tx,`
+            + `read ${readCount} entries,${entrySize} B/entry,,${batchSize} ops/tx,`
             + `${this._sync? '' : 'a'}sync`;
     }
 

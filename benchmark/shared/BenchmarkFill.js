@@ -23,7 +23,7 @@ class BenchmarkFill extends Benchmark {
         this._batchSize = batchSize;
         this._useRandomKeys = useRandomKeys;
         this._sync = sync;
-        this.description = `${BenchmarkFill.NAME},${entryCount} entries,${entrySize} B/entry,`
+        this.description = `${BenchmarkFill.NAME},${entryCount} entries,${entrySize} B/entry,,`
             + `${batchSize} ops/tx,${useRandomKeys? 'random' : 'sequential'} keys,`
             + `${this._sync? '' : 'a'}sync`;
     }
