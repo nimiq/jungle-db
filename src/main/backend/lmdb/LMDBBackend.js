@@ -307,9 +307,10 @@ class LMDBBackend {
      * @param {function(value:*, key:string):boolean} callback A predicate called for each value and key until returning false.
      * @param {boolean} ascending Determines the direction of traversal.
      * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @param {boolean} keysOnly
      * @protected
      */
-    _readStream(callback, ascending = true, query = null) {
+    _readStream(callback, ascending = true, query = null, keysOnly = false) {
         const txn = this._env.beginTxn({ readOnly: true });
         const cursor = new lmdb.Cursor(txn, this._dbBackend, {
             keyIsBuffer: this._keyEncoding && this._keyEncoding.encoding === JungleDB.Encoding.BINARY
@@ -360,10 +361,14 @@ class LMDBBackend {
                 break;
             }
 
-            this._cursorGetCurrent(cursor, (key, value) => {
-                currentKey = key;
-                currentValue = value;
-            });
+            if (keysOnly) {
+                currentValue = undefined;
+            } else {
+                this._cursorGetCurrent(cursor, (key, value) => {
+                    currentKey = key;
+                    currentValue = value;
+                });
+            }
 
             // Only consider return value if not undefined.
             const shouldContinue = callback(currentValue, currentKey);
@@ -414,7 +419,7 @@ class LMDBBackend {
         let resultSet = new Set();
         this._readStream((value, key) => {
             resultSet.add(key);
-        }, true, query);
+        }, true, query, true);
         return Promise.resolve(resultSet);
     }
 
@@ -430,7 +435,7 @@ class LMDBBackend {
     keyStream(callback, ascending=true, query=null) {
         this._readStream((value, key) => {
             return callback(key);
-        }, ascending, query);
+        }, ascending, query, true);
         return Promise.resolve();
     }
 
@@ -478,7 +483,7 @@ class LMDBBackend {
         this._readStream((value, key) => {
             maxKey = key;
             return false;
-        }, false, query);
+        }, false, query, true);
         return Promise.resolve(maxKey);
     }
 
@@ -510,7 +515,7 @@ class LMDBBackend {
         this._readStream((value, key) => {
             minKey = value;
             return false;
-        }, true, query);
+        }, true, query, true);
         return Promise.resolve(minKey);
     }
 
@@ -525,7 +530,7 @@ class LMDBBackend {
         let i = 0;
         this._readStream((value, key) => {
             i++;
-        }, true, query);
+        }, true, query, true);
         return Promise.resolve(i);
     }
 
