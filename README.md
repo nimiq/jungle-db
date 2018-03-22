@@ -24,8 +24,108 @@ cd clients/nodejs/
 node index.js
 ```
 
-### API
-We're currently annotating all classes and methods to get a complete API documentation.
+### Usage
+
+## Getting started
+Depending on your target and preferences, include one of the files in the dist folder into your application.
+
+* Modern Browsers: `indexeddb.js`
+* Browser backwards compatibility: `indexeddb-babel.js`
+* NodeJS LevelDB: `leveldb.js`
+* NodeJS LMDB: `lmdb.js`
+
+Then, create a `JungleDB` instance and potential object stores as follows:
+```javascript
+// Create a JungleDB instance
+// The maxDbSize option is only required for LMDB based databases
+const db = new JungleDB('myDatabase', 1, undefined, { maxDbSize: 1024*1024 });
+
+// Create an object store
+db.createObjectStore('myStore');
+
+// Switch to an async context
+(async function() {
+    // Connect to your database
+    await db.connect();
+
+    // Now you can easily put/get/remove objects and use transactions.
+    const store = db.getObjectStore('myStore');
+
+    const tx = store.transaction();
+    await tx.put('test', 'value');
+    
+    // Prints value
+    console.log(await tx.get('test'));
+    // Prints undefined due to read isolation
+    console.log(await store.get('test'));
+    
+    await tx.commit();
+    
+    // Prints value
+    console.log(await store.get('test'));
+    await store.remove('test');
+})();
+```
+
+If your next application version now includes an index, you can use upgrade conditions:
+```javascript
+// Create a JungleDB instance with a new version
+// The maxDbSize option is only required for LMDB based databases
+const db = new JungleDB('myDatabase', 2, undefined, { maxDbSize: 1024*1024 });
+
+// Create an object store
+// The upgrade condition specifies that the store needs to be physically created
+// if the database version is less than 1 (since we created it in version 1).
+const st = db.createObjectStore('myStore', { upgradeCondition: version => version < 1 });
+st.createIndex('myIndex', 'i', { upgradeCondition: version => version < 2 });
+
+// Switch to an async context
+(async function() {
+    // Connect to your database
+    await db.connect();
+
+    // Now you can easily put/get/remove objects and use transactions.
+    const store = db.getObjectStore('myStore');
+
+    const tx = store.transaction();
+    await tx.put('test', {'i': 1, 'data': 'value'});
+    
+    // Prints {'i': 1, 'data': 'value'}
+    console.log(await tx.get('test'));
+    // Prints undefined due to read isolation
+    console.log(await store.get('test'));
+    
+    await tx.commit();
+    
+    // Prints {'i': 1, 'data': 'value'}
+    console.log(await store.get('test'));
+    
+    // Prints [{'i': 1, 'data': 'value'}]
+    console.log(await store.index('myIndex').values(KeyRange.only(1)));
+    console.log(await store.values(Query.eq('myIndex', 1)));
+    
+    await store.remove('test');
+})();
+```
+
+## Encoding
+JungleDB allows to specify custom encodings for values (primary keys are currently restricted to strings only).
+The encoding is only applied immediately before writing/after reading from the underlying backend.
+A custom encoding – implementing the `ICodec` interface – can be passed to the `JungleDB.createObjectStore(tableName, options)` method in the `options` argument as follows:
+
+```javascript
+db.createObjectStore('test', {
+    codec: {
+        encode: value => yourEncodeFunction(value),
+        decode: (value, key) => yourDecodeFunction(value, key),
+        valueEncoding: JungleDB.JSON_ENCODING // This property is only used for levelDB and LMDB.
+    }    
+});
+``` 
+
+The `valueEncoding` property defines a backend specific encoding.
+While the default JSON encoding is sufficient for most cases, it can be used to optimise storage in case only binary data is stored.
+There is also the possibility to define different backend specific encodings for LevelDB and LMDB using `leveldbValueEncoding` and `lmdbValueEncoding`.
 
 ### Benchmarks
 

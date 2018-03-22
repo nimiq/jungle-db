@@ -223,7 +223,7 @@ class PersistentIndex extends LMDBBackend {
      */
     async values(query=null) {
         const results = await LMDBBackend.prototype.values.call(this, query);
-        return this._retrieveValues(values);
+        return this._retrieveValues(results);
     }
 
     /**

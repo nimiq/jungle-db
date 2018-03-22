@@ -31,7 +31,8 @@ class LMDBBackend {
     }
 
     get _valueEncoding() {
-        return this._codec === null ? JungleDB.JSON_ENCODING : this._codec.valueEncoding;
+        return this._codec === null ? JungleDB.JSON_ENCODING :
+            (this._codec.valueEncoding || this._codec.lmdbValueEncoding || JungleDB.JSON_ENCODING);
     }
 
     /**

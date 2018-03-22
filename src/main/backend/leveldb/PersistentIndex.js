@@ -309,7 +309,7 @@ class PersistentIndex {
      */
     async values(query=null) {
         const results = await this._indexBackend.values(query);
-        return this._retrieveValues(values);
+        return this._retrieveValues(results);
     }
 
     /**

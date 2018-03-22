@@ -28,7 +28,8 @@ class LevelDBBackend {
     }
 
     get _valueEncoding() {
-        return this._codec === null ? JungleDB.JSON_ENCODING : this._codec.valueEncoding;
+        return this._codec === null ? JungleDB.JSON_ENCODING :
+            (this._codec.valueEncoding || this._codec.leveldbValueEncoding || JungleDB.JSON_ENCODING);
     }
 
     /**
