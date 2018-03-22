@@ -25,7 +25,7 @@ class BenchmarkOverwrite extends Benchmark {
         this._sync = sync;
         this._entryKeys = BenchmarkUtils.createRandomKeys(databaseEntryCount);
         this.description = `${BenchmarkOverwrite.NAME},${databaseEntryCount} entries,`
-            + `overwrite ${overwriteCount} entries,${entrySize} B/entry,${batchSize} ops/tx,`
+            + `overwrite ${overwriteCount} entries,${entrySize} B/entry,,${batchSize} ops/tx,`
             + `${this._sync? '' : 'a'}sync`;
     }
 

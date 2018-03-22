@@ -29,7 +29,7 @@ class BenchmarkReadIndex extends Benchmark {
         this._entryKeys = BenchmarkUtils.createRandomKeys(databaseEntryCount);
         this._indexKeys = BenchmarkUtils.createRandomKeys(databaseEntryCount);
         this.description = `${BenchmarkReadIndex.NAME},${databaseEntryCount} entries,`
-            + `read ${readCount} entries,${entrySize} B/entry,${batchSize} ops/tx,`
+            + `read ${readCount} entries,${entrySize} B/entry,,${batchSize} ops/tx,`
             + `${this._sync? '' : 'a'}sync`;
     }
 
