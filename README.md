@@ -1,6 +1,6 @@
 # jungle-db [![Build Status](https://travis-ci.org/nimiq-network/jungle-db.svg?branch=master)](https://travis-ci.org/nimiq-network/jungle-db)
 
-JungleDB is a simple database abstraction layer for NodeJS (LevelDB) and Browsers (IndexedDB) supporting advanced features such as transactions with read-isolation and secondary indices.
+JungleDB is a simple database abstraction layer for NodeJS (LevelDB or LMDB) and browsers (IndexedDB) supporting advanced features such as transactions with read-isolation and secondary indices.
 
 ## Quickstart
 
@@ -29,57 +29,40 @@ We're currently annotating all classes and methods to get a complete API documen
 
 ### Benchmarks
 
-#### Run Browser Benchmarks
-Open `benchmark/browser/index.html` in your browser
+#### Run IndexedDB Benchmarks
+Open `benchmark/indexeddb/index.html` in your browser
 
-#### Run NodeJs Benchmarks
+#### Run LevelDB Benchmarks
 
-Start the example by running `benchmark/nodejs/index.js`.
+Start the example by running `benchmark/leveldb/index.js`.
 
 ```bash
-cd benchmark/nodejs/
+cd benchmark/leveldb/
 node index.js
 ```
 
+#### Run LMDB Benchmarks
 
-## Developers
-Developers are free to choose between npm and yarn for managing the dependencies.
-### Installation for Core Developers (using npm)
-- NodeJs latest version (> 7.9.0)
-- Dependencies: `npm install`
-- NodeJs dependencies:
+Start the example by running `benchmark/lmdb/index.js`.
 
-	```bash
-	cd src/main/platform/nodejs/
-	npm install
-	cd clients/nodejs/
-	npm install
-	```
-
-### Installation for Core Developers (using yarn)
-- NodeJs latest version (> 7.9.0)
-- Dependencies: `yarn install`
-- NodeJs dependencies:
-
-	```bash
-	cd src/main/platform/nodejs/
-	yarn install
-	cd clients/nodejs/
-	yarn install
-	```
+```bash
+cd benchmark/lmdb/
+node index.js
+```
 
 ### Test and Build
 
 #### Run Testsuite
 - `npm test` or `yarn test` runs browser and NodeJS tests.
-- `npm run test-browser` or `yarn test-browser` runs the testsuite in your browser only.
-- `npm run test-node` or `yarn test-node` runs the testsuite in NodeJS only.
+- `npm run test-indexeddb` or `yarn test-indexeddb` runs the testsuite in your browser only.
+- `npm run test-leveldb` or `yarn test-leveldb` runs the LevelDB testsuite for NodeJS only.
+- `npm run test-lmdb` or `yarn test-lmdb` runs the LMDB testsuite for NodeJS only.
 
 #### Run ESLint
 `npm run lint` or `yarn lint` runs the ESLint javascript linter.
 
 #### Build
-Executing `npm run build` or `yarn build` concatenates all sources into `dist/{web,node}.js`
+Executing `npm run build` or `yarn build` concatenates all sources into `dist/{indexeddb,leveldb,lmdb}.js`
 
 ## Contribute
 
