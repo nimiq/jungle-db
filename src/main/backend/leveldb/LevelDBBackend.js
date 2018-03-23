@@ -9,8 +9,9 @@ class LevelDBBackend {
      * @param {JungleDB} db The JungleDB object managing the connection.
      * @param {string} tableName The table name this object store represents.
      * @param {ICodec} [codec] A default codec for the object store.
+     * @param {object} [options] Advanced options.
      */
-    constructor(db, tableName, codec=null) {
+    constructor(db, tableName, codec=null, options = {}) {
         this._db = db;
 
         this._tableName = tableName;
@@ -20,6 +21,7 @@ class LevelDBBackend {
         this._indicesToDelete = [];
 
         this._codec = codec;
+        this._keyEncoding = options && options.keyEncoding ? options.keyEncoding : null;
     }
 
     /** @type {boolean} */
@@ -33,25 +35,32 @@ class LevelDBBackend {
     }
 
     /**
+     * @param op
+     * @return
+     * @private
+     */
+    _setKeyEncoding(op) {
+        if (this._keyEncoding) {
+            op.keyEncoding = this._keyEncoding;
+        }
+        return op;
+    }
+
+    /**
      * Initialises the persisted indices of the object store.
      * @param {number} oldVersion
      * @param {number} newVersion
-     * @param {*} [keyEncoding]
      * @returns {Promise.<Array.<PersistentIndex>>} The list of indices.
      */
-    async init(oldVersion, newVersion, keyEncoding) {
-        const encoding = { valueEncoding: this._valueEncoding };
-        if (keyEncoding) {
-            encoding.keyEncoding = keyEncoding;
-        }
-        this._dbBackend = this._db.backend.sublevel(this._tableName, encoding);
+    async init(oldVersion, newVersion) {
+        this._dbBackend = this._db.backend.sublevel(this._tableName, this._setKeyEncoding({ valueEncoding: this._valueEncoding }));
 
         let indexPromises = [];
         // Delete indices.
         for (const { indexName, upgradeCondition } of this._indicesToDelete) {
             if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(oldVersion, newVersion)) {
-                const index = new PersistentIndex(this, indexName, '');
-                indexPromises.push(index.destroy());
+                const index = new PersistentIndex(this, this._db, indexName, '');
+                indexPromises.push(index.init(oldVersion, newVersion, false).then(() => index.destroy()));
             }
         }
         this._indicesToDelete = [];
@@ -489,10 +498,10 @@ class LevelDBBackend {
         }
 
         for (const key of tx._removed) {
-            batch.push({key: key, type: 'del', prefix: this._dbBackend, valueEncoding: this._valueEncoding});
+            batch.push(this._setKeyEncoding({key: key, type: 'del', prefix: this._dbBackend, valueEncoding: this._valueEncoding}));
         }
         for (const [key, value] of tx._modified) {
-            batch.push({key: key, value: this.encode(value), type: 'put', prefix: this._dbBackend, valueEncoding: this._valueEncoding});
+            batch.push(this._setKeyEncoding({key: key, value: this.encode(value), type: 'put', prefix: this._dbBackend, valueEncoding: this._valueEncoding}));
         }
 
         for (const index of this._indices.values()) {
@@ -527,15 +536,19 @@ class LevelDBBackend {
     /**
      * Prepares a batch operation to truncate a sublevel.
      * @param sub A levelDB sublevel instance.
-     * @param {string} tableName A table's name.
+     * @param [keyEncoding]
      * @returns {Promise.<Array>}
      */
-    static async _truncate(sub) {
+    static async _truncate(sub, keyEncoding) {
         return new Promise((resolve, error) => {
             const batch = [];
             sub.createReadStream({ 'values': false, 'keys': true })
                 .on('data', data => {
-                    batch.push({key: data, type: 'del', prefix: this._dbBackend, valueEncoding: this._valueEncoding});
+                    const op = { key: data, type: 'del', prefix: sub };
+                    if (keyEncoding) {
+                        op.keyEncoding = keyEncoding;
+                    }
+                    batch.push(op);
                 })
                 .on('error', err => {
                     error(err);

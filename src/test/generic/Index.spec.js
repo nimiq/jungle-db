@@ -1,14 +1,9 @@
 describe('Index', () => {
-    const setEqual = function(actual, expected) {
-        return expected.equals(actual);
-    };
-
     let originalTimeout;
 
     beforeEach(function() {
         originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
         jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
-        jasmine.addCustomEqualityTester(setEqual);
     });
 
     afterEach(function() {
@@ -30,6 +25,13 @@ describe('Index', () => {
             expect((await st.get('test')).val).toBe(123);
             expect(await st.keys(Query.eq('testIndex', 123))).toEqual(new Set(['test']));
             expect(await st.keys(Query.eq('testIndex2', 1))).toEqual(new Set(['test']));
+            expect(await st.values(Query.eq('testIndex', 123))).toEqual([{'val': 123, 'a': {'b': 1}}]);
+            expect(await st.values(Query.eq('testIndex2', 1))).toEqual([{'val': 123, 'a': {'b': 1}}]);
+
+            expect(await st.index('testIndex').maxKeys()).toEqual(new Set(['test']));
+            expect(await st.index('testIndex').maxValues()).toEqual([{'val': 123, 'a': {'b': 1}}]);
+            expect(await st.index('testIndex').minKeys()).toEqual(new Set(['test']));
+            expect(await st.index('testIndex').minValues()).toEqual([{'val': 123, 'a': {'b': 1}}]);
 
             await db.destroy();
         })().then(done, done.fail);

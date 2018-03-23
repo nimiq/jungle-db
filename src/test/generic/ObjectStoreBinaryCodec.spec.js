@@ -1,5 +1,5 @@
 describe('BinaryCodec', () => {
-    let backend, objectStore;
+    let jdb, objectStore;
 
     const setEqual = function(actual, expected) {
         return expected.equals(actual);
@@ -28,18 +28,23 @@ describe('BinaryCodec', () => {
     };
 
     beforeEach((done) => {
-        backend = new DummyBackend(BinaryCodec.instance);
-
-        objectStore = new ObjectStore(backend, backend);
+        jdb = new JungleDB('test', 1, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
+        objectStore = jdb.createObjectStore('testStore1', { codec: BinaryCodec.instance });
 
         (async function () {
+            await jdb.connect();
+
             // Add 10 objects.
             for (let i=0; i<10; ++i) {
-                await backend.put(`key${i}`, objfy(`key${i}`, `value${i}`));
+                await objectStore.put(`key${i}`, objfy(`key${i}`, `value${i}`));
             }
         })().then(done, done.fail);
 
         jasmine.addCustomEqualityTester(setEqual);
+    });
+
+    afterEach((done) => {
+        jdb.destroy().then(done);
     });
 
     it('can open a transaction and commit it', (done) => {
@@ -89,9 +94,6 @@ describe('BinaryCodec', () => {
             expectvaluefy(await tx3.get('key0')).toBe(undefined);
             expectvaluefy(await tx3.get('test')).toBe('success');
             expectvaluefy(await tx3.get('key1')).toBe('someval');
-            expectvaluefy(await backend.get('key0')).toBe('value0'); // not yet written
-            expectvaluefy(await backend.get('test')).toBe(undefined); // not yet written
-            expectvaluefy(await backend.get('key1')).toBe('value1'); // not yet written
 
             // More changes
             await tx3.remove('key2');
@@ -118,10 +120,6 @@ describe('BinaryCodec', () => {
             expectvaluefy(await tx4.get('test')).toBe('success2');
             expectvaluefy(await tx4.get('key1')).toBe('someval');
             expectvaluefy(await tx4.get('key2')).toBe(undefined);
-            expectvaluefy(await backend.get('key0')).toBe('value0'); // not yet written
-            expectvaluefy(await backend.get('test')).toBe(undefined); // not yet written
-            expectvaluefy(await backend.get('key1')).toBe('value1'); // not yet written
-            expectvaluefy(await backend.get('key2')).toBe('value2'); // not yet written
 
             // Abort second transaction and commit empty fourth transaction.
             expect(await tx2.abort()).toBe(true);
@@ -129,13 +127,9 @@ describe('BinaryCodec', () => {
             expect(tx4.state).toBe(Transaction.STATE.COMMITTED);
 
             // Now everything should be in the backend.
-            expectvaluefy(await backend.get('key0')).toBe('someval');
             expectvaluefy(await objectStore.get('key0')).toBe('someval');
-            expectvaluefy(await backend.get('test')).toBe('success2');
             expectvaluefy(await objectStore.get('test')).toBe('success2');
-            expectvaluefy(await backend.get('key1')).toBe('someval');
             expectvaluefy(await objectStore.get('key1')).toBe('someval');
-            expectvaluefy(await backend.get('key2')).toBe(undefined);
             expectvaluefy(await objectStore.get('key2')).toBe(undefined);
 
             // Create a fifth transaction, which should be based on the new state.
@@ -171,7 +165,6 @@ describe('BinaryCodec', () => {
             const tx3 = objectStore.transaction();
             await tx3.put('test', objfy('test', 'successful'));
             expect(await tx3.get('key0')).toBe(undefined);
-            expectvaluefy(await backend.get('key0')).toBe('value0'); // not yet written
 
             // Should not be able to commit tx2.
             expect(await tx2.commit()).toBe(false);
@@ -196,10 +189,8 @@ describe('BinaryCodec', () => {
             expect(await tx4.commit()).toBe(false);
 
             // Now tx1 should be in the backend.
-            expect(await backend.get('key0')).toBe(undefined);
             expect(await objectStore.get('key0')).toBe(undefined);
             // As well as tx3.
-            expectvaluefy(await backend.get('test')).toBe('successful');
             expectvaluefy(await objectStore.get('test')).toBe('successful');
 
             // Create a fourth transaction, which should be based on the new state.

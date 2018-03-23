@@ -247,7 +247,7 @@ class PersistentIndex extends LMDBBackend {
      */
     async maxValues(query=null) {
         const results = await this.maxValue(query);
-        return this._retrieveValues([result]);
+        return this._retrieveValues([results]);
     }
 
     /**
@@ -269,8 +269,8 @@ class PersistentIndex extends LMDBBackend {
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async minValues(query=null) {
-        const result = await this.minValue(query);
-        return this._retrieveValues([result]);
+        const results = await this.minValue(query);
+        return this._retrieveValues([results]);
     }
 
     /**

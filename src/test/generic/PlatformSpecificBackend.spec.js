@@ -1,10 +1,6 @@
 describe('PlatformSpecificBackend', () => {
     let objectStore, db, allKeys;
 
-    const setEqual = function(actual, expected) {
-        return expected.equals(actual);
-    };
-
     beforeEach((done) => {
         db = new JungleDB('test', 1, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
         objectStore = db.createObjectStore('testStore');
@@ -19,8 +15,6 @@ describe('PlatformSpecificBackend', () => {
                 allKeys.add(`key${i}`);
             }
         })().then(done, done.fail);
-
-        jasmine.addCustomEqualityTester(setEqual);
     });
 
     afterEach((done) => {
@@ -171,6 +165,13 @@ describe('PlatformSpecificBackend', () => {
             expect(await objectStore.keys(KeyRange.upperBound('key5'))).toEqual(new Set(['key0', 'key1', 'key2', 'key3', 'key4', 'key5']));
             expect(await objectStore.keys(KeyRange.lowerBound('key1', true))).toEqual(allKeys.difference(['key0', 'key1']));
             expect(await objectStore.keys(KeyRange.lowerBound('key5', true))).toEqual(new Set(['key6', 'key7', 'key8', 'key9']));
+
+            expect(await objectStore.values(KeyRange.only('key5'))).toEqual(['value5']);
+
+            expect(await objectStore.minKey()).toEqual('key0');
+            expect(await objectStore.maxKey()).toEqual('key9');
+            expect(await objectStore.minValue()).toEqual('value0');
+            expect(await objectStore.maxValue()).toEqual('value9');
         })().then(done, done.fail);
     });
 

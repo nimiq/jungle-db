@@ -22,7 +22,7 @@ class LMDBBackend {
         this._indicesToDelete = [];
 
         this._codec = codec;
-        this._keyEncoding = options.keyEncoding ? options.keyEncoding : null;
+        this._keyEncoding = options && options.keyEncoding ? options.keyEncoding : null;
     }
 
     /** @type {boolean} */
@@ -513,7 +513,7 @@ class LMDBBackend {
     minKey(query=null) {
         let minKey = null;
         this._readStream((value, key) => {
-            minKey = value;
+            minKey = key;
             return false;
         }, true, query, true);
         return Promise.resolve(minKey);
@@ -619,12 +619,18 @@ class LMDBBackend {
      * Truncates a dbi object store.
      * @param db A lmdb instance.
      * @param {string} tableName A table's name.
+     * @return {boolean} Whether the table existed or not.
      */
     static truncate(db, tableName) {
-        const dbi = db.openDbi({
-            name: tableName
-        });
-        dbi.drop();
+        try {
+            const dbi = db.openDbi({
+                name: tableName
+            });
+            dbi.drop();
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 
     /**

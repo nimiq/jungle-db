@@ -25,14 +25,12 @@ const sources = {
         leveldb: [
             './src/main/backend/leveldb/utils/LevelDBTools.js',
             './src/main/backend/leveldb/utils/LogNative.js',
-            './src/main/backend/leveldb/utils/GenericValueEncoding.js',
             './src/main/backend/leveldb/LevelDBBackend.js',
             './src/main/backend/leveldb/JungleDB.js',
             './src/main/backend/leveldb/PersistentIndex.js'
         ],
         lmdb: [
             './src/main/backend/lmdb/utils/LogNative.js',
-            './src/main/backend/lmdb/utils/GenericValueEncoding.js',
             './src/main/backend/lmdb/LMDBBackend.js',
             './src/main/backend/lmdb/JungleDB.js',
             './src/main/backend/lmdb/PersistentIndex.js'
@@ -50,6 +48,7 @@ const sources = {
         './src/main/generic/utils/SetUtils.js',
         './src/main/generic/utils/Synchronizer.js',
         './src/main/generic/utils/EncodedTransaction.js',
+        './src/main/generic/utils/GenericValueEncoding.js',
         './src/main/generic/CachedBackend.js',
         './src/main/generic/InMemoryIndex.js',
         './src/main/generic/InMemoryBackend.js',
@@ -205,7 +204,7 @@ gulp.task('build-leveldb', function () {
     return gulp.src(LEVELDB_SOURCES, { base: 'src' })
         .pipe(sourcemaps.init())
         .pipe(concat('leveldb.js'))
-        .pipe(uglify(uglify_config))
+        // .pipe(uglify(uglify_config))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'));
 });

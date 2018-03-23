@@ -208,7 +208,7 @@ class JungleDB {
         }
 
         const backend = persistent
-            ? new LMDBBackend(this, tableName, codec)
+            ? new LMDBBackend(this, tableName, codec, options)
             : new InMemoryBackend(tableName, codec);
         const objStore = new ObjectStore(backend, this, tableName);
         this._objectStores.set(tableName, objStore);

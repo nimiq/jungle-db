@@ -499,9 +499,7 @@ class ObjectStore {
      * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
      */
     deleteIndex(indexName, options={}) {
-        let { upgradeCondition = null } = options || {};
-
-        return this._backend.deleteIndex(indexName, upgradeCondition);
+        return this._backend.deleteIndex(indexName, options);
     }
 
     /**
