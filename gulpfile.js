@@ -31,6 +31,7 @@ const sources = {
         ],
         lmdb: [
             './src/main/backend/lmdb/utils/LogNative.js',
+            './src/main/backend/lmdb/LMDBBaseBackend.js',
             './src/main/backend/lmdb/LMDBBackend.js',
             './src/main/backend/lmdb/JungleDB.js',
             './src/main/backend/lmdb/PersistentIndex.js'
