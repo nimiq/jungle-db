@@ -72,6 +72,15 @@ describe('JungleDB', () => {
             st = db.createObjectStore('testStore');
             await db.connect();
             expect(await st.get('test')).toBe(undefined);
+            await st.put('test', 'succeeded');
+            expect(await st.get('test')).toBe('succeeded');
+            await db.destroy();
+
+            // And check that destroy has worked.
+            db = new JungleDB('test', 3, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
+            st = db.createObjectStore('testStore');
+            await db.connect();
+            expect(await st.get('test')).toBe(undefined);
             await db.destroy();
         })().then(done, done.fail);
     });
@@ -85,16 +94,24 @@ describe('JungleDB', () => {
             }, { maxDbSize: 1024*1024*100, maxDbs: 10 });
 
             const store = db.createObjectStore('books', { upgradeCondition: (oldVersion) => oldVersion < 1 });
+            if (version === 1) {
+                db.createObjectStore('notNeeded', { upgradeCondition: (oldVersion, newVersion) => oldVersion < 1 });
+            }
             const titleIndex = store.createIndex('by_title', 'title', { upgradeCondition: (oldVersion) => oldVersion < 1 });
             const authorIndex = store.createIndex('by_author', 'author', { upgradeCondition: (oldVersion) => oldVersion < 1 });
 
             if (version >= 2) {
+                db.deleteObjectStore('notNeeded', { upgradeCondition: (oldVersion) => oldVersion === 1 });
+            }
+
+            if (version === 2) {
                 // Version 2 introduces a new index of books by year.
                 const yearIndex = store.createIndex('by_year', 'year', { upgradeCondition: (oldVersion) => oldVersion < 2 });
             }
 
             if (version >= 3) {
                 // Version 3 introduces a new object store for magazines with two indexes.
+                store.deleteIndex('by_year', { upgradeCondition: (oldVersion) => oldVersion === 2 });
                 const magazines = db.createObjectStore('magazines', { upgradeCondition: (oldVersion) => oldVersion < 3 });
                 const publisherIndex = magazines.createIndex('by_publisher', 'publisher', { upgradeCondition: (oldVersion) => oldVersion < 3 });
                 const frequencyIndex = magazines.createIndex('by_frequency', 'frequency', { upgradeCondition: (oldVersion) => oldVersion < 3 });
@@ -118,6 +135,7 @@ describe('JungleDB', () => {
             expect(store.index('by_author')).toBeTruthy();
             expect(store.index('by_year')).toBeFalsy();
             expect(db.getObjectStore('magazines')).toBeFalsy();
+            expect(db.getObjectStore('notNeeded')).toBeTruthy();
             await db.close();
 
             // No changes with same version.
@@ -131,6 +149,7 @@ describe('JungleDB', () => {
             expect(store.index('by_author')).toBeTruthy();
             expect(store.index('by_year')).toBeFalsy();
             expect(db.getObjectStore('magazines')).toBeFalsy();
+            expect(db.getObjectStore('notNeeded')).toBeTruthy();
             await db.close();
 
             // Upgrade to 2.
@@ -146,6 +165,7 @@ describe('JungleDB', () => {
             expect(store.index('by_author')).toBeTruthy();
             expect(store.index('by_year')).toBeTruthy();
             expect(db.getObjectStore('magazines')).toBeFalsy();
+            expect(db.getObjectStore('notNeeded')).toBeFalsy();
             await db.close();
 
             // Upgrade to 3.
@@ -159,11 +179,12 @@ describe('JungleDB', () => {
             expect(store).toBeTruthy();
             expect(store.index('by_title')).toBeTruthy();
             expect(store.index('by_author')).toBeTruthy();
-            expect(store.index('by_year')).toBeTruthy();
+            expect(store.index('by_year')).toBeFalsy();
             let magazines = db.getObjectStore('magazines');
             expect(magazines).toBeTruthy();
             expect(magazines.index('by_publisher')).toBeTruthy();
             expect(magazines.index('by_frequency')).toBeTruthy();
+            expect(db.getObjectStore('notNeeded')).toBeFalsy();
             await db.close();
 
             await db.destroy();
@@ -179,11 +200,12 @@ describe('JungleDB', () => {
             expect(store).toBeTruthy();
             expect(store.index('by_title')).toBeTruthy();
             expect(store.index('by_author')).toBeTruthy();
-            expect(store.index('by_year')).toBeTruthy();
+            expect(store.index('by_year')).toBeFalsy();
             magazines = db.getObjectStore('magazines');
             expect(magazines).toBeTruthy();
             expect(magazines.index('by_publisher')).toBeTruthy();
             expect(magazines.index('by_frequency')).toBeTruthy();
+            expect(db.getObjectStore('notNeeded')).toBeFalsy();
             await db.close();
 
             await db.destroy();

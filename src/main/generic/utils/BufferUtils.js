@@ -83,12 +83,47 @@ class BufferUtils {
      * @return {Uint8Array}
      */
     static fromBase64(base64) {
+        if (!(/^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/.test(base64))) {
+            throw new Error('Invalid base64');
+        }
         return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    }
+
+    /**
+     * @param {*} buffer
+     * @return {string}
+     */
+    static toBase64lex(buffer) {
+        const base64 = BufferUtils.toBase64(buffer);
+        let base64lex = '';
+        for (let i = 0; i < base64.length; i++) {
+            base64lex += BufferUtils.BASE64_TO_BASE64_LEX[base64[i]];
+        }
+        return base64lex;
+    }
+
+    /**
+     * @param {string} base64lex
+     * @return {Uint8Array}
+     */
+    static fromBase64lex(base64lex) {
+        let base64 = '';
+        for (let i = 0; i < base64lex.length; i++) {
+            base64 += BufferUtils.BASE64_LEX_TO_BASE64[base64lex[i]];
+        }
+        return BufferUtils.fromBase64(base64);
     }
 }
 BufferUtils.BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 BufferUtils._BASE64_LOOKUP = [];
 for (let i = 0, len = BufferUtils.BASE64_ALPHABET.length; i < len; ++i) {
     BufferUtils._BASE64_LOOKUP[i] = BufferUtils.BASE64_ALPHABET[i];
+}
+BufferUtils.BASE64_LEX_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~';
+BufferUtils.BASE64_TO_BASE64_LEX = { '=': '-' };
+BufferUtils.BASE64_LEX_TO_BASE64 = { '-': '=' };
+for (let i = 0, len = BufferUtils.BASE64_ALPHABET.length; i < len; ++i) {
+    BufferUtils.BASE64_TO_BASE64_LEX[BufferUtils.BASE64_ALPHABET[i]] = BufferUtils.BASE64_LEX_ALPHABET[i];
+    BufferUtils.BASE64_LEX_TO_BASE64[BufferUtils.BASE64_LEX_ALPHABET[i]] = BufferUtils.BASE64_ALPHABET[i];
 }
 Class.register(BufferUtils);

@@ -207,7 +207,7 @@ class JungleDB {
 
         // LevelDB already implements a LRU cache. so we don't need to cache it.
         const backend = persistent
-            ? new LevelDBBackend(this, tableName, codec)
+            ? new LevelDBBackend(this, tableName, codec, options)
             : new InMemoryBackend(tableName, codec);
         const objStore = new ObjectStore(backend, this, tableName);
         this._objectStores.set(tableName, objStore);
@@ -295,5 +295,26 @@ JungleDB.JSON_ENCODING = {
     decode: JSONUtils.parse,
     buffer: false,
     type: 'json'
+};
+/**
+ * A LevelDB JSON encoding that can handle generic values.
+ * @type {{encode: function(val:*):*, decode: function(val:*):*, buffer: boolean, type: string}}
+ */
+JungleDB.GENERIC_ENCODING = {
+    encode: data => {
+        if (typeof data === 'string') {
+            return data;
+        }
+        return BufferUtils.toBase64lex(GenericValueEncoding.encode(data));
+    },
+    decode: data => {
+        try {
+            return GenericValueEncoding.decode(BufferUtils.fromBase64lex(data));
+        } catch (e) {
+            return data;
+        }
+    },
+    buffer: false,
+    type: 'generic-value-codec'
 };
 Class.register(JungleDB);

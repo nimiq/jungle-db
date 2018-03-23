@@ -25,10 +25,11 @@ class GenericValueEncoding {
     }
 
     static _encodeOther(obj) {
-        return GenericValueEncoding._encodeString(JungleDB.JSON_ENCODING.encode(obj), GenericValueEncoding.Type.JSON);
+        return GenericValueEncoding._encodeString(JSONUtils.stringify(obj), GenericValueEncoding.Type.JSON);
     }
     static _decodeOther(buffer) {
-        return JungleDB.JSON_ENCODING.decode(GenericValueEncoding._decodeString(buffer));
+        const json = GenericValueEncoding._decodeString(buffer);
+        return JSONUtils.parse(json);
     }
 
     static _encodeBuffer(buffer) {
@@ -55,6 +56,7 @@ class GenericValueEncoding {
     }
 
     static decode(data) {
+        data = new Uint8Array(data);
         const type = data[0];
         switch (type) {
             case GenericValueEncoding.Type.INTEGER:

@@ -1,7 +1,7 @@
 /**
  * This class implements a persistent index for LevelDB.
  */
-class PersistentIndex {
+class PersistentIndex extends LevelDBBackend {
     /**
      * Creates a new PersistentIndex for a LevelDB backend.
      * @param {LevelDBBackend} objectStore The underlying LevelDB backend.
@@ -13,8 +13,9 @@ class PersistentIndex {
      * @param {boolean} [unique] Whether there is a unique constraint on the attribute.
      */
     constructor(objectStore, db, indexName, keyPath, multiEntry=false, unique=false) {
-        this._prefix = `_${objectStore.tableName}-${indexName}`;
-        this._indexBackend = new LevelDBBackend(db, this._prefix);
+        const prefix = `_${objectStore.tableName}-${indexName}`;
+        super(db, prefix, undefined, { keyEncoding: JungleDB.GENERIC_ENCODING });
+        this._prefix = prefix;
 
         /** @type {LevelDBBackend} */
         this._objectStore = objectStore;
@@ -26,39 +27,7 @@ class PersistentIndex {
 
     /** The levelDB backend. */
     get backend() {
-        return this._indexBackend;
-    }
-
-    /**
-     * Reinitialises the index.
-     * @returns {Promise} The promise resolves after emptying the index.
-     */
-    truncate() {
-        return this._indexBackend.truncate();
-    }
-
-    /**
-     * Returns batch operations to reinitialise the index.
-     * @returns {Promise.<Array>} The promise contains the batch operations.
-     */
-    async _truncate() {
-        return LevelDBBackend._truncate(this._indexBackend._dbBackend);
-    }
-
-    /**
-     * Closes the connection to the index database.
-     * @returns {Promise} The promise resolves after closing the object store.
-     */
-    close() {
-        return this._indexBackend.close();
-    }
-
-    /**
-     * Fully deletes the database of the index.
-     * @returns {Promise} The promise resolves after deleting the database.
-     */
-    destroy() {
-        return this._indexBackend.destroy();
+        return this;
     }
 
     /**
@@ -137,7 +106,7 @@ class PersistentIndex {
      * @returns {Promise.<?Array>}
      */
     async put(key, value, oldValue, tx) {
-        const internalTx = tx || new Transaction(null, this._indexBackend, this._indexBackend, false);
+        const internalTx = tx || new Transaction(null, this, this, false);
         const oldIKey = this._indexKey(key, oldValue);
         const newIKey = this._indexKey(key, value);
 
@@ -147,7 +116,7 @@ class PersistentIndex {
         if (newIKey !== undefined) {
             await this._insert(key, newIKey, internalTx);
         }
-        return tx ? null : this._indexBackend.applyCombined(internalTx);
+        return tx ? null : this.applyCombined(internalTx);
     }
 
     /**
@@ -158,13 +127,13 @@ class PersistentIndex {
      * @returns {Promise.<Transaction>}
      */
     async remove(key, oldValue, tx) {
-        const internalTx = tx || new Transaction(null, this._indexBackend, this._indexBackend, false);
+        const internalTx = tx || new Transaction(null, this, this, false);
 
         const iKey = this._indexKey(key, oldValue);
         if (iKey !== undefined) {
             await this._remove(key, iKey, internalTx);
         }
-        return tx ? null : this._indexBackend.applyCombined(internalTx);
+        return tx ? null : this.applyCombined(internalTx);
     }
 
     /**
@@ -210,12 +179,12 @@ class PersistentIndex {
      * @returns {Promise.<PersistentIndex>} A promise of the fully initialised index.
      */
     async init(oldVersion, newVersion, isUpgrade) {
-        await this._indexBackend.init(oldVersion, newVersion, GenericValueEncoding);
+        await LevelDBBackend.prototype.init.call(this, oldVersion, newVersion);
 
         // Initialise the index on first construction.
         if (isUpgrade) {
-            const tx = new EncodedTransaction(this._indexBackend.tableName);
-            await this._objectStore.valueStream((value, primaryKey) => {
+            const tx = new EncodedTransaction(this.tableName);
+            await this.valueStream((value, primaryKey) => {
                 const keyPathValue = ObjectUtils.byKeyPath(value, this._keyPath);
                 if (keyPathValue !== undefined) {
                     // Support for multi entry secondary key paths.
@@ -239,7 +208,7 @@ class PersistentIndex {
                     }
                 }
             });
-            await this._indexBackend._apply(tx);
+            await LevelDBBackend.prototype._apply.call(this, tx);
         }
 
         return this;
@@ -254,7 +223,7 @@ class PersistentIndex {
      * @protected
      */
     async _apply(tx) {
-        const internalTx = new Transaction(null, this._indexBackend, this._indexBackend, false);
+        const internalTx = new Transaction(null, this, this, false);
 
         if (tx._truncated) {
             await internalTx.truncate();
@@ -269,7 +238,7 @@ class PersistentIndex {
             await this.put(key, value, oldValue, internalTx);
         }
 
-        return this._indexBackend.applyCombined(internalTx);
+        return this.applyCombined(internalTx);
     }
 
     /**
@@ -308,7 +277,7 @@ class PersistentIndex {
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
     async values(query=null) {
-        const results = await this._indexBackend.values(query);
+        const results = await LevelDBBackend.prototype.values.call(this, query);
         return this._retrieveValues(results);
     }
 
@@ -320,7 +289,7 @@ class PersistentIndex {
      * @returns {Promise.<Set.<string>>} A promise of the set of primary keys relevant to the query.
      */
     async keys(query=null) {
-        const results = await this._indexBackend.values(query);
+        const results = await LevelDBBackend.prototype.values.call(this, query);
         return Set.from(this._retrieveKeys(results));
     }
 
@@ -332,8 +301,8 @@ class PersistentIndex {
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async maxValues(query=null) {
-        const result = await this._indexBackend.maxValue(query);
-        return this._retrieveValues([result]);
+        const results = await this.maxValue(query);
+        return this._retrieveValues([results]);
     }
 
     /**
@@ -344,7 +313,7 @@ class PersistentIndex {
      * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async maxKeys(query=null) {
-        return Set.from(await this._indexBackend.maxValue(query));
+        return Set.from(await this.maxValue(query));
     }
 
     /**
@@ -355,8 +324,8 @@ class PersistentIndex {
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async minValues(query=null) {
-        const result = await this._indexBackend.minValue(query);
-        return this._retrieveValues([result]);
+        const results = await this.minValue(query);
+        return this._retrieveValues([results]);
     }
 
     /**
@@ -367,7 +336,7 @@ class PersistentIndex {
      * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async minKeys(query=null) {
-        return Set.from(await this._indexBackend.minValue(query));
+        return Set.from(await this.minValue(query));
     }
 
     /**
@@ -378,7 +347,7 @@ class PersistentIndex {
      * @returns {Promise.<number>}
      */
     async count(query=null) {
-        const results = await this._indexBackend.values(query);
+        const results = await LevelDBBackend.prototype.values.call(this, query);
         return this._retrieveKeys(results).length;
     }
 }

@@ -1,3 +1,8 @@
+process.on('uncaughtException', function(err){
+    console.error(err.stack);
+    process.exit();
+});
+
 const JDB = require('../../../../dist/leveldb.js');
 
 for(let i in JDB) global[i] = JDB[i];
