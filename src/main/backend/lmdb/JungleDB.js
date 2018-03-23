@@ -31,151 +31,14 @@ class JungleDB {
         this._options = options;
     }
 
-    /**
-     * Connects to the lmdb.
-     * @returns {Promise} A promise resolving on successful connection.
-     */
-    connect() {
-        if (this._db) return Promise.resolve(this._db);
-
-        // Ensure existence of directory.
-        if (!fs.existsSync(this._databaseDir)){
-            fs.mkdirSync(this._databaseDir);
-        }
-
-        this._db = new lmdb.Env();
-        this._db.open({
-            path: this._databaseDir,
-            mapSize: this._options.maxDbSize,
-            maxDbs: this._options.maxDbs || 3 // default
-        });
-
-        this._mainDb = this._db.openDbi({
-            name: null,
-            create: true
-        });
-
-        return this._initDB();
-    }
-
-    /**
-     * Closes the database connection.
-     * @returns {Promise} The promise resolves after closing the database.
-     */
-    close() {
-        if (this._connected) {
-            this._connected = false;
-            this._mainDb.close();
-            this._db.close();
-        }
-        return Promise.resolve();
-    }
-
-    /**
-     * Returns a promise of the current database version.
-     * @returns {number} The database version.
-     * @private
-     */
-    _readDBVersion() {
-        const tx = this._db.beginTxn({ readOnly: true });
-        const version = tx.getNumber(this._mainDb, '_dbVersion') || 0;
-        tx.commit();
-        return version;
-    }
-
-    /**
-     * Writes a new database version to the db.
-     * @private
-     */
-    _writeDBVersion(version) {
-        const tx = this._db.beginTxn();
-        tx.putNumber(this._mainDb, '_dbVersion', version);
-        tx.commit();
-    }
-
     /** The underlying LMDB. */
     get backend() {
         return this._db;
     }
 
-    /**
-     * Fully deletes the database.
-     * @returns {Promise} The promise resolves after deleting the database.
-     */
-    async destroy() {
-        await this.close();
-        JungleDB._deleteFolderRecursive(this._databaseDir);
-    }
-
-    /**
-     * @param {string} path
-     * @private
-     */
-    static _deleteFolderRecursive(path) {
-        if (fs.existsSync(path)) {
-            fs.readdirSync(path).forEach((file, index) => {
-                const curPath = `${path}/${file}`;
-                if (fs.lstatSync(curPath).isDirectory()) { // recurse
-                    JungleDB._deleteFolderRecursive(curPath);
-                } else { // delete file
-                    fs.unlinkSync(curPath);
-                }
-            });
-            fs.rmdirSync(path);
-        }
-    }
-
-    /**
-     * Internal method that is called for opening the database connection.
-     * Also handles the db version upgrade.
-     * @returns {Promise.<void>} A promise that resolves after successful completion.
-     * @private
-     */
-    async _initDB() {
-        const storedVersion = this._readDBVersion();
-        // Upgrade database.
-        if (this._dbVersion > storedVersion) {
-            // Delete object stores, if requested.
-            for (const { tableName, upgradeCondition } of this._objectStoresToDelete) {
-                if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(storedVersion, this._dbVersion)) {
-                    LMDBBackend.truncate(this._db, tableName);
-                }
-            }
-            this._objectStoresToDelete = [];
-
-            // The order of the above promises does not matter.
-            this._writeDBVersion(this._dbVersion);
-        }
-
-        // Create new ObjectStores.
-        for (const { backend, upgradeCondition } of this._objectStoreBackends) {
-            // We do not explicitly create object stores, therefore, we ignore the upgrade condition.
-            backend.init(storedVersion, this._dbVersion);
-        }
-
-        // Upgrade database (part 2).
-        if (this._dbVersion > storedVersion) {
-            // Call user defined function if requested.
-            if (this._onUpgradeNeeded) {
-                await this._onUpgradeNeeded(storedVersion, this._dbVersion);
-            }
-        }
-
-        this._connected = true;
-    }
-
     /** @type {boolean} Whether a connection is established. */
     get connected() {
         return this._connected;
-    }
-
-    /**
-     * Returns the ObjectStore object for a given table name.
-     * @param {string} tableName The table name to access.
-     * @returns {ObjectStore} The ObjectStore object.
-     */
-    getObjectStore(tableName) {
-        return this._objectStores.get(tableName);
     }
 
     /**
@@ -185,48 +48,6 @@ class JungleDB {
      */
     static createVolatileObjectStore(codec=null) {
         return new ObjectStore(new InMemoryBackend('', codec), null);
-    }
-
-    /**
-     * Creates a new object store (and allows to access it).
-     * This method always has to be called before connecting to the database.
-     * If it is not called, the object store will not be accessible afterwards.
-     * If a call is newly introduced, but the database version did not change,
-     * the table does not exist yet.
-     * @param {string} tableName The name of the object store.
-     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|ICodec} [options] An options object (for deprecated usage: A codec for the object store).
-     * @param {boolean} [persistentArg] If set to false, this object store is not persistent.
-     * @returns {IObjectStore}
-     */
-    createObjectStore(tableName, options=null, persistentArg=true) {
-        let { codec = null, persistent = persistentArg, upgradeCondition = null } = (typeof options === 'object' && options !== null) ? options : {};
-        if (typeof options === 'object' && options !== null && 'encode' in options && 'decode' in options) codec = options;
-
-        if (this._connected) throw new Error('Cannot create ObjectStore while connected');
-        if (this._objectStores.has(tableName)) {
-            return this._objectStores.get(tableName);
-        }
-
-        const backend = persistent
-            ? new LMDBBackend(this, tableName, codec, options)
-            : new InMemoryBackend(tableName, codec);
-        const objStore = new ObjectStore(backend, this, tableName);
-        this._objectStores.set(tableName, objStore);
-        this._objectStoreBackends.push({ backend, upgradeCondition });
-        return objStore;
-    }
-
-    /**
-     * Deletes an object store.
-     * This method has to be called before connecting to the database.
-     * @param {string} tableName
-     * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
-     */
-    deleteObjectStore(tableName, options={}) {
-        let { upgradeCondition = null } = options || {};
-
-        if (this._connected) throw new Error('Cannot delete ObjectStore while connected');
-        this._objectStoresToDelete.push({ tableName, upgradeCondition });
     }
 
     /**
@@ -277,8 +98,187 @@ class JungleDB {
         return ctx.commit();
     }
 
+    /**
+     * Connects to the lmdb.
+     * @returns {Promise} A promise resolving on successful connection.
+     */
+    connect() {
+        if (this._db) return Promise.resolve(this._db);
+
+        // Ensure existence of directory.
+        if (!fs.existsSync(this._databaseDir)){
+            fs.mkdirSync(this._databaseDir);
+        }
+
+        this._db = new lmdb.Env();
+        this._db.open({
+            path: this._databaseDir,
+            mapSize: this._options.maxDbSize,
+            maxDbs: this._options.maxDbs || 3 // default
+        });
+
+        this._mainDb = this._db.openDbi({
+            name: null,
+            create: true
+        });
+
+        return this._initDB();
+    }
+
+    /**
+     * Closes the database connection.
+     * @returns {Promise} The promise resolves after closing the database.
+     */
+    close() {
+        if (this._connected) {
+            this._connected = false;
+            this._mainDb.close();
+            this._db.close();
+        }
+        return Promise.resolve();
+    }
+
+    /**
+     * Fully deletes the database.
+     * @returns {Promise} The promise resolves after deleting the database.
+     */
+    async destroy() {
+        await this.close();
+        JungleDB._deleteFolderRecursive(this._databaseDir);
+    }
+
+    /**
+     * Returns the ObjectStore object for a given table name.
+     * @param {string} tableName The table name to access.
+     * @returns {ObjectStore} The ObjectStore object.
+     */
+    getObjectStore(tableName) {
+        return this._objectStores.get(tableName);
+    }
+
+    /**
+     * Creates a new object store (and allows to access it).
+     * This method always has to be called before connecting to the database.
+     * If it is not called, the object store will not be accessible afterwards.
+     * If a call is newly introduced, but the database version did not change,
+     * the table does not exist yet.
+     * @param {string} tableName The name of the object store.
+     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|ICodec} [options] An options object (for deprecated usage: A codec for the object store).
+     * @param {boolean} [persistentArg] If set to false, this object store is not persistent.
+     * @returns {IObjectStore}
+     */
+    createObjectStore(tableName, options=null, persistentArg=true) {
+        let { codec = null, persistent = persistentArg, upgradeCondition = null } = (typeof options === 'object' && options !== null) ? options : {};
+        if (typeof options === 'object' && options !== null && 'encode' in options && 'decode' in options) codec = options;
+
+        if (this._connected) throw new Error('Cannot create ObjectStore while connected');
+        if (this._objectStores.has(tableName)) {
+            return this._objectStores.get(tableName);
+        }
+
+        const backend = persistent
+            ? new LMDBBackend(this, tableName, codec, options)
+            : new InMemoryBackend(tableName, codec);
+        const objStore = new ObjectStore(backend, this, tableName);
+        this._objectStores.set(tableName, objStore);
+        this._objectStoreBackends.push({ backend, upgradeCondition });
+        return objStore;
+    }
+
+    /**
+     * Deletes an object store.
+     * This method has to be called before connecting to the database.
+     * @param {string} tableName
+     * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
+     */
+    deleteObjectStore(tableName, options={}) {
+        let { upgradeCondition = null } = options || {};
+
+        if (this._connected) throw new Error('Cannot delete ObjectStore while connected');
+        this._objectStoresToDelete.push({ tableName, upgradeCondition });
+    }
+
     toString() {
         return `JungleDB{name=${this._databaseDir}}`;
+    }
+
+    /**
+     * @param {string} path
+     * @private
+     */
+    static _deleteFolderRecursive(path) {
+        if (fs.existsSync(path)) {
+            fs.readdirSync(path).forEach((file, index) => {
+                const curPath = `${path}/${file}`;
+                if (fs.lstatSync(curPath).isDirectory()) { // recurse
+                    JungleDB._deleteFolderRecursive(curPath);
+                } else { // delete file
+                    fs.unlinkSync(curPath);
+                }
+            });
+            fs.rmdirSync(path);
+        }
+    }
+
+    /**
+     * Internal method that is called for opening the database connection.
+     * Also handles the db version upgrade.
+     * @returns {Promise.<void>} A promise that resolves after successful completion.
+     * @private
+     */
+    async _initDB() {
+        const storedVersion = this._readDBVersion();
+        // Upgrade database.
+        if (this._dbVersion > storedVersion) {
+            // Delete object stores, if requested.
+            for (const { tableName, upgradeCondition } of this._objectStoresToDelete) {
+                if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(storedVersion, this._dbVersion)) {
+                    LMDBBaseBackend.truncate(this._db, tableName);
+                }
+            }
+            this._objectStoresToDelete = [];
+
+            // The order of the above promises does not matter.
+            this._writeDBVersion(this._dbVersion);
+        }
+
+        // Create new ObjectStores.
+        for (const { backend, upgradeCondition } of this._objectStoreBackends) {
+            // We do not explicitly create object stores, therefore, we ignore the upgrade condition.
+            backend.init(storedVersion, this._dbVersion);
+        }
+
+        // Upgrade database (part 2).
+        if (this._dbVersion > storedVersion) {
+            // Call user defined function if requested.
+            if (this._onUpgradeNeeded) {
+                await this._onUpgradeNeeded(storedVersion, this._dbVersion);
+            }
+        }
+
+        this._connected = true;
+    }
+
+    /**
+     * Returns a promise of the current database version.
+     * @returns {number} The database version.
+     * @private
+     */
+    _readDBVersion() {
+        const tx = this._db.beginTxn({ readOnly: true });
+        const version = tx.getNumber(this._mainDb, '_dbVersion') || 0;
+        tx.commit();
+        return version;
+    }
+
+    /**
+     * Writes a new database version to the db.
+     * @private
+     */
+    _writeDBVersion(version) {
+        const tx = this._db.beginTxn();
+        tx.putNumber(this._mainDb, '_dbVersion', version);
+        tx.commit();
     }
 }
 /** @enum {number} */

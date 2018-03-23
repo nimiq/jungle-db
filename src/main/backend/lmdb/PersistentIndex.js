@@ -1,7 +1,7 @@
 /**
  * This class implements a persistent index for LMDB.
  */
-class PersistentIndex extends LMDBBackend {
+class PersistentIndex extends LMDBBaseBackend {
     /**
      * Creates a new PersistentIndex for a LMDB backend.
      * @param {LMDBBackend} objectStore The underlying LMDB backend.
@@ -14,7 +14,7 @@ class PersistentIndex extends LMDBBackend {
      */
     constructor(objectStore, db, indexName, keyPath, multiEntry=false, unique=false) {
         const prefix = `_${objectStore.tableName}-${indexName}`;
-        super(db, prefix, undefined, { keyEncoding: GenericValueEncoding });
+        super(db, prefix, undefined, { keyEncoding: GenericValueEncoding, dupSort: true });
         this._prefix = prefix;
 
         /** @type {LMDBBackend} */
@@ -31,69 +31,56 @@ class PersistentIndex extends LMDBBackend {
     }
 
     /**
-     * Helper method to return the attribute associated with the key path if it exists.
-     * @param {string} key The primary key of the key-value pair.
-     * @param {*} obj The value of the key-value pair.
-     * @returns {*} The attribute associated with the key path, if it exists, and undefined otherwise.
-     * @private
+     * The key path associated with this index.
+     * A key path is defined by a key within the object or alternatively a path through the object to a specific subkey.
+     * For example, ['a', 'b'] could be used to use 'key' as the key in the following object:
+     * { 'a': { 'b': 'key' } }
+     * @type {string|Array.<string>}
      */
-    _indexKey(key, obj) {
-        if (this.keyPath) {
-            if (obj === undefined) return undefined;
-            return ObjectUtils.byKeyPath(obj, this.keyPath);
-        }
-        return key;
+    get keyPath() {
+        return this._keyPath;
     }
 
     /**
-     * A helper method to insert a primary-secondary key pair into the tree.
-     * @param {string} primaryKey The primary key.
-     * @param {*} iKeys The indexed key.
-     * @param txn
-     * @throws if the uniqueness constraint is violated.
+     * This value determines whether the index supports multiple secondary keys per entry.
+     * If so, the value at the key path is considered to be an iterable.
+     * @type {boolean}
      */
-    _insert(primaryKey, iKeys, txn) {
-        if (!this._multiEntry || !Array.isArray(iKeys)) {
-            iKeys = [iKeys];
-        }
-
-        for (const secondaryKey of iKeys) {
-            let pKeys = super._get(txn, secondaryKey);
-            if (this._unique) {
-                if (pKeys !== undefined) {
-                    throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
-                }
-                pKeys = primaryKey;
-            } else {
-                pKeys = pKeys || [];
-                pKeys.push(primaryKey);
-            }
-            super._put(txn, secondaryKey, pKeys);
-        }
+    get multiEntry() {
+        return this._multiEntry;
     }
 
     /**
-     * A helper method to remove a primary-secondary key pair from the tree.
-     * @param {string} primaryKey The primary key.
-     * @param {*} iKeys The indexed key.
-     * @param txn
+     * This value determines whether the index is a unique constraint.
+     * @type {boolean}
      */
-    _remove(primaryKey, iKeys, txn) {
-        if (!this._multiEntry || !Array.isArray(iKeys)) {
-            iKeys = [iKeys];
+    get unique() {
+        return this._unique;
+    }
+
+    /**
+     * Initialises the persistent index by validating the version numbers
+     * and loading the InMemoryIndex from the database.
+     * @param {number} oldVersion
+     * @param {number} newVersion
+     * @param {boolean} isUpgrade
+     * @returns {PersistentIndex} The fully initialised index.
+     */
+    init(oldVersion, newVersion, isUpgrade) {
+        super.init(oldVersion, newVersion);
+
+        // Initialise the index on first construction.
+        if (isUpgrade) {
+            const txn = this._env.beginTxn();
+
+            this._objectStore._readStream((value, primaryKey) => {
+                this.put(primaryKey, value, undefined, txn);
+            });
+
+            txn.commit();
         }
-        // Remove all keys.
-        for (const secondaryKey of iKeys) {
-            let pKeys = super._get(txn, secondaryKey);
-            if (pKeys) {
-                if (!this._unique && pKeys.length > 1) {
-                    pKeys.splice(pKeys.indexOf(primaryKey), 1);
-                    super._put(txn, secondaryKey, pKeys);
-                } else {
-                    super._remove(txn, secondaryKey);
-                }
-            }
-        }
+
+        return this;
     }
 
     /**
@@ -130,40 +117,6 @@ class PersistentIndex extends LMDBBackend {
     }
 
     /**
-     * A helper method to retrieve the values corresponding to a set of keys.
-     * @param {Array.<string|Array.<string>>} results The set of keys to get the corresponding values for.
-     * @returns {Array.<*>} The array of values.
-     * @protected
-     */
-    _retrieveValues(results) {
-        const values = [];
-        for (const key of this._retrieveKeys(results)) {
-            values.push(this._objectStore.getSync(key));
-        }
-        return values;
-    }
-
-    /**
-     * A helper method to retrieve the values corresponding to a set of keys.
-     * @param {Array.<string|Array.<string>>} results The set of keys to get the corresponding values for.
-     * @returns {Array.<string>} A promise of the array of values.
-     * @protected
-     */
-    _retrieveKeys(results) {
-        const keys = [];
-        for (const result of results) {
-            if (Array.isArray(result)) {
-                for (const key of result) {
-                    keys.push(key);
-                }
-            } else {
-                keys.push(result);
-            }
-        }
-        return keys;
-    }
-
-    /**
      * Internally applies a transaction to the store's state.
      * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
      * or no changes are applied.
@@ -187,34 +140,6 @@ class PersistentIndex extends LMDBBackend {
     }
 
     /**
-     * The name of the index.
-     * @type {string}
-     */
-    get name() {
-        return this._indexName;
-    }
-
-    /**
-     * The key path associated with this index.
-     * A key path is defined by a key within the object or alternatively a path through the object to a specific subkey.
-     * For example, ['a', 'b'] could be used to use 'key' as the key in the following object:
-     * { 'a': { 'b': 'key' } }
-     * @type {string|Array.<string>}
-     */
-    get keyPath() {
-        return this._keyPath;
-    }
-
-    /**
-     * This value determines whether the index supports multiple secondary keys per entry.
-     * If so, the value at the key path is considered to be an iterable.
-     * @type {boolean}
-     */
-    get multiEntry() {
-        return this._multiEntry;
-    }
-
-    /**
      * Returns a promise of an array of objects whose secondary keys fulfill the given query.
      * If the optional query is not given, it returns all objects in the index.
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
@@ -222,7 +147,7 @@ class PersistentIndex extends LMDBBackend {
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
     async values(query=null) {
-        const results = await LMDBBackend.prototype.values.call(this, query);
+        const results = this._getValues(query);
         return this._retrieveValues(results);
     }
 
@@ -234,8 +159,8 @@ class PersistentIndex extends LMDBBackend {
      * @returns {Promise.<Set.<string>>} A promise of the set of primary keys relevant to the query.
      */
     async keys(query=null) {
-        const results = await LMDBBackend.prototype.values.call(this, query);
-        return Set.from(this._retrieveKeys(results));
+        const results = this._getValues(query);
+        return Set.from(results);
     }
 
     /**
@@ -246,8 +171,8 @@ class PersistentIndex extends LMDBBackend {
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async maxValues(query=null) {
-        const results = await this.maxValue(query);
-        return this._retrieveValues([results]);
+        const results = this._getMinMaxValues(query, false);
+        return this._retrieveValues(results);
     }
 
     /**
@@ -258,7 +183,8 @@ class PersistentIndex extends LMDBBackend {
      * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async maxKeys(query=null) {
-        return Set.from(await this.maxValue(query));
+        const results = this._getMinMaxValues(query, false);
+        return Set.from(results);
     }
 
     /**
@@ -269,8 +195,8 @@ class PersistentIndex extends LMDBBackend {
      * @returns {Promise.<Array.<*>>} A promise of array of objects relevant to the query.
      */
     async minValues(query=null) {
-        const results = await this.minValue(query);
-        return this._retrieveValues([results]);
+        const results = this._getMinMaxValues(query, true);
+        return this._retrieveValues(results);
     }
 
     /**
@@ -281,7 +207,8 @@ class PersistentIndex extends LMDBBackend {
      * @returns {Promise.<Set.<*>>} A promise of the key relevant to the query.
      */
     async minKeys(query=null) {
-        return Set.from(await this.minValue(query));
+        const results = this._getMinMaxValues(query, true);
+        return Set.from(results);
     }
 
     /**
@@ -292,33 +219,109 @@ class PersistentIndex extends LMDBBackend {
      * @returns {Promise.<number>}
      */
     async count(query=null) {
-        const results = await LMDBBackend.prototype.values.call(this, query);
-        return this._retrieveKeys(results).length;
+        const results = this._getMinMaxValues(query);
+        return results.length;
     }
 
     /**
-     * Initialises the persistent index by validating the version numbers
-     * and loading the InMemoryIndex from the database.
-     * @param {number} oldVersion
-     * @param {number} newVersion
-     * @param {boolean} isUpgrade
-     * @returns {PersistentIndex} The fully initialised index.
+     * Helper method to return the attribute associated with the key path if it exists.
+     * @param {string} key The primary key of the key-value pair.
+     * @param {*} obj The value of the key-value pair.
+     * @returns {*} The attribute associated with the key path, if it exists, and undefined otherwise.
+     * @private
      */
-    init(oldVersion, newVersion, isUpgrade) {
-        super.init(oldVersion, newVersion, GenericValueEncoding);
+    _indexKey(key, obj) {
+        if (this.keyPath) {
+            if (obj === undefined) return undefined;
+            return ObjectUtils.byKeyPath(obj, this.keyPath);
+        }
+        return key;
+    }
 
-        // Initialise the index on first construction.
-        if (isUpgrade) {
-            const txn = this._env.beginTxn();
-
-            this._objectStore._readStream((value, primaryKey) => {
-                this.put(primaryKey, value, undefined, txn);
-            });
-
-            txn.commit();
+    /**
+     * A helper method to insert a primary-secondary key pair into the tree.
+     * @param {string} primaryKey The primary key.
+     * @param {*} iKeys The indexed key.
+     * @param txn
+     * @throws if the uniqueness constraint is violated.
+     */
+    _insert(primaryKey, iKeys, txn) {
+        if (!this._multiEntry || !Array.isArray(iKeys)) {
+            iKeys = [iKeys];
         }
 
-        return this;
+        for (const secondaryKey of iKeys) {
+            const result = super._put(txn, secondaryKey, primaryKey, !this._unique);
+            if (!result) {
+                throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
+            }
+        }
+    }
+
+    /**
+     * A helper method to remove a primary-secondary key pair from the tree.
+     * @param {string} primaryKey The primary key.
+     * @param {*} iKeys The indexed key.
+     * @param txn
+     */
+    _remove(primaryKey, iKeys, txn) {
+        if (!this._multiEntry || !Array.isArray(iKeys)) {
+            iKeys = [iKeys];
+        }
+        // Remove all keys.
+        for (const secondaryKey of iKeys) {
+            super._remove(txn, secondaryKey, this._unique ? undefined : primaryKey);
+        }
+    }
+
+    /**
+     * A helper method to retrieve the values corresponding to a set of keys.
+     * @param {Array.<string|Array.<string>>} results The set of keys to get the corresponding values for.
+     * @returns {Array.<*>} The array of values.
+     * @protected
+     */
+    _retrieveValues(results) {
+        const values = [];
+        for (const key of results) {
+            values.push(this._objectStore.getSync(key));
+        }
+        return values;
+    }
+
+    /**
+     * @param {KeyRange} [query]
+     * @return {Array.<string>}
+     * @private
+     */
+    _getValues(query) {
+        let result = [];
+        this._readStream((value, key) => {
+            result.push(value);
+        }, true, query);
+        return result;
+    }
+
+    /**
+     * @param {KeyRange} [query]
+     * @param {boolean} [ascending]
+     * @return {Array.<string>}
+     * @private
+     */
+    _getMinMaxValues(query, ascending = true) {
+        let values = [], targetKey = null;
+        this._readStream((value, key) => {
+            if (targetKey === null) {
+                targetKey = key;
+            }
+
+            // Continue for as many values as the key is the same.
+            if (key === targetKey) {
+                values.push(value);
+                return true;
+            }
+            return false;
+        }, ascending, query);
+        return values;
     }
 }
 Class.register(PersistentIndex);
