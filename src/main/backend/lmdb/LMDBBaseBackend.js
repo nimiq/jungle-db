@@ -145,6 +145,17 @@ class LMDBBaseBackend {
     }
 
     /**
+     * Internally applies a transaction to the store's state.
+     * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
+     * or no changes are applied.
+     * @param {EncodedLMDBTransaction} tx The transaction to apply.
+     * @param txn
+     */
+    applyEncodedTransaction(tx, txn) {
+        throw new Error('Needs to be implemented by subclass');
+    }
+
+    /**
      * Fully deletes the object store and its indices.
      * @returns {Promise} The promise resolves after deleting the object store and its indices.
      */
@@ -282,6 +293,14 @@ class LMDBBaseBackend {
         }
 
         value = this.encode(value, alreadyEncoded);
+
+        // Shortcut for EncodedLMDBTransactions
+        if (txn instanceof EncodedLMDBTransaction) {
+            txn.put(this.encodeKey(key, alreadyEncoded), value);
+            return true;
+        }
+
+        // If it is a low-level transaction
         switch (this._valueEncoding.encoding) {
             case JungleDB.Encoding.STRING:
                 txn.putString(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
@@ -311,6 +330,13 @@ class LMDBBaseBackend {
         if (value !== undefined) {
             value = this.encode(value, alreadyEncoded);
         }
+
+        // Shortcut for EncodedLMDBTransactions
+        if (txn instanceof EncodedLMDBTransaction) {
+            txn.remove(this.encodeKey(key, alreadyEncoded), value);
+            return;
+        }
+
         txn.del(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
     }
 
@@ -336,29 +362,6 @@ class LMDBBaseBackend {
                 return cursor.getCurrentBinary(extendedCallback);
         }
         throw new Error('Invalid encoding given for LMDBBackend');
-    }
-
-    /**
-     * @param data
-     * @returns {number}
-     * @protected
-     */
-    _getByteSize(data) {
-        // We support different types of values:
-        // integers, strings, Uint8Arrays, booleans (as these are the values that can be stored by LMDB)
-        if (Number.isInteger(data)) {
-            return 64;
-        }
-        if (typeof data === 'string') {
-            return data.length * 2; // JavaScript uses UTF16 encoding
-        }
-        if (data instanceof Uint8Array) {
-            return data.byteLength;
-        }
-        if (typeof Buffer !== 'undefined' && typeof window === 'undefined' && data instanceof Buffer) {
-            return data.length;
-        }
-        throw new Error('Invalid datatype given for LMDBBackend');
     }
 
     /**

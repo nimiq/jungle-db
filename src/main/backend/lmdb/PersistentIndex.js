@@ -121,42 +121,45 @@ class PersistentIndex extends LMDBBaseBackend {
      * Internally applies a transaction to the store's state.
      * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
      * or no changes are applied.
-     * @param {Transaction} tx The transaction to apply.
+     * @param {EncodedLMDBTransaction} tx The transaction to apply.
      * @param txn
      * @override
      */
-    applySync(tx, txn) {
+    applyEncodedTransaction(tx, txn) {
         if (tx._truncated) {
             this._truncate(txn);
         }
 
         for (const key of tx._removed) {
-            const oldValue = tx._originalValues.get(key);
-            this.remove(key, oldValue, txn);
+            super._remove(txn, key, tx.removedValue(key), true);
         }
         for (const [key, value] of tx._modified) {
-            const oldValue = tx._originalValues.get(key);
-            this.put(key, value, oldValue, txn);
+            super._put(txn, key, value, !this._unique, true);
         }
     }
 
     /**
-     * Estimate the encoded size of a transaction.
-     * TODO: Improve performance.
+     * Encode writes and estimate the encoded size of a transaction.
      * @param {Transaction} tx The transaction to encode.
-     * @returns {number}
+     * @returns {EncodedLMDBTransaction}
      */
-    encodedSize(tx) {
-        let byteSize = 0;
+    encodeTransaction(tx) {
+        const encodedTx = new EncodedLMDBTransaction(this);
 
-        for (const [key, value] of tx._modified) {
-            const newIKey = this._indexKey(key, value);
-            if (newIKey !== undefined) {
-                byteSize += this._insertSize(key, newIKey);
-            }
+        if (tx._truncated) {
+            encodedTx.truncate();
         }
 
-        return byteSize;
+        for (const key of tx._removed) {
+            const oldValue = tx._originalValues.get(key);
+            this.remove(key, oldValue, encodedTx);
+        }
+        for (const [key, value] of tx._modified) {
+            const oldValue = tx._originalValues.get(key);
+            this.put(key, value, oldValue, encodedTx);
+        }
+
+        return encodedTx;
     }
 
     /**
@@ -276,27 +279,6 @@ class PersistentIndex extends LMDBBaseBackend {
                 throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
             }
         }
-    }
-
-    /**
-     * A helper method to insert a primary-secondary key pair into the tree.
-     * @param {string} primaryKey The primary key.
-     * @param {*} iKeys The indexed key.
-     * @param txn
-     * @throws if the uniqueness constraint is violated.
-     */
-    _insertSize(primaryKey, iKeys) {
-        if (!this._multiEntry || !Array.isArray(iKeys)) {
-            iKeys = [iKeys];
-        }
-
-        let byteSize = 0;
-        for (const secondaryKey of iKeys) {
-            const encodedKey = this.encodeKey(secondaryKey);
-            const encodedValue = this.encode(primaryKey);
-            byteSize += this._getByteSize(encodedKey) + this._getByteSize(encodedValue);
-        }
-        return byteSize;
     }
 
     /**

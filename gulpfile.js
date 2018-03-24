@@ -15,22 +15,23 @@ const istanbul = require('istanbul-api');
 const sources = {
     backend: {
         indexeddb: [
-            './src/main/backend/indexeddb/Class.js',
+            './src/main/platform/browser/Class.js',
+            './src/main/platform/browser/utils/LogNative.js',
             './src/main/backend/indexeddb/utils/IDBTools.js',
-            './src/main/backend/indexeddb/utils/LogNative.js',
             './src/main/backend/indexeddb/IDBBackend.js',
             './src/main/backend/indexeddb/JungleDB.js',
             './src/main/backend/indexeddb/PersistentIndex.js'
         ],
         leveldb: [
+            './src/main/platform/nodejs/utils/LogNative.js',
             './src/main/backend/leveldb/utils/LevelDBTools.js',
-            './src/main/backend/leveldb/utils/LogNative.js',
             './src/main/backend/leveldb/LevelDBBackend.js',
             './src/main/backend/leveldb/JungleDB.js',
             './src/main/backend/leveldb/PersistentIndex.js'
         ],
         lmdb: [
-            './src/main/backend/lmdb/utils/LogNative.js',
+            './src/main/platform/nodejs/utils/LogNative.js',
+            './src/main/backend/lmdb/utils/EncodedLMDBTransaction.js',
             './src/main/backend/lmdb/LMDBBaseBackend.js',
             './src/main/backend/lmdb/LMDBBackend.js',
             './src/main/backend/lmdb/JungleDB.js',
@@ -230,7 +231,7 @@ gulp.task('build-lmdb', function () {
     return gulp.src(LMDB_SOURCES, { base: 'src' })
         .pipe(sourcemaps.init())
         .pipe(concat('lmdb.js'))
-        .pipe(uglify(uglify_config))
+        // .pipe(uglify(uglify_config))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'));
 });

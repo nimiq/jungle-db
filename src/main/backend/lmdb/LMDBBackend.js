@@ -321,45 +321,50 @@ class LMDBBackend extends LMDBBaseBackend {
      * Internally applies a transaction to the store's state.
      * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
      * or no changes are applied.
-     * @param {Transaction} tx The transaction to apply.
+     * @param {EncodedLMDBTransaction} tx The transaction to apply.
+     * @param txn
      */
-    applySync(tx, txn) {
+    applyEncodedTransaction(tx, txn) {
         if (tx._truncated) {
             this._truncate(txn);
         }
 
         for (const key of tx._removed) {
-            this._remove(txn, key);
+            this._remove(txn, key, undefined, true);
         }
         for (const [key, value] of tx._modified) {
-            this._put(txn, key, value);
+            this._put(txn, key, value, undefined, true);
         }
 
-        for (const index of this._indices.values()) {
-            index.applySync(tx, txn);
+        for (const [indexName, index] of this._indices) {
+            index.applyEncodedTransaction(tx.getIndex(indexName), txn);
         }
     }
 
     /**
-     * Estimate the encoded size of a transaction.
-     * TODO: Improve performance.
+     * Encode transaction and estimate the encoded size of a transaction.
      * @param {Transaction} tx The transaction to encode.
-     * @returns {number}
+     * @returns {EncodedLMDBTransaction}
      */
-    encodedSize(tx) {
-        let byteSize = 0;
+    encodeTransaction(tx) {
+        const encodedTx = new EncodedLMDBTransaction(this);
 
+        if (tx._truncated) {
+            encodedTx.truncate();
+        }
+
+        for (const key of tx._removed) {
+            this._remove(encodedTx, key);
+        }
         for (const [key, value] of tx._modified) {
-            const encodedKey = this.encodeKey(key);
-            const encodedValue = this.encode(value);
-            byteSize += this._getByteSize(encodedKey) + this._getByteSize(encodedValue);
+            this._put(encodedTx, key, value);
         }
 
-        for (const index of this._indices.values()) {
-            byteSize += index.encodedSize(tx);
+        for (const [indexName, index] of this._indices) {
+            encodedTx.setIndex(indexName, index.encodeTransaction(tx));
         }
 
-        return byteSize;
+        return encodedTx;
     }
 
     /**
@@ -368,7 +373,7 @@ class LMDBBackend extends LMDBBaseBackend {
      * @returns {Promise.<Array>} An array containing the batch operations.
      */
     async applyCombined(tx) {
-        return tx;
+        return this.encodeTransaction(tx);
     }
 
     /**
@@ -459,15 +464,16 @@ class LMDBBackend extends LMDBBaseBackend {
      */
     async _apply(tx) {
         // Check database size before applying transaction.
+        const encodedTx = this.encodeTransaction(tx);
         if (this._db.autoResize) {
-            const estimatedSize = this.encodedSize(tx) * 2;
+            const estimatedSize = encodedTx.byteSize * 2;
             if (this._db.needsResize(estimatedSize)) {
                 this._db.doResize(estimatedSize);
             }
         }
 
         const txn = this._env.beginTxn();
-        this.applySync(tx, txn);
+        this.applyEncodedTransaction(encodedTx, txn);
         txn.commit();
     }
 }

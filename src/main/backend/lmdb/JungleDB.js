@@ -104,10 +104,11 @@ class JungleDB {
 
             if (lmdbTransactions.length > 0) {
                 const jdb = tx1.backend;
+                // Resize if needed
                 if (jdb.autoResize) {
                     let estimatedSize = 0;
-                    for (const tx of lmdbTransactions) {
-                        estimatedSize += tx.objectStore._backend.encodedSize(tx);
+                    for (const /** @type {EncodedLMDBTransaction} */ tx of lmdbTransactions) {
+                        estimatedSize += tx.byteSize;
                     }
                     estimatedSize = estimatedSize * 2;
                     if (jdb.needsResize(estimatedSize)) {
@@ -117,8 +118,8 @@ class JungleDB {
 
                 const txn = jdb.backend.beginTxn();
 
-                for (const tx of lmdbTransactions) {
-                    tx.objectStore._backend.applySync(tx, txn);
+                for (const /** @type {EncodedLMDBTransaction} */ tx of lmdbTransactions) {
+                    tx.backend.applyEncodedTransaction(tx, txn);
                 }
 
                 txn.commit();
@@ -261,6 +262,10 @@ class JungleDB {
 
         if (thresholdSize > 0 && info.mapSize - sizeUsed < thresholdSize) {
             Log.i(JungleDB, 'Database needs resize (thresholdSize)');
+            Log.i(JungleDB, `DB map size: ${info.mapSize / (1024 * 1024)} MB`);
+            Log.i(JungleDB, `Used: ${sizeUsed / (1024 * 1024)} MB`);
+            Log.i(JungleDB, `Available: ${(info.mapSize - sizeUsed) / (1024 * 1024)} MB`);
+            Log.i(JungleDB, `Needed: ${thresholdSize / (1024 * 1024)} MB`);
             return true;
         }
 
@@ -270,6 +275,10 @@ class JungleDB {
         if (sizeUsed / info.mapSize > resizePercentage)
         {
             Log.i(JungleDB, 'Database needs resize (resizePercentage)');
+            Log.i(JungleDB, `DB map size: ${info.mapSize / (1024 * 1024)} MB`);
+            Log.i(JungleDB, `Used: ${sizeUsed / (1024 * 1024)} MB`);
+            Log.i(JungleDB, `Available: ${(info.mapSize - sizeUsed) / (1024 * 1024)} MB`);
+            Log.i(JungleDB, `Percentage full: ${sizeUsed / info.mapSize * 100} %`);
             return true;
         }
         return false;
@@ -286,6 +295,8 @@ class JungleDB {
 
         let newMapSize = info.mapSize + sizeAdd;
         newMapSize += newMapSize % stat.pageSize;
+
+        Log.i(JungleDB, `Resize to ${newMapSize / (1024 * 1024)} MB`);
 
         this._db.resize(newMapSize);
     }
