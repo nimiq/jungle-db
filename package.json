@@ -13,7 +13,7 @@
     "lint": "gulp eslint"
   },
   "repository": "git@github.com:nimiq-network/jungle-db.git",
-  "author": "pb <mail@paberr.net>",
+  "author": "paberr <pascal@nimiq.com>",
   "license": "MIT",
   "engines": {
     "node": ">=7.9.0"

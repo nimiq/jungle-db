@@ -275,16 +275,13 @@ class LevelDBBackend {
                 } catch (e) {
                     error(e);
                 }
-            })
-            .on('error', err => {
+            }).on('error', err => {
                 if (!stopped) {
                     error(err);
                 }
-            })
-            .on('end', () => {
+            }).on('end', () => {
                 resolve();
-            })
-            .on('close', () => {
+            }).on('close', () => {
                 resolve();
             });
         });
@@ -316,18 +313,15 @@ class LevelDBBackend {
                     stream.destroy();
                     error(e);
                 }
-            })
-            .on('error', err => {
+            }).on('error', err => {
                 if (!stopped) {
                     error(err);
                 } else {
                     resolve();
                 }
-            })
-            .on('end', () => {
+            }).on('end', () => {
                 resolve();
-            })
-            .on('close', () => {
+            }).on('close', () => {
                 resolve();
             });
         });
