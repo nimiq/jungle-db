@@ -14,7 +14,8 @@ class PersistentIndex extends LMDBBaseBackend {
      */
     constructor(objectStore, db, indexName, keyPath, multiEntry=false, unique=false) {
         const prefix = `_${objectStore.tableName}-${indexName}`;
-        super(db, prefix, undefined, { keyEncoding: GenericValueEncoding, dupSort: true });
+        super(db, prefix, { encode: x => x, decode: x => x, valueEncoding: JungleDB.STRING_ENCODING },
+            { keyEncoding: GenericValueEncoding, dupSort: true });
         this._prefix = prefix;
 
         /** @type {LMDBBackend} */
@@ -140,6 +141,25 @@ class PersistentIndex extends LMDBBaseBackend {
     }
 
     /**
+     * Estimate the encoded size of a transaction.
+     * TODO: Improve performance.
+     * @param {Transaction} tx The transaction to encode.
+     * @returns {number}
+     */
+    encodedSize(tx) {
+        let byteSize = 0;
+
+        for (const [key, value] of tx._modified) {
+            const newIKey = this._indexKey(key, value);
+            if (newIKey !== undefined) {
+                byteSize += this._insertSize(key, newIKey);
+            }
+        }
+
+        return byteSize;
+    }
+
+    /**
      * Returns a promise of an array of objects whose secondary keys fulfill the given query.
      * If the optional query is not given, it returns all objects in the index.
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
@@ -256,6 +276,27 @@ class PersistentIndex extends LMDBBaseBackend {
                 throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
             }
         }
+    }
+
+    /**
+     * A helper method to insert a primary-secondary key pair into the tree.
+     * @param {string} primaryKey The primary key.
+     * @param {*} iKeys The indexed key.
+     * @param txn
+     * @throws if the uniqueness constraint is violated.
+     */
+    _insertSize(primaryKey, iKeys) {
+        if (!this._multiEntry || !Array.isArray(iKeys)) {
+            iKeys = [iKeys];
+        }
+
+        let byteSize = 0;
+        for (const secondaryKey of iKeys) {
+            const encodedKey = this.encodeKey(secondaryKey);
+            const encodedValue = this.encode(primaryKey);
+            byteSize += this._getByteSize(encodedKey) + this._getByteSize(encodedValue);
+        }
+        return byteSize;
     }
 
     /**

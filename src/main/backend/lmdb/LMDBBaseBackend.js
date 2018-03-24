@@ -81,9 +81,13 @@ class LMDBBaseBackend {
     /**
      * Internal method called to encode a single value.
      * @param {*} value Value to be encoded.
+     * @param {boolean} [alreadyEncoded] This flag allows to skip the encoding.
      * @returns {*} The encoded value, either by the object store's default or the overriding decoder if given.
      */
-    encode(value) {
+    encode(value, alreadyEncoded = false) {
+        if (alreadyEncoded) {
+            return value;
+        }
         if (value === undefined) {
             return null; // LMDB only supports null values
         }
@@ -112,13 +116,14 @@ class LMDBBaseBackend {
     /**
      * Internal method called to encode a single key.
      * @param {*} key Key to be encoded.
+     * @param {boolean} [alreadyEncoded] This flag allows to skip the encoding.
      * @returns {*} The encoded key, either by the object store's default or the overriding decoder if given.
      */
-    encodeKey(key) {
+    encodeKey(key, alreadyEncoded = false) {
         if (key === null || key === undefined) {
             return null; // LMDB only supports null values
         }
-        if (this._keyEncoding !== null && this._keyEncoding !== undefined) {
+        if (!alreadyEncoded && this._keyEncoding !== null && this._keyEncoding !== undefined) {
             key = this._keyEncoding.encode(key);
         }
         return key;
@@ -243,19 +248,20 @@ class LMDBBaseBackend {
     /**
      * @param txn
      * @param key
+     * @param {boolean} [alreadyEncoded] This flag allows to skip the encoding.
      * @returns {*}
      * @protected
      */
-    _get(txn, key) {
+    _get(txn, key, alreadyEncoded = false) {
         switch (this._valueEncoding.encoding) {
             case JungleDB.Encoding.STRING:
-                return this.decode(txn.getString(this._dbBackend, this.encodeKey(key)), key);
+                return this.decode(txn.getString(this._dbBackend, this.encodeKey(key, alreadyEncoded)), key);
             case JungleDB.Encoding.NUMBER:
-                return this.decode(txn.getNumber(this._dbBackend, this.encodeKey(key)), key);
+                return this.decode(txn.getNumber(this._dbBackend, this.encodeKey(key, alreadyEncoded)), key);
             case JungleDB.Encoding.BOOLEAN:
-                return this.decode(txn.getBoolean(this._dbBackend, this.encodeKey(key)), key);
+                return this.decode(txn.getBoolean(this._dbBackend, this.encodeKey(key, alreadyEncoded)), key);
             case JungleDB.Encoding.BINARY:
-                return this.decode(txn.getBinary(this._dbBackend, this.encodeKey(key)), key);
+                return this.decode(txn.getBinary(this._dbBackend, this.encodeKey(key, alreadyEncoded)), key);
         }
         throw new Error('Invalid encoding given for LMDBBackend');
     }
@@ -265,28 +271,29 @@ class LMDBBaseBackend {
      * @param key
      * @param value
      * @param {boolean} [allowOverwrite]
+     * @param {boolean} [alreadyEncoded]
      * @return {boolean}
      * @protected
      */
-    _put(txn, key, value, allowOverwrite = true) {
+    _put(txn, key, value, allowOverwrite = true, alreadyEncoded = false) {
         // Workaround for SIGABRT in node-lmdb
-        if (!allowOverwrite && this._get(txn, key) === null) {
+        if (!allowOverwrite && this._get(txn, key, alreadyEncoded) === null) {
             return false;
         }
 
-        value = this.encode(value);
+        value = this.encode(value, alreadyEncoded);
         switch (this._valueEncoding.encoding) {
             case JungleDB.Encoding.STRING:
-                txn.putString(this._dbBackend, this.encodeKey(key), value);
+                txn.putString(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
                 return true;
             case JungleDB.Encoding.NUMBER:
-                txn.putNumber(this._dbBackend, this.encodeKey(key), value);
+                txn.putNumber(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
                 return true;
             case JungleDB.Encoding.BOOLEAN:
-                txn.putBoolean(this._dbBackend, this.encodeKey(key), value);
+                txn.putBoolean(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
                 return true;
             case JungleDB.Encoding.BINARY:
-                txn.putBinary(this._dbBackend, this.encodeKey(key), value);
+                txn.putBinary(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
                 return true;
         }
         throw new Error('Invalid encoding given for LMDBBackend');
@@ -296,20 +303,22 @@ class LMDBBaseBackend {
      * @param txn
      * @param key
      * @param [value]
+     * @param {boolean} [alreadyEncoded] This flag allows to skip the encoding.
      * @protected
      */
-    _remove(txn, key, value) {
+    _remove(txn, key, value, alreadyEncoded = false) {
+        // value being undefined is intentional here!
         if (value !== undefined) {
-            value = this.encode(value);
+            value = this.encode(value, alreadyEncoded);
         }
-        txn.del(this._dbBackend, this.encodeKey(key), value);
+        txn.del(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
     }
 
     /**
      * @param cursor
      * @param callback
      * @returns {*}
-     * @private
+     * @protected
      */
     _cursorGetCurrent(cursor, callback) {
         const extendedCallback = (key, value) => {
@@ -327,6 +336,29 @@ class LMDBBaseBackend {
                 return cursor.getCurrentBinary(extendedCallback);
         }
         throw new Error('Invalid encoding given for LMDBBackend');
+    }
+
+    /**
+     * @param data
+     * @returns {number}
+     * @protected
+     */
+    _getByteSize(data) {
+        // We support different types of values:
+        // integers, strings, Uint8Arrays, booleans (as these are the values that can be stored by LMDB)
+        if (Number.isInteger(data)) {
+            return 64;
+        }
+        if (typeof data === 'string') {
+            return data.length * 2; // JavaScript uses UTF16 encoding
+        }
+        if (data instanceof Uint8Array) {
+            return data.byteLength;
+        }
+        if (typeof Buffer !== 'undefined' && typeof window === 'undefined' && data instanceof Buffer) {
+            return data.length;
+        }
+        throw new Error('Invalid datatype given for LMDBBackend');
     }
 
     /**

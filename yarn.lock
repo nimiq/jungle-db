@@ -5439,9 +5439,9 @@ node-abi@^2.1.1:
   dependencies:
     semver "^5.4.1"
 
-node-lmdb@^0.4.13:
+node-lmdb@Venemo/node-lmdb:
   version "0.4.13"
-  resolved "https://registry.yarnpkg.com/node-lmdb/-/node-lmdb-0.4.13.tgz#65aa9b42c2a19ed7135f618eaaa1711cebb7be29"
+  resolved "https://codeload.github.com/Venemo/node-lmdb/tar.gz/1e03ec80c5c9a553ee9867673cb56d3c81821e55"
   dependencies:
     bindings "^1.2.1"
     nan "^2.6.2"
