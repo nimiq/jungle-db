@@ -6,10 +6,10 @@ JungleDB is a simple database abstraction layer for NodeJS (LevelDB or LMDB) and
 
 The easiest option to use jungle-db is to install it from the npm repository.
 ```bash
-npm install jungle-db
+npm install @nimiq/jungle-db
 ```
 
-Or alternatively using `yarn add jungle-db`.
+Or alternatively using `yarn add @nimiq/jungle-db`.
 
 ## Usage
 
