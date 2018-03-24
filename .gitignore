@@ -7,12 +7,7 @@
 /clients/nodejs/node_modules
 /clients/nodejs/database
 /clients/nodejs/localhost.*
-/dist/nimiq*
-/dist/web*
-/dist/node*
-/dist/leveldb*
-/dist/indexeddb*
-/dist/doc/
+/dist
 .idea
 *.iml
 /database
