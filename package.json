@@ -1,20 +1,24 @@
 {
   "name": "jungle-db",
   "version": "0.5.0",
-  "main": "dist/leveldb.js",
-  "private": true,
+  "main": "dist/lmdb.js",
+  "unpkg": "dist/indexeddb.js",
   "scripts": {
     "build": "gulp build",
     "esdoc": "esdoc",
-    "test": "jasmine && gulp test",
+    "test": "jasmine && jasmine --config=spec/support/lmdb-jasmine.json && gulp test",
     "test-leveldb": "jasmine",
     "test-lmdb": "jasmine --config=spec/support/lmdb-jasmine.json",
     "test-indexeddb": "gulp test",
-    "lint": "gulp eslint"
+    "lint": "gulp eslint",
+    "prepublish": "gulp eslint && jasmine && jasmine --config=spec/support/lmdb-jasmine.json && rm -rf dist && gulp build"
   },
   "repository": "git@github.com:nimiq-network/jungle-db.git",
   "author": "paberr <pascal@nimiq.com>",
-  "license": "MIT",
+  "license": "Apache-2.0",
+  "files": [
+    "dist"
+  ],
   "engines": {
     "node": ">=7.9.0"
   },
