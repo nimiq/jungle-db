@@ -15,7 +15,7 @@ class JungleDB {
      * @param {string} databaseDir The name of the database.
      * @param {number} dbVersion The current version of the database.
      * @param {function(oldVersion:number, newVersion:number)} [onUpgradeNeeded] A function to be called after upgrades of the structure.
-     * @param {{maxDbs:?number, maxDbSize:number}} options
+     * @param {{maxDbs:?number, maxDbSize:?number, minResize:?number, autoResize:?boolean}} options
      */
     constructor(databaseDir, dbVersion, onUpgradeNeeded, options = {}) {
         if (dbVersion <= 0) throw new Error('The version provided must not be less or equal to 0');
@@ -27,7 +27,6 @@ class JungleDB {
         this._objectStoreBackends = [];
         this._objectStoresToDelete = [];
 
-        if (!options.maxDbSize) throw new Error('maxDbSize is a required option');
         this._options = options;
         this._minResize = options.minResize || 1 << 30; // 1 GB default
     }
@@ -139,7 +138,7 @@ class JungleDB {
         this._db = new lmdb.Env();
         this._db.open({
             path: this._databaseDir,
-            mapSize: this._options.maxDbSize,
+            mapSize: this._options.maxDbSize || 1024*1024*5, // 5MB default
             maxDbs: this._options.maxDbs || 3 // default
         });
 
@@ -244,7 +243,7 @@ class JungleDB {
         const sizeUsed = stat.pageSize * (info.lastPageNumber + 1);
 
         if (thresholdSize > 0 && info.mapSize - sizeUsed < thresholdSize) {
-            Log.i('Database needs resize (thresholdSize)');
+            Log.i(JungleDB, 'Database needs resize (thresholdSize)');
             return true;
         }
 
@@ -253,7 +252,7 @@ class JungleDB {
 
         if (sizeUsed / info.mapSize > resizePercentage)
         {
-            Log.i('Database needs resize (resizePercentage)');
+            Log.i(JungleDB, 'Database needs resize (resizePercentage)');
             return true;
         }
         return false;

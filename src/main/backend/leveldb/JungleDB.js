@@ -317,4 +317,14 @@ JungleDB.GENERIC_ENCODING = {
     buffer: false,
     type: 'generic-value-codec'
 };
+/**
+ * A levelDB binary encoding.
+ * @type {{encode: function(val:*):*, decode: function(val:*):*, encoding: JungleDB.Encoding}}
+ */
+JungleDB.BINARY_ENCODING = 'binary';
+/**
+ * A levelDB string encoding.
+ * @type {{encode: function(val:*):*, decode: function(val:*):*, encoding: JungleDB.Encoding}}
+ */
+JungleDB.STRING_ENCODING = 'ascii';
 Class.register(JungleDB);
