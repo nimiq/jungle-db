@@ -94,7 +94,7 @@ If an option does not apply for the current backend, it is simply ignored.
 * `maxDbSize: number`: The maximum size of the database in bytes (default: 5MB).
 * `autoResize: boolean`: This flag indicates whether the database should be automatically resized if needed (default: false).
      If enabled, the DB will be resized by max(`minResize`, spaceNeeded).
-* `minResize: number`: The minimum number of bytes the database will be resized (default: 1GB).
+* `minResize: number`: The minimum number of bytes the database will be resized (default: 100MB).
 * `maxDbs: number`: The maximum number of object stores + indices for this JungleDB instance.
     This value defaults to the correct number of object stores + indices created.
 

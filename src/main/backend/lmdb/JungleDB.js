@@ -28,7 +28,7 @@ class JungleDB {
         this._objectStoresToDelete = [];
 
         this._options = options;
-        this._minResize = options.minResize || (1 << 30); // 1 GB default
+        this._minResize = options.minResize || (1024*1024*100); // 100 MB default
     }
 
     /** The underlying LMDB. */
@@ -48,7 +48,7 @@ class JungleDB {
 
     /** @type {number} */
     set minResize(sizeAdd) {
-        this._minResize = sizeAdd || (1 << 30); // 1 GB default
+        this._minResize = sizeAdd || (1024*1024*100); // 100 MB default
     }
 
     /** @type {boolean} */
