@@ -21,8 +21,8 @@ Depending on your target and preferences, include one of the files in the dist f
 * NodeJS LevelDB: `leveldb.js`
 * NodeJS LMDB: `lmdb.js`
 
-In NodeJS, you can use `var JDB = require('jungle-db');` to include the LMDB backend.
-In order to use the LevelDB backend, `var JDB = require('jungle-db/dist/leveldb.js');` has to be used.
+In NodeJS, you can use `var JDB = require('@nimiq/jungle-db');` to include the LMDB backend.
+In order to use the LevelDB backend, `var JDB = require('@nimiq/jungle-db/dist/leveldb.js');` has to be used.
 
 Then, create a `JungleDB` instance and potential object stores as follows:
 ```javascript
