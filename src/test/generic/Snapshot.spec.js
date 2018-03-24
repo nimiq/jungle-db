@@ -202,7 +202,6 @@ describe('Snapshot', () => {
 
     it('can handle index queries', (done) => {
         (async function () {
-            debugger;
             const tx1 = objectStore.transaction();
             await tx1.put('newTest', {
                 'key': 'newTest',
