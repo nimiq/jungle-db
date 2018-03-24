@@ -4,15 +4,13 @@
   "main": "dist/leveldb.js",
   "private": true,
   "scripts": {
-    "prepare": "gulp build",
     "build": "gulp build",
     "esdoc": "esdoc",
     "test": "jasmine && gulp test",
     "test-leveldb": "jasmine",
     "test-lmdb": "jasmine --config=spec/support/lmdb-jasmine.json",
     "test-indexeddb": "gulp test",
-    "lint": "gulp eslint",
-    "postinstall": "gulp build"
+    "lint": "gulp eslint"
   },
   "repository": "git@github.com:nimiq-network/jungle-db.git",
   "author": "pb <mail@paberr.net>",
@@ -27,7 +25,7 @@
     "level-sublevel": "^6.6.1",
     "leveldown": "^2.1.1",
     "levelup": "^2.0.0",
-    "node-lmdb": "^0.4.13"
+    "node-lmdb": "Venemo/node-lmdb"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",

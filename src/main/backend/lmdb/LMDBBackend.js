@@ -341,6 +341,28 @@ class LMDBBackend extends LMDBBaseBackend {
     }
 
     /**
+     * Estimate the encoded size of a transaction.
+     * TODO: Improve performance.
+     * @param {Transaction} tx The transaction to encode.
+     * @returns {number}
+     */
+    encodedSize(tx) {
+        let byteSize = 0;
+
+        for (const [key, value] of tx._modified) {
+            const encodedKey = this.encodeKey(key);
+            const encodedValue = this.encode(value);
+            byteSize += this._getByteSize(encodedKey) + this._getByteSize(encodedValue);
+        }
+
+        for (const index of this._indices.values()) {
+            byteSize += index.encodedSize(tx);
+        }
+
+        return byteSize;
+    }
+
+    /**
      * Returns the necessary information in order to flush a combined transaction.
      * @param {Transaction} tx The transaction that should be applied to this backend.
      * @returns {Promise.<Array>} An array containing the batch operations.
@@ -436,6 +458,14 @@ class LMDBBackend extends LMDBBaseBackend {
      * @protected
      */
     async _apply(tx) {
+        // Check database size before applying transaction.
+        if (this._db.autoResize) {
+            const estimatedSize = this.encodedSize(tx) * 2;
+            if (this._db.needsResize(estimatedSize)) {
+                this._db.doResize(estimatedSize);
+            }
+        }
+
         const txn = this._env.beginTxn();
         this.applySync(tx, txn);
         txn.commit();
