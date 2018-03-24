@@ -10,8 +10,7 @@
     "test-leveldb": "jasmine",
     "test-lmdb": "jasmine --config=spec/support/lmdb-jasmine.json",
     "test-indexeddb": "gulp test",
-    "lint": "gulp eslint",
-    "prepublish": "gulp eslint && jasmine && jasmine --config=spec/support/lmdb-jasmine.json && rm -rf dist && gulp build"
+    "lint": "gulp eslint"
   },
   "repository": "git@github.com:nimiq-network/jungle-db.git",
   "author": "paberr <pascal@nimiq.com>",
