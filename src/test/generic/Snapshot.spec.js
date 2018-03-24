@@ -9,7 +9,7 @@ describe('Snapshot', () => {
     };
 
     beforeEach((done) => {
-        db = new JungleDB('test', 1, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
+        db = new JungleDB('test', 1);
         objectStore = db.createObjectStore('testStore');
         objectStore.createIndex('test', ['a', 'b'], true);
 

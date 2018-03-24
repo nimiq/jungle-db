@@ -28,7 +28,7 @@ describe('BinaryCodec', () => {
     };
 
     beforeEach((done) => {
-        jdb = new JungleDB('test', 1, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
+        jdb = new JungleDB('test', 1);
         objectStore = jdb.createObjectStore('testStore1', { codec: BinaryCodec.instance });
 
         (async function () {

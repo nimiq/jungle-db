@@ -28,7 +28,7 @@ class JungleDB {
         this._objectStoresToDelete = [];
 
         this._options = options;
-        this._minResize = options.minResize || 1 << 30; // 1 GB default
+        this._minResize = options.minResize || (1 << 30); // 1 GB default
     }
 
     /** The underlying LMDB. */
@@ -48,7 +48,7 @@ class JungleDB {
 
     /** @type {number} */
     set minResize(sizeAdd) {
-        this._minResize = sizeAdd || 1 << 30; // 1 GB default
+        this._minResize = sizeAdd || (1 << 30); // 1 GB default
     }
 
     /** @type {boolean} */
@@ -147,11 +147,16 @@ class JungleDB {
             fs.mkdirSync(this._databaseDir);
         }
 
+        let numDbs = 1;
+        for (const { /** @type {LMDBBackend} */ backend, upgradeCondition } of this._objectStoreBackends) {
+            numDbs += 1 + backend.indices.size;
+        }
+
         this._db = new lmdb.Env();
         this._db.open({
             path: this._databaseDir,
-            mapSize: this._options.maxDbSize || 1024*1024*5, // 5MB default
-            maxDbs: this._options.maxDbs || 3 // default
+            mapSize: this._options.maxDbSize || (1024*1024*5), // 5MB default
+            maxDbs: (this._options.maxDbs + 1) || numDbs // default, always add 1 for the internal db
         });
 
         // Check if resize is needed.

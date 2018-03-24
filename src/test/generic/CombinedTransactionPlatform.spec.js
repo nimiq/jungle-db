@@ -2,7 +2,7 @@ describe('CombinedTransactionPlatform', () => {
     let jdb, backend1, backend2, objectStore1, objectStore2;
 
     beforeEach((done) => {
-        jdb = new JungleDB('test', 1, undefined, { maxDbSize: 1024*1024*100, maxDbs: 10 });
+        jdb = new JungleDB('test', 1);
         objectStore1 = jdb.createObjectStore('testStore1');
         objectStore2 = jdb.createObjectStore('testStore2');
 

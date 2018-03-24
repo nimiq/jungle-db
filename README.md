@@ -4,29 +4,16 @@ JungleDB is a simple database abstraction layer for NodeJS (LevelDB or LMDB) and
 
 ## Quickstart
 
-1. Clone this repository `git clone https://github.com/nimiq-network/jungle-db`.
-2. Run `npm install` or `yarn`
-3. Run `npm run build` or `yarn build`
-4. Open `clients/browser/index.html` in your browser to access a simple browser example.
-
-
-### Run Example
-
-#### Run Browser Example
-Open `clients/browser/index.html` in your browser.
-
-#### Run NodeJs Example
-
-Start the example by running `clients/nodejs/index.js`.
-
+The easiest option to use jungle-db is to install it from the npm repository.
 ```bash
-cd clients/nodejs/
-node index.js
+npm install jungle-db
 ```
 
-### Usage
+Or alternatively using `yarn add jungle-db`.
 
-## Getting started
+## Usage
+
+### Getting started
 Depending on your target and preferences, include one of the files in the dist folder into your application.
 
 * Modern Browsers: `indexeddb.js`
@@ -34,11 +21,14 @@ Depending on your target and preferences, include one of the files in the dist f
 * NodeJS LevelDB: `leveldb.js`
 * NodeJS LMDB: `lmdb.js`
 
+In NodeJS, you can use `var JDB = require('jungle-db');` to include the LMDB backend.
+In order to use the LevelDB backend, `var JDB = require('jungle-db/dist/leveldb.js');` has to be used.
+
 Then, create a `JungleDB` instance and potential object stores as follows:
 ```javascript
 // Create a JungleDB instance
 // The maxDbSize option is only required for LMDB based databases
-const db = new JungleDB('myDatabase', 1, undefined, { maxDbSize: 1024*1024 });
+const db = new JDB.JungleDB('myDatabase', 1);
 
 // Create an object store
 db.createObjectStore('myStore');
@@ -70,45 +60,13 @@ db.createObjectStore('myStore');
 If your next application version now includes an index, you can use upgrade conditions:
 ```javascript
 // Create a JungleDB instance with a new version
-// The maxDbSize option is only required for LMDB based databases
-const db = new JungleDB('myDatabase', 2, undefined, { maxDbSize: 1024*1024 });
-
-// Create an object store
-// The upgrade condition specifies that the store needs to be physically created
-// if the database version is less than 1 (since we created it in version 1).
-const st = db.createObjectStore('myStore', { upgradeCondition: version => version < 1 });
-st.createIndex('myIndex', 'i', { upgradeCondition: version => version < 2 });
-
-// Switch to an async context
-(async function() {
-    // Connect to your database
-    await db.connect();
-
-    // Now you can easily put/get/remove objects and use transactions.
-    const store = db.getObjectStore('myStore');
-
-    const tx = store.transaction();
-    await tx.put('test', {'i': 1, 'data': 'value'});
-    
-    // Prints {'i': 1, 'data': 'value'}
-    console.log(await tx.get('test'));
-    // Prints undefined due to read isolation
-    console.log(await store.get('test'));
-    
-    await tx.commit();
-    
-    // Prints {'i': 1, 'data': 'value'}
-    console.log(await store.get('test'));
-    
-    // Prints [{'i': 1, 'data': 'value'}]
-    console.log(await store.index('myIndex').values(KeyRange.only(1)));
-    console.log(await store.values(Query.eq('myIndex', 1)));
-    
-    await store.remove('test');
-})();
+const db = new JDB.JungleDB('myDatabase', 2, undefined, {
+    autoResize: true,
+    maxDbSize: 1024*1024*100
+});
 ```
 
-## Encoding
+### Encoding
 JungleDB allows to specify custom encodings for values (primary keys are currently restricted to strings only).
 The encoding is only applied immediately before writing/after reading from the underlying backend.
 A custom encoding – implementing the `ICodec` interface – can be passed to the `JungleDB.createObjectStore(tableName, options)` method in the `options` argument as follows:
@@ -126,6 +84,50 @@ db.createObjectStore('test', {
 The `valueEncoding` property defines a backend specific encoding.
 While the default JSON encoding is sufficient for most cases, it can be used to optimise storage in case only binary data is stored.
 There is also the possibility to define different backend specific encodings for LevelDB and LMDB using `leveldbValueEncoding` and `lmdbValueEncoding`.
+
+### Database Options
+There are options specific to some of the backends. Especially the LMDB backend is highly configurable.
+If an option does not apply for the current backend, it is simply ignored.
+
+#### LMDB Options
+
+* `maxDbSize: number`: The maximum size of the database in bytes (default: 5MB).
+* `autoResize: boolean`: This flag indicates whether the database should be automatically resized if needed (default: false).
+     If enabled, the DB will be resized by max(`minResize`, spaceNeeded).
+* `minResize: number`: The minimum number of bytes the database will be resized (default: 1GB).
+* `maxDbs: number`: The maximum number of object stores + indices for this JungleDB instance.
+    This value defaults to the correct number of object stores + indices created.
+
+Here is an example to make use of these options.
+```javascript
+// Create a JungleDB instance with a new version
+const db = new JDB.JungleDB('myDatabase', 2, undefined, {
+    autoResize: true,
+    maxDbSize: 1024*1024*100
+});
+```
+
+## Installing from Source
+
+1. Clone this repository `git clone https://github.com/nimiq-network/jungle-db`.
+2. Run `npm install` or `yarn`
+3. Run `npm run build` or `yarn build`
+4. Open `clients/browser/index.html` in your browser to access a simple browser example.
+
+
+### Run Example
+
+#### Run Browser Example
+Open `clients/browser/index.html` in your browser.
+
+#### Run NodeJs Example
+
+Start the example by running `clients/nodejs/index.js`.
+
+```bash
+cd clients/nodejs/
+node index.js
+```
 
 ### Benchmarks
 
