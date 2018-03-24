@@ -103,7 +103,19 @@ class JungleDB {
             }
 
             if (lmdbTransactions.length > 0) {
-                const txn = tx1.backend.backend.beginTxn();
+                const jdb = tx1.backend;
+                if (jdb.autoResize) {
+                    let estimatedSize = 0;
+                    for (const tx of lmdbTransactions) {
+                        estimatedSize += tx.objectStore._backend.encodedSize(tx);
+                    }
+                    estimatedSize = estimatedSize * 2;
+                    if (jdb.needsResize(estimatedSize)) {
+                        jdb.doResize(estimatedSize);
+                    }
+                }
+
+                const txn = jdb.backend.beginTxn();
 
                 for (const tx of lmdbTransactions) {
                     tx.objectStore._backend.applySync(tx, txn);
