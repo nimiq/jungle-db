@@ -31,69 +31,90 @@ class PersistentIndex extends LevelDBBackend {
     }
 
     /**
-     * Helper method to return the attribute associated with the key path if it exists.
-     * @param {string} key The primary key of the key-value pair.
-     * @param {*} obj The value of the key-value pair.
-     * @returns {*} The attribute associated with the key path, if it exists, and undefined otherwise.
-     * @private
+     * The name of the index.
+     * @type {string}
      */
-    _indexKey(key, obj) {
-        if (this.keyPath) {
-            if (obj === undefined) return undefined;
-            return ObjectUtils.byKeyPath(obj, this.keyPath);
-        }
-        return key;
+    get name() {
+        return this._indexName;
     }
 
     /**
-     * A helper method to insert a primary-secondary key pair into the tree.
-     * @param {string} primaryKey The primary key.
-     * @param {*} iKeys The indexed key.
-     * @param {Transaction} tx The transaction in which to track the changes.
-     * @throws if the uniqueness constraint is violated.
+     * The key path associated with this index.
+     * A key path is defined by a key within the object or alternatively a path through the object to a specific subkey.
+     * For example, ['a', 'b'] could be used to use 'key' as the key in the following object:
+     * { 'a': { 'b': 'key' } }
+     * @type {string|Array.<string>}
      */
-    async _insert(primaryKey, iKeys, tx) {
-        if (!this._multiEntry || !Array.isArray(iKeys)) {
-            iKeys = [iKeys];
-        }
-
-        for (const secondaryKey of iKeys) {
-            let pKeys = await tx.get(secondaryKey);
-            if (this._unique) {
-                if (pKeys !== undefined) {
-                    throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
-                }
-                pKeys = primaryKey;
-            } else {
-                pKeys = pKeys || [];
-                pKeys.push(primaryKey);
-            }
-            await tx.put(secondaryKey, pKeys);
-        }
+    get keyPath() {
+        return this._keyPath;
     }
 
     /**
-     * A helper method to remove a primary-secondary key pair from the tree.
-     * @param {string} primaryKey The primary key.
-     * @param {*} iKeys The indexed key.
-     * @param {Transaction} tx The transaction in which to track the changes.
+     * This value determines whether the index supports multiple secondary keys per entry.
+     * If so, the value at the key path is considered to be an iterable.
+     * @type {boolean}
      */
-    async _remove(primaryKey, iKeys, tx) {
-        if (!this._multiEntry || !Array.isArray(iKeys)) {
-            iKeys = [iKeys];
+    get multiEntry() {
+        return this._multiEntry;
+    }
+
+    /**
+     * This value determines whether the index is a unique constraint.
+     * @type {boolean}
+     */
+    get unique() {
+        return this._unique;
+    }
+
+    /**
+     * Initialises the persistent index by validating the version numbers
+     * and loading the InMemoryIndex from the database.
+     * @param {number} oldVersion
+     * @param {number} newVersion
+     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} upgradeCondition
+     * @returns {Promise.<PersistentIndex>} A promise of the fully initialised index.
+     */
+    async init(oldVersion, newVersion, upgradeCondition) {
+        await LevelDBBackend.prototype.init.call(this, oldVersion, newVersion);
+
+        let isUpgrade = true;
+        if (upgradeCondition === null) {
+            isUpgrade = (await this.maxKey()) === undefined; // Heuristic: empty index
+        } else {
+            isUpgrade = upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(oldVersion, newVersion));
         }
-        // Remove all keys.
-        for (const secondaryKey of iKeys) {
-            let pKeys = await tx.get(secondaryKey);
-            if (pKeys) {
-                if (!this._unique && pKeys.length > 1) {
-                    pKeys.splice(pKeys.indexOf(primaryKey), 1);
-                    await tx.put(secondaryKey, pKeys);
-                } else {
-                    await tx.remove(secondaryKey);
+
+        // Initialise the index on first construction.
+        if (isUpgrade) {
+            const tx = new EncodedTransaction(this.tableName);
+            await this._objectStore.valueStream((value, primaryKey) => {
+                const keyPathValue = ObjectUtils.byKeyPath(value, this._keyPath);
+                if (keyPathValue !== undefined) {
+                    // Support for multi entry secondary key paths.
+                    let iKeys = keyPathValue;
+                    if (!this._multiEntry || !Array.isArray(iKeys)) {
+                        iKeys = [iKeys];
+                    }
+
+                    for (const secondaryKey of iKeys) {
+                        let pKeys = tx.get(secondaryKey);
+                        if (this._unique) {
+                            if (pKeys !== undefined) {
+                                throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
+                            }
+                            pKeys = primaryKey;
+                        } else {
+                            pKeys = pKeys || [];
+                            pKeys.push(primaryKey);
+                        }
+                        tx.put(secondaryKey, pKeys);
+                    }
                 }
-            }
+            });
+            await LevelDBBackend.prototype._apply.call(this, tx);
         }
+
+        return this;
     }
 
     /**
@@ -134,139 +155,6 @@ class PersistentIndex extends LevelDBBackend {
             await this._remove(key, iKey, internalTx);
         }
         return tx ? null : this.applyCombined(internalTx);
-    }
-
-    /**
-     * A helper method to retrieve the values corresponding to a set of keys.
-     * @param {Array.<string|Array.<string>>} results The set of keys to get the corresponding values for.
-     * @returns {Promise.<Array.<*>>} A promise of the array of values.
-     * @protected
-     */
-    async _retrieveValues(results) {
-        const valuePromises = [];
-        for (const key of this._retrieveKeys(results)) {
-            valuePromises.push(this._objectStore.get(key));
-        }
-        return Promise.all(valuePromises);
-    }
-
-    /**
-     * A helper method to retrieve the values corresponding to a set of keys.
-     * @param {Array.<string|Array.<string>>} results The set of keys to get the corresponding values for.
-     * @returns {Array.<string>} A promise of the array of values.
-     * @protected
-     */
-    _retrieveKeys(results) {
-        const keys = [];
-        for (const result of results) {
-            if (Array.isArray(result)) {
-                for (const key of result) {
-                    keys.push(key);
-                }
-            } else {
-                keys.push(result);
-            }
-        }
-        return keys;
-    }
-
-    /**
-     * Initialises the persistent index by validating the version numbers
-     * and loading the InMemoryIndex from the database.
-     * @param {number} oldVersion
-     * @param {number} newVersion
-     * @param {boolean} isUpgrade
-     * @returns {Promise.<PersistentIndex>} A promise of the fully initialised index.
-     */
-    async init(oldVersion, newVersion, isUpgrade) {
-        await LevelDBBackend.prototype.init.call(this, oldVersion, newVersion);
-
-        // Initialise the index on first construction.
-        if (isUpgrade) {
-            const tx = new EncodedTransaction(this.tableName);
-            await this.valueStream((value, primaryKey) => {
-                const keyPathValue = ObjectUtils.byKeyPath(value, this._keyPath);
-                if (keyPathValue !== undefined) {
-                    // Support for multi entry secondary key paths.
-                    let iKeys = keyPathValue;
-                    if (!this._multiEntry || !Array.isArray(iKeys)) {
-                        iKeys = [iKeys];
-                    }
-
-                    for (const secondaryKey of iKeys) {
-                        let pKeys = tx.get(secondaryKey);
-                        if (this._unique) {
-                            if (pKeys !== undefined) {
-                                throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
-                            }
-                            pKeys = primaryKey;
-                        } else {
-                            pKeys = pKeys || [];
-                            pKeys.push(primaryKey);
-                        }
-                        tx.put(secondaryKey, pKeys);
-                    }
-                }
-            });
-            await LevelDBBackend.prototype._apply.call(this, tx);
-        }
-
-        return this;
-    }
-
-    /**
-     * Internally applies a transaction to the store's state.
-     * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
-     * or no changes are applied.
-     * @param {Transaction} tx The transaction to apply.
-     * @returns {Promise.<Array>} The promise resolves after applying the transaction.
-     * @protected
-     */
-    async _apply(tx) {
-        const internalTx = new Transaction(null, this, this, false);
-
-        if (tx._truncated) {
-            await internalTx.truncate();
-        }
-
-        for (const key of tx._removed) {
-            const oldValue = tx._originalValues.get(key);
-            await this.remove(key, oldValue, internalTx);
-        }
-        for (const [key, value] of tx._modified) {
-            const oldValue = tx._originalValues.get(key);
-            await this.put(key, value, oldValue, internalTx);
-        }
-
-        return this.applyCombined(internalTx);
-    }
-
-    /**
-     * The name of the index.
-     * @type {string}
-     */
-    get name() {
-        return this._indexName;
-    }
-
-    /**
-     * The key path associated with this index.
-     * A key path is defined by a key within the object or alternatively a path through the object to a specific subkey.
-     * For example, ['a', 'b'] could be used to use 'key' as the key in the following object:
-     * { 'a': { 'b': 'key' } }
-     * @type {string|Array.<string>}
-     */
-    get keyPath() {
-        return this._keyPath;
-    }
-
-    /**
-     * This value determines whether the index supports multiple secondary keys per entry.
-     * If so, the value at the key path is considered to be an iterable.
-     * @type {boolean}
-     */
-    get multiEntry() {
-        return this._multiEntry;
     }
 
     /**
@@ -349,6 +237,133 @@ class PersistentIndex extends LevelDBBackend {
     async count(query=null) {
         const results = await LevelDBBackend.prototype.values.call(this, query);
         return this._retrieveKeys(results).length;
+    }
+
+    /**
+     * Helper method to return the attribute associated with the key path if it exists.
+     * @param {string} key The primary key of the key-value pair.
+     * @param {*} obj The value of the key-value pair.
+     * @returns {*} The attribute associated with the key path, if it exists, and undefined otherwise.
+     * @private
+     */
+    _indexKey(key, obj) {
+        if (this.keyPath) {
+            if (obj === undefined) return undefined;
+            return ObjectUtils.byKeyPath(obj, this.keyPath);
+        }
+        return key;
+    }
+
+    /**
+     * A helper method to insert a primary-secondary key pair into the tree.
+     * @param {string} primaryKey The primary key.
+     * @param {*} iKeys The indexed key.
+     * @param {Transaction} tx The transaction in which to track the changes.
+     * @throws if the uniqueness constraint is violated.
+     */
+    async _insert(primaryKey, iKeys, tx) {
+        if (!this._multiEntry || !Array.isArray(iKeys)) {
+            iKeys = [iKeys];
+        }
+
+        for (const secondaryKey of iKeys) {
+            let pKeys = await tx.get(secondaryKey);
+            if (this._unique) {
+                if (pKeys !== undefined) {
+                    throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
+                }
+                pKeys = primaryKey;
+            } else {
+                pKeys = pKeys || [];
+                pKeys.push(primaryKey);
+            }
+            await tx.put(secondaryKey, pKeys);
+        }
+    }
+
+    /**
+     * A helper method to remove a primary-secondary key pair from the tree.
+     * @param {string} primaryKey The primary key.
+     * @param {*} iKeys The indexed key.
+     * @param {Transaction} tx The transaction in which to track the changes.
+     */
+    async _remove(primaryKey, iKeys, tx) {
+        if (!this._multiEntry || !Array.isArray(iKeys)) {
+            iKeys = [iKeys];
+        }
+        // Remove all keys.
+        for (const secondaryKey of iKeys) {
+            let pKeys = await tx.get(secondaryKey);
+            if (pKeys) {
+                if (!this._unique && pKeys.length > 1) {
+                    pKeys.splice(pKeys.indexOf(primaryKey), 1);
+                    await tx.put(secondaryKey, pKeys);
+                } else {
+                    await tx.remove(secondaryKey);
+                }
+            }
+        }
+    }
+
+    /**
+     * A helper method to retrieve the values corresponding to a set of keys.
+     * @param {Array.<string|Array.<string>>} results The set of keys to get the corresponding values for.
+     * @returns {Promise.<Array.<*>>} A promise of the array of values.
+     * @protected
+     */
+    async _retrieveValues(results) {
+        const valuePromises = [];
+        for (const key of this._retrieveKeys(results)) {
+            valuePromises.push(this._objectStore.get(key));
+        }
+        return Promise.all(valuePromises);
+    }
+
+    /**
+     * A helper method to retrieve the values corresponding to a set of keys.
+     * @param {Array.<string|Array.<string>>} results The set of keys to get the corresponding values for.
+     * @returns {Array.<string>} A promise of the array of values.
+     * @protected
+     */
+    _retrieveKeys(results) {
+        const keys = [];
+        for (const result of results) {
+            if (Array.isArray(result)) {
+                for (const key of result) {
+                    keys.push(key);
+                }
+            } else {
+                keys.push(result);
+            }
+        }
+        return keys;
+    }
+
+    /**
+     * Internally applies a transaction to the store's state.
+     * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
+     * or no changes are applied.
+     * @param {Transaction} tx The transaction to apply.
+     * @returns {Promise.<Array>} The promise resolves after applying the transaction.
+     * @protected
+     */
+    async _apply(tx) {
+        const internalTx = new Transaction(null, this, this, false);
+
+        if (tx._truncated) {
+            await internalTx.truncate();
+        }
+
+        for (const key of tx._removed) {
+            const oldValue = tx._originalValues.get(key);
+            await this.remove(key, oldValue, internalTx);
+        }
+        for (const [key, value] of tx._modified) {
+            const oldValue = tx._originalValues.get(key);
+            await this.put(key, value, oldValue, internalTx);
+        }
+
+        return this.applyCombined(internalTx);
     }
 }
 Class.register(PersistentIndex);

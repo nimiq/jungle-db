@@ -41,7 +41,7 @@ class LMDBBackend extends LMDBBaseBackend {
 
         // Delete indices.
         for (const { indexName, upgradeCondition } of this._indicesToDelete) {
-            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(oldVersion, newVersion)) {
+            if (upgradeCondition === null || upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(oldVersion, newVersion))) {
                 const index = new PersistentIndex(this, indexName, '');
                 LMDBBaseBackend.truncate(this._env, index.tableName);
             }
@@ -50,8 +50,7 @@ class LMDBBackend extends LMDBBaseBackend {
 
         const indices = [];
         for (const [indexName, { index, upgradeCondition }] of this._indicesToCreate) {
-            indices.push(index.init(oldVersion, newVersion,
-                upgradeCondition === null || upgradeCondition === true || upgradeCondition(oldVersion, newVersion)));
+            indices.push(index.init(oldVersion, newVersion, upgradeCondition));
         }
         return indices;
     }

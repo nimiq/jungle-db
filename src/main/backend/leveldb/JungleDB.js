@@ -130,7 +130,7 @@ class JungleDB {
         if (this._dbVersion > storedVersion) {
             // Delete object stores, if requested.
             for (const { tableName, upgradeCondition } of this._objectStoresToDelete) {
-                if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(storedVersion, this._dbVersion)) {
+                if (upgradeCondition === null || upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(storedVersion, this._dbVersion))) {
                     promises.push(LevelDBBackend.truncate(this._db, tableName));
                 }
             }

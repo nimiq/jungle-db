@@ -52,13 +52,23 @@ class LMDBBaseBackend {
      * Initialises the persisted indices of the object store.
      * @param {number} oldVersion
      * @param {number} newVersion
+     * @returns {boolean} object store was newly created
      */
     init(oldVersion, newVersion) {
-        this._dbBackend = this._env.openDbi({
-            name: this._tableName,
-            create: true,
-            dupSort: this._dupSort
-        });
+        try {
+            this._dbBackend = this._env.openDbi({
+                name: this._tableName,
+                dupSort: this._dupSort
+            });
+            return false;
+        } catch (e) {
+            this._dbBackend = this._env.openDbi({
+                name: this._tableName,
+                create: true,
+                dupSort: this._dupSort
+            });
+            return true;
+        }
     }
 
     /**

@@ -114,7 +114,7 @@ class EncodedLMDBTransaction {
         // We support different types of values:
         // integers, strings, Uint8Arrays, booleans (as these are the values that can be stored by LMDB)
         if (Number.isInteger(data)) {
-            return 64;
+            return 8;
         }
         if (typeof data === 'string') {
             return data.length * 2; // JavaScript uses UTF16 encoding

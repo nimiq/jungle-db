@@ -31,7 +31,7 @@ describe('EncodedLMDBTransaction', () => {
 
         tx.put(1, 0);
 
-        expect(tx.byteSize).toBe(128);
+        expect(tx.byteSize).toBe(16);
     });
 
     it('correctly estimates buffer byte size', () => {

@@ -24,26 +24,61 @@ class LevelDBBackend {
         this._keyEncoding = options && options.keyEncoding ? options.keyEncoding : null;
     }
 
+    /**
+     * Truncates a sublevel object store.
+     * @param db A levelDB instance.
+     * @param {string} tableName A table's name.
+     * @returns {Promise.<void>}
+     */
+    static async truncate(db, tableName) {
+        const sub = db.sublevel(tableName);
+        const batch = await LevelDBBackend._truncate(sub);
+
+        return new Promise((resolve, error) => {
+            sub.batch(batch, err => {
+                if (err) {
+                    error(err);
+                    return;
+                }
+
+                resolve(true);
+            });
+        });
+    }
+
+    /**
+     * Removes all database related files from the folder.
+     * @returns {Promise} The promise resolves after deleting the object store and its indices.
+     */
+    static async destroy(databaseDirectory) {
+        return new Promise((resolve, error) => {
+            require('leveldown').destroy(databaseDirectory, err => {
+                if (err) {
+                    error(err);
+                    return;
+                }
+                resolve();
+            });
+        });
+    }
+
     /** @type {boolean} */
     get connected() {
         return this._db.connected;
     }
 
-    get _valueEncoding() {
-        return this._codec === null ? JungleDB.JSON_ENCODING :
-            (this._codec.valueEncoding || this._codec.leveldbValueEncoding || JungleDB.JSON_ENCODING);
+    /** @type {string} The own table name. */
+    get tableName() {
+        return this._tableName;
     }
 
     /**
-     * @param op
-     * @return
-     * @private
+     * A map of index names to indices.
+     * The index names can be used to access an index.
+     * @type {Map.<string,IIndex>}
      */
-    _setKeyEncoding(op) {
-        if (this._keyEncoding) {
-            op.keyEncoding = this._keyEncoding;
-        }
-        return op;
+    get indices() {
+        return this._indices;
     }
 
     /**
@@ -58,7 +93,7 @@ class LevelDBBackend {
         let indexPromises = [];
         // Delete indices.
         for (const { indexName, upgradeCondition } of this._indicesToDelete) {
-            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(oldVersion, newVersion)) {
+            if (upgradeCondition === null || upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(oldVersion, newVersion))) {
                 const index = new PersistentIndex(this, this._db, indexName, '');
                 indexPromises.push(index.init(oldVersion, newVersion, false).then(() => index.destroy()));
             }
@@ -68,19 +103,9 @@ class LevelDBBackend {
 
         indexPromises = [];
         for (const [indexName, { index, upgradeCondition }] of this._indicesToCreate) {
-            indexPromises.push(index.init(oldVersion, newVersion,
-                upgradeCondition === null || upgradeCondition === true || upgradeCondition(oldVersion, newVersion)));
+            indexPromises.push(index.init(oldVersion, newVersion, upgradeCondition));
         }
         return Promise.all(indexPromises);
-    }
-
-    /**
-     * A map of index names to indices.
-     * The index names can be used to access an index.
-     * @type {Map.<string,IIndex>}
-     */
-    get indices() {
-        return this._indices;
     }
 
     /**
@@ -218,6 +243,9 @@ class LevelDBBackend {
                 })
                 .on('end', () => {
                     resolve(result);
+                })
+                .on('close', () => {
+                    resolve(result);
                 });
         });
     }
@@ -346,6 +374,12 @@ class LevelDBBackend {
                 })
                 .on('error', err => {
                     error(err);
+                })
+                .on('end', () => {
+                    resolve(undefined);
+                })
+                .on('close', () => {
+                    resolve(undefined);
                 });
         });
     }
@@ -365,6 +399,12 @@ class LevelDBBackend {
                 })
                 .on('error', err => {
                     error(err);
+                })
+                .on('end', () => {
+                    resolve(undefined);
+                })
+                .on('close', () => {
+                    resolve(undefined);
                 });
         });
     }
@@ -388,6 +428,12 @@ class LevelDBBackend {
                 })
                 .on('error', err => {
                     error(err);
+                })
+                .on('end', () => {
+                    resolve(undefined);
+                })
+                .on('close', () => {
+                    resolve(undefined);
                 });
         });
     }
@@ -407,6 +453,12 @@ class LevelDBBackend {
                 })
                 .on('error', err => {
                     error(err);
+                })
+                .on('end', () => {
+                    resolve(undefined);
+                })
+                .on('close', () => {
+                    resolve(undefined);
                 });
         });
     }
@@ -451,34 +503,6 @@ class LevelDBBackend {
         return this._indices.get(indexName);
     }
 
-    /** @type {string} The own table name. */
-    get tableName() {
-        return this._tableName;
-    }
-
-    /**
-     * Internally applies a transaction to the store's state.
-     * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
-     * or no changes are applied.
-     * @param {Transaction} tx The transaction to apply.
-     * @returns {Promise} The promise resolves after applying the transaction.
-     * @protected
-     */
-    async _apply(tx) {
-        let batch = await this.applyCombined(tx);
-
-        return new Promise((resolve, error) => {
-            this._dbBackend.batch(batch, err => {
-                if (err) {
-                    error(err);
-                    return;
-                }
-
-                resolve(true);
-            });
-        });
-    }
-
     /**
      * Returns the necessary information in order to flush a combined transaction.
      * @param {Transaction} tx The transaction that should be applied to this backend.
@@ -506,54 +530,6 @@ class LevelDBBackend {
     }
 
     /**
-     * Truncates a sublevel object store.
-     * @param db A levelDB instance.
-     * @param {string} tableName A table's name.
-     * @returns {Promise.<void>}
-     */
-    static async truncate(db, tableName) {
-        const sub = db.sublevel(tableName);
-        const batch = await LevelDBBackend._truncate(sub);
-
-        return new Promise((resolve, error) => {
-            sub.batch(batch, err => {
-                if (err) {
-                    error(err);
-                    return;
-                }
-
-                resolve(true);
-            });
-        });
-    }
-
-    /**
-     * Prepares a batch operation to truncate a sublevel.
-     * @param sub A levelDB sublevel instance.
-     * @param [keyEncoding]
-     * @returns {Promise.<Array>}
-     */
-    static async _truncate(sub, keyEncoding) {
-        return new Promise((resolve, error) => {
-            const batch = [];
-            sub.createReadStream({ 'values': false, 'keys': true })
-                .on('data', data => {
-                    const op = { key: data, type: 'del', prefix: sub };
-                    if (keyEncoding) {
-                        op.keyEncoding = keyEncoding;
-                    }
-                    batch.push(op);
-                })
-                .on('error', err => {
-                    error(err);
-                })
-                .on('end', () => {
-                    resolve(batch);
-                });
-        });
-    }
-
-    /**
      * Empties the object store.
      * @returns {Promise} The promise resolves after emptying the object store.
      */
@@ -572,57 +548,11 @@ class LevelDBBackend {
     }
 
     /**
-     * Empties the object store.
-     * @returns {Promise} The promise resolves after emptying the object store.
-     */
-    async _truncate() {
-        let batch = await LevelDBBackend._truncate(this._dbBackend);
-        // Truncate all indices.
-        for (const index of this._indices.values()) {
-            batch = batch.concat(index._truncate());
-        }
-        return batch;
-    }
-
-    /**
      * Fully deletes the object store and its indices.
      * @returns {Promise} The promise resolves after deleting the object store and its indices.
      */
     destroy() {
         return this.truncate();
-    }
-
-    /**
-     * Removes all database related files from the folder.
-     * @returns {Promise} The promise resolves after deleting the object store and its indices.
-     */
-    static async destroy(databaseDirectory) {
-        return new Promise((resolve, error) => {
-            require('leveldown').destroy(databaseDirectory, err => {
-                if (err) {
-                    error(err);
-                    return;
-                }
-                resolve();
-            });
-        });
-    }
-
-    /**
-     * Internal method to close the backend's connection.
-     * @returns {Promise} The promise resolves after closing the object store.
-     * @private
-     */
-    _close() {
-        return new Promise((resolve, error) => {
-            this._dbBackend.close(err => {
-                if (err) {
-                    error(err);
-                    return;
-                }
-                resolve();
-            });
-        });
     }
 
     /**
@@ -717,6 +647,102 @@ class LevelDBBackend {
      */
     isSynchronous() {
         return false;
+    }
+
+    /**
+     * Prepares a batch operation to truncate a sublevel.
+     * @param sub A levelDB sublevel instance.
+     * @param [keyEncoding]
+     * @returns {Promise.<Array>}
+     */
+    static async _truncate(sub, keyEncoding) {
+        return new Promise((resolve, error) => {
+            const batch = [];
+            sub.createReadStream({ 'values': false, 'keys': true })
+                .on('data', data => {
+                    const op = { key: data, type: 'del', prefix: sub };
+                    if (keyEncoding) {
+                        op.keyEncoding = keyEncoding;
+                    }
+                    batch.push(op);
+                })
+                .on('error', err => {
+                    error(err);
+                })
+                .on('end', () => {
+                    resolve(batch);
+                });
+        });
+    }
+
+    get _valueEncoding() {
+        return this._codec === null ? JungleDB.JSON_ENCODING :
+            (this._codec.valueEncoding || this._codec.leveldbValueEncoding || JungleDB.JSON_ENCODING);
+    }
+
+    /**
+     * @param op
+     * @return
+     * @private
+     */
+    _setKeyEncoding(op) {
+        if (this._keyEncoding) {
+            op.keyEncoding = this._keyEncoding;
+        }
+        return op;
+    }
+
+    /**
+     * Internally applies a transaction to the store's state.
+     * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
+     * or no changes are applied.
+     * @param {Transaction} tx The transaction to apply.
+     * @returns {Promise} The promise resolves after applying the transaction.
+     * @protected
+     */
+    async _apply(tx) {
+        let batch = await this.applyCombined(tx);
+
+        return new Promise((resolve, error) => {
+            this._dbBackend.batch(batch, err => {
+                if (err) {
+                    error(err);
+                    return;
+                }
+
+                resolve(true);
+            });
+        });
+    }
+
+    /**
+     * Empties the object store.
+     * @returns {Promise} The promise resolves after emptying the object store.
+     */
+    async _truncate() {
+        let batch = await LevelDBBackend._truncate(this._dbBackend);
+        // Truncate all indices.
+        for (const index of this._indices.values()) {
+            batch = batch.concat(index._truncate());
+        }
+        return batch;
+    }
+
+    /**
+     * Internal method to close the backend's connection.
+     * @returns {Promise} The promise resolves after closing the object store.
+     * @private
+     */
+    _close() {
+        return new Promise((resolve, error) => {
+            this._dbBackend.close(err => {
+                if (err) {
+                    error(err);
+                    return;
+                }
+                resolve();
+            });
+        });
     }
 }
 Class.register(LevelDBBackend);

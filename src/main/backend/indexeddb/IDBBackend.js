@@ -52,7 +52,7 @@ class IDBBackend {
     init(objectStore, oldVersion, newVersion) {
         // Delete indices.
         for (const { indexName, upgradeCondition } of this._indicesToDelete) {
-            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(oldVersion, newVersion)) {
+            if (upgradeCondition === null || upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(oldVersion, newVersion))) {
                 objectStore.deleteIndex(indexName);
             }
         }
@@ -60,7 +60,7 @@ class IDBBackend {
 
         // Create indices.
         for (const [indexName, { index, upgradeCondition }] of this._indicesToCreate) {
-            if (upgradeCondition === null || upgradeCondition === true || upgradeCondition(oldVersion, newVersion)) {
+            if (upgradeCondition === null || upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(oldVersion, newVersion))) {
                 const keyPath = Array.isArray(index.keyPath) ? index.keyPath.join('.') : index.keyPath;
                 objectStore.createIndex(indexName, keyPath, {unique: false, multiEntry: index.multiEntry});
             }

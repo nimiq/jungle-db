@@ -64,11 +64,18 @@ class PersistentIndex extends LMDBBaseBackend {
      * and loading the InMemoryIndex from the database.
      * @param {number} oldVersion
      * @param {number} newVersion
-     * @param {boolean} isUpgrade
+     * @param {?boolean|?function(oldVersion:number, newVersion:number):boolean} upgradeCondition
      * @returns {PersistentIndex} The fully initialised index.
      */
-    init(oldVersion, newVersion, isUpgrade) {
-        super.init(oldVersion, newVersion);
+    init(oldVersion, newVersion, upgradeCondition) {
+        const wasCreated = super.init(oldVersion, newVersion);
+
+        let isUpgrade = false;
+        if (upgradeCondition === null) {
+            isUpgrade = wasCreated;
+        } else {
+            isUpgrade = upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(oldVersion, newVersion));
+        }
 
         // Initialise the index on first construction.
         if (isUpgrade) {

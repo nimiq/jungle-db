@@ -166,4 +166,82 @@ describe('Index', () => {
             await db.destroy();
         })().then(done, done.fail);
     });
+
+    it('only fills the index once', (done) => {
+        (async function () {
+            // Write something into an object store.
+            let db = new JungleDB('indexTest', 1);
+            let st = db.createObjectStore('testStore');
+            st.createIndex('depth', ['a', 'b']);
+            await db.connect();
+
+            await st.put('test', {'val': 123, 'a': {'b': 1}});
+            await st.put('test2', 'other');
+
+            expect(await st.index('depth').count()).toBe(1);
+
+            await db.close();
+
+            // 2nd connection
+            db = new JungleDB('indexTest', 1);
+            st = db.createObjectStore('testStore');
+            st.createIndex('depth', ['a', 'b']);
+            await db.connect();
+
+            await st.put('test', {'val': 123, 'a': {'b': 1}});
+            await st.put('test2', 'other');
+
+            expect(await st.index('depth').count()).toBe(1);
+
+            await db.destroy();
+        })().then(done, done.fail);
+    });
+
+    it('can fill the index on implicit upgrade', (done) => {
+        (async function () {
+            // Write something into an object store.
+            let db = new JungleDB('indexTest', 1);
+            let st = db.createObjectStore('testStore');
+            await db.connect();
+
+            await st.put('test', {'val': 123, 'a': {'b': 1}});
+            await st.put('test2', 'other');
+
+            await db.close();
+
+            // 2nd connection
+            db = new JungleDB('indexTest', 2);
+            st = db.createObjectStore('testStore', { upgradeCondition: false });
+            st.createIndex('depth', ['a', 'b']);
+            await db.connect();
+
+            expect(await st.index('depth').count()).toBe(1);
+
+            await db.destroy();
+        })().then(done, done.fail);
+    });
+
+    it('can fill the index on explicit upgrade', (done) => {
+        (async function () {
+            // Write something into an object store.
+            let db = new JungleDB('indexTest', 1);
+            let st = db.createObjectStore('testStore');
+            await db.connect();
+
+            await st.put('test', {'val': 123, 'a': {'b': 1}});
+            await st.put('test2', 'other');
+
+            await db.close();
+
+            // 2nd connection
+            db = new JungleDB('indexTest', 2);
+            st = db.createObjectStore('testStore', { upgradeCondition: false });
+            st.createIndex('depth', ['a', 'b'], { upgradeCondition: true });
+            await db.connect();
+
+            expect(await st.index('depth').count()).toBe(1);
+
+            await db.destroy();
+        })().then(done, done.fail);
+    });
 });
