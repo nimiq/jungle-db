@@ -169,11 +169,6 @@ describe('Index', () => {
 
     it('only fills the index once', (done) => {
         (async function () {
-            // Do not run this test in Edge.
-            if (typeof window !== 'undefined' && window.navigator.userAgent.indexOf("Edge") > -1) {
-                return;
-            }
-
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
@@ -204,11 +199,6 @@ describe('Index', () => {
 
     it('can fill the index on implicit upgrade', (done) => {
         (async function () {
-            // Do not run this test in Edge.
-            if (typeof window !== 'undefined' && window.navigator.userAgent.indexOf("Edge") > -1) {
-                return;
-            }
-
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
@@ -233,11 +223,6 @@ describe('Index', () => {
 
     it('can fill the index on explicit upgrade', (done) => {
         (async function () {
-            // Do not run this test in Edge.
-            if (typeof window !== 'undefined' && window.navigator.userAgent.indexOf("Edge") > -1) {
-                return;
-            }
-            
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');

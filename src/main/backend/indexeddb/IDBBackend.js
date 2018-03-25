@@ -60,9 +60,12 @@ class IDBBackend {
 
         // Create indices.
         for (const [indexName, { index, upgradeCondition }] of this._indicesToCreate) {
-            if (upgradeCondition === null || upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(oldVersion, newVersion))) {
+            // Only check upgradeCondition if index does not already exist!
+            if (!objectStore.indexNames.contains(indexName)
+                && (upgradeCondition === null || upgradeCondition === true
+                    || (typeof upgradeCondition === 'function' && upgradeCondition(oldVersion, newVersion)))) {
                 const keyPath = Array.isArray(index.keyPath) ? index.keyPath.join('.') : index.keyPath;
-                objectStore.createIndex(indexName, keyPath, {unique: index.unique, multiEntry: index.multiEntry});
+                objectStore.createIndex(indexName, keyPath, { unique: index.unique, multiEntry: index.multiEntry });
             }
         }
         this._indicesToCreate.clear();
@@ -394,11 +397,19 @@ class IDBBackend {
         query = IDBTools.convertKeyRange(query);
         const db = this._backend;
         return new Promise((resolve, reject) => {
-            const getRequest = db.transaction([this._tableName], 'readonly')
-                .objectStore(this._tableName)
-                .count(query);
-            getRequest.onsuccess = () => resolve(getRequest.result);
-            getRequest.onerror = () => reject(getRequest.error);
+            let request;
+            // Edge compatibility
+            if (query) {
+                request = db.transaction([this._tableName], 'readonly')
+                    .objectStore(this._tableName)
+                    .count(query);
+            } else {
+                request = db.transaction([this._tableName], 'readonly')
+                    .objectStore(this._tableName)
+                    .count();
+            }
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
         });
     }
 

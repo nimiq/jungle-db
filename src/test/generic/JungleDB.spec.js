@@ -85,6 +85,27 @@ describe('JungleDB', () => {
         })().then(done, done.fail);
     });
 
+    it('does not throw errors when recreating existing stores', (done) => {
+        (async function () {
+            // Write something into an object store.
+            let db = new JungleDB('test', 1);
+            let st = db.createObjectStore('testStore');
+            st.createIndex('test');
+            await db.connect();
+            await st.put('test', 'succeeded');
+            await db.close();
+
+            // Create another index
+            db = new JungleDB('test', 2);
+            st = db.createObjectStore('testStore');
+            st.createIndex('test');
+            st.createIndex('test2');
+            await db.connect();
+            expect(await st.get('test')).toBe('succeeded');
+            await db.destroy();
+        })().then(done, done.fail);
+    });
+
     it('can use advanced upgrade methods (new signatures)', (done) => {
         let upgradeCall = { called: false, oldVersion: null, newVersion: null };
         async function connect(version) {

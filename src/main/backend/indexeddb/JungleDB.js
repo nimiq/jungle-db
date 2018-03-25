@@ -77,7 +77,10 @@ class JungleDB {
         // Create new ObjectStores.
         for (const [tableName, { backend, upgradeCondition }] of this._objectStoreBackends) {
             let IDBobjStore;
-            if (upgradeCondition === null || upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(event.oldVersion, event.newVersion))) {
+            // Only check upgradeCondition if object store does not already exist!
+            if (!db.objectStoreNames.contains(tableName)
+                && (upgradeCondition === null || upgradeCondition === true
+                    || (typeof upgradeCondition === 'function' && upgradeCondition(event.oldVersion, event.newVersion)))) {
                 IDBobjStore = db.createObjectStore(tableName);
             } else {
                 IDBobjStore = request.transaction.objectStore(tableName);

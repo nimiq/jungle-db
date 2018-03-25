@@ -268,7 +268,13 @@ class PersistentIndex {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
-            const request = this._index(db).count(query);
+            let request;
+            // Edge compatibility
+            if (query) {
+                request = this._index(db).count(query);
+            } else {
+                request = this._index(db).count();
+            }
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
         });
