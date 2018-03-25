@@ -262,7 +262,6 @@ describe('Index', () => {
 
     it('provides unique indices', (done) => {
         (async function () {
-            debugger;
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
