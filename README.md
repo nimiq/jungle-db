@@ -24,6 +24,11 @@ Depending on your target and preferences, include one of the files in the dist f
 In NodeJS, you can use `var JDB = require('@nimiq/jungle-db');` to include the LMDB backend.
 In order to use the LevelDB backend, `var JDB = require('@nimiq/jungle-db/dist/leveldb.js');` has to be used.
 
+**Note on Edge browser:** At the time of writing, Edge does not provide full IndexedDB support.
+That means that using certain types of indices might fail on Edge.
+If you observe a `DataError` in Edge while using JungleDB,
+it is most likely that you are using one of the features not supported by Edge.
+
 Then, create a `JungleDB` instance and potential object stores as follows:
 ```javascript
 // Create a JungleDB instance
