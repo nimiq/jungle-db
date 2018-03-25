@@ -14,14 +14,13 @@ class JungleDB {
      * after modifying the database structure.
      * @param {string} databaseDir The name of the database.
      * @param {number} dbVersion The current version of the database.
-     * @param {function(oldVersion:number, newVersion:number)} [onUpgradeNeeded] A function to be called after upgrades of the structure.
-     * @param {{maxDbs:?number, maxDbSize:?number, minResize:?number, autoResize:?boolean}} options
+     * @param {{maxDbs:?number, maxDbSize:?number, minResize:?number, autoResize:?boolean, onUpgradeNeeded:?function(oldVersion:number, newVersion:number)}} [options]
      */
-    constructor(databaseDir, dbVersion, onUpgradeNeeded, options = {}) {
+    constructor(databaseDir, dbVersion, options = {}) {
         if (dbVersion <= 0) throw new Error('The version provided must not be less or equal to 0');
         this._databaseDir = databaseDir.endsWith('/') ? databaseDir : `${databaseDir}/`;
         this._dbVersion = dbVersion;
-        this._onUpgradeNeeded = onUpgradeNeeded;
+        this._onUpgradeNeeded = options.onUpgradeNeeded;
         this._connected = false;
         this._objectStores = new Map();
         this._objectStoreBackends = [];

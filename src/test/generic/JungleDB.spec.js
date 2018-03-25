@@ -3,9 +3,9 @@ describe('JungleDB', () => {
     it('can connect', (done) => {
         let called = false;
 
-        const db = new JungleDB('test', 1, () => {
+        const db = new JungleDB('test', 1, { onUpgradeNeeded: () => {
             called = true;
-        });
+        }});
 
         db.connect().then(() => {
             expect(called).toBe(true);
@@ -17,27 +17,27 @@ describe('JungleDB', () => {
     it('can reconnect to a database', (done) => {
         let called = false;
         (async function () {
-            let db = new JungleDB('test', 1, () => {
+            let db = new JungleDB('test', 1, { onUpgradeNeeded: () => {
                 called = true;
-            });
+            }});
             await db.connect();
             expect(called).toBe(true);
             expect(db._dbVersion).toBe(1);
             await db.close();
 
             called = false;
-            db = new JungleDB('test', 1, () => {
+            db = new JungleDB('test', 1, { onUpgradeNeeded: () => {
                 called = true;
-            });
+            }});
             await db.connect();
             expect(called).toBe(false);
             expect(db._dbVersion).toBe(1);
             await db.close();
 
             called = false;
-            db = new JungleDB('test', 2, () => {
+            db = new JungleDB('test', 2, { onUpgradeNeeded: () => {
                 called = true;
-            });
+            }});
             await db.connect();
             expect(called).toBe(true);
             expect(db._dbVersion).toBe(2);
@@ -110,9 +110,9 @@ describe('JungleDB', () => {
         let upgradeCall = { called: false, oldVersion: null, newVersion: null };
         async function connect(version) {
             // Write something into an object store.
-            let db = new JungleDB('testme', version, (oldVersion, newVersion) => {
+            let db = new JungleDB('testme', version, { onUpgradeNeeded: (oldVersion, newVersion) => {
                 upgradeCall = { called: true, oldVersion: oldVersion, newVersion: newVersion };
-            });
+            }});
 
             const store = db.createObjectStore('books', { upgradeCondition: (oldVersion) => oldVersion < 1 });
             if (version === 1) {

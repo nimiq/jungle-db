@@ -65,10 +65,41 @@ db.createObjectStore('myStore');
 If your next application version now includes an index, you can use upgrade conditions:
 ```javascript
 // Create a JungleDB instance with a new version
-const db = new JDB.JungleDB('myDatabase', 2, undefined, {
-    autoResize: true,
-    maxDbSize: 1024*1024*100
-});
+const db = new JungleDB('myDatabase', 2);
+
+// Create an object store
+// The upgrade condition specifies that the store needs to be physically created
+// if the database version is less than 1 (since we created it in version 1).
+const st = db.createObjectStore('myStore', { upgradeCondition: version => version < 1 });
+st.createIndex('myIndex', 'i', { upgradeCondition: version => version < 2 });
+
+// Switch to an async context
+(async function() {
+    // Connect to your database
+    await db.connect();
+
+    // Now you can easily put/get/remove objects and use transactions.
+    const store = db.getObjectStore('myStore');
+
+    const tx = store.transaction();
+    await tx.put('test', {'i': 1, 'data': 'value'});
+    
+    // Prints {'i': 1, 'data': 'value'}
+    console.log(await tx.get('test'));
+    // Prints undefined due to read isolation
+    console.log(await store.get('test'));
+    
+    await tx.commit();
+    
+    // Prints {'i': 1, 'data': 'value'}
+    console.log(await store.get('test'));
+    
+    // Prints [{'i': 1, 'data': 'value'}]
+    console.log(await store.index('myIndex').values(KeyRange.only(1)));
+    console.log(await store.values(Query.eq('myIndex', 1)));
+    
+    await store.remove('test');
+})();
 ```
 
 ### Encoding
@@ -106,7 +137,7 @@ If an option does not apply for the current backend, it is simply ignored.
 Here is an example to make use of these options.
 ```javascript
 // Create a JungleDB instance with a new version
-const db = new JDB.JungleDB('myDatabase', 2, undefined, {
+const db = new JDB.JungleDB('myDatabase', 2, {
     autoResize: true,
     maxDbSize: 1024*1024*100
 });
