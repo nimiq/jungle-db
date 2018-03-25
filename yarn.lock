@@ -5462,9 +5462,9 @@ node-abi@^2.2.0:
   dependencies:
     semver "^5.4.1"
 
-node-lmdb@Venemo/node-lmdb#d9eb604:
+node-lmdb@Venemo/node-lmdb#024bd35:
   version "0.4.13"
-  resolved "https://codeload.github.com/Venemo/node-lmdb/tar.gz/d9eb604791b1ac87724f0f3c78c005c508f012d2"
+  resolved "https://codeload.github.com/Venemo/node-lmdb/tar.gz/024bd35f117bdbe67143723e390114a34a8f55bb"
   dependencies:
     bindings "^1.2.1"
     nan "^2.6.2"
