@@ -278,6 +278,15 @@ describe('Index', () => {
             }
             expect(threw).toBe(true);
 
+            threw = false;
+            const tx = st.transaction();
+            try {
+                await tx.put('test2', {'val': 123, 'a': {'b': 1}});
+            } catch (e) {
+                threw = true;
+            }
+            expect(threw).toBe(true);
+
             await db.destroy();
         })().then(done, done.fail);
     });

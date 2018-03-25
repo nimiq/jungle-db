@@ -7,7 +7,8 @@ class PersistentIndex {
      * @param {IDBBackend} objectStore
      * @param {string} indexName
      * @param {string|Array.<string>} keyPath
-     * @param {boolean} multiEntry
+     * @param {boolean} [multiEntry]
+     * @param {boolean} [unique]
      */
     constructor(objectStore, indexName, keyPath, multiEntry = false, unique = false) {
         this._objectStore = objectStore;
