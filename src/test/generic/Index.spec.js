@@ -169,6 +169,11 @@ describe('Index', () => {
 
     it('only fills the index once', (done) => {
         (async function () {
+            // Do not run this test in Edge.
+            if (typeof window !== 'undefined' && window.navigator.userAgent.indexOf("Edge") > -1) {
+                return;
+            }
+
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
@@ -199,6 +204,11 @@ describe('Index', () => {
 
     it('can fill the index on implicit upgrade', (done) => {
         (async function () {
+            // Do not run this test in Edge.
+            if (typeof window !== 'undefined' && window.navigator.userAgent.indexOf("Edge") > -1) {
+                return;
+            }
+
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
@@ -223,6 +233,11 @@ describe('Index', () => {
 
     it('can fill the index on explicit upgrade', (done) => {
         (async function () {
+            // Do not run this test in Edge.
+            if (typeof window !== 'undefined' && window.navigator.userAgent.indexOf("Edge") > -1) {
+                return;
+            }
+            
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
@@ -240,6 +255,36 @@ describe('Index', () => {
             await db.connect();
 
             expect(await st.index('depth').count()).toBe(1);
+
+            await db.destroy();
+        })().then(done, done.fail);
+    });
+
+    it('provides unique indices', (done) => {
+        (async function () {
+            // Write something into an object store.
+            let db = new JungleDB('indexTest', 1);
+            let st = db.createObjectStore('testStore');
+            st.createIndex('depth', ['a', 'b'], { unique: true });
+            await db.connect();
+
+            await st.put('test', {'val': 123, 'a': {'b': 1}});
+            let threw = false;
+            try {
+                await st.put('test2', {'val': 123, 'a': {'b': 1}});
+            } catch (e) {
+                threw = true;
+            }
+            expect(threw).toBe(true);
+
+            threw = false;
+            const tx = st.transaction();
+            try {
+                await tx.put('test2', {'val': 123, 'a': {'b': 1}});
+            } catch (e) {
+                threw = true;
+            }
+            expect(threw).toBe(true);
 
             await db.destroy();
         })().then(done, done.fail);

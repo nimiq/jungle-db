@@ -7,13 +7,15 @@ class PersistentIndex {
      * @param {IDBBackend} objectStore
      * @param {string} indexName
      * @param {string|Array.<string>} keyPath
-     * @param {boolean} multiEntry
+     * @param {boolean} [multiEntry]
+     * @param {boolean} [unique]
      */
-    constructor(objectStore, indexName, keyPath, multiEntry=false) {
+    constructor(objectStore, indexName, keyPath, multiEntry = false, unique = false) {
         this._objectStore = objectStore;
         this._indexName = indexName;
         this._keyPath = keyPath;
         this._multiEntry = multiEntry;
+        this._unique = unique;
     }
 
     /**
@@ -42,6 +44,14 @@ class PersistentIndex {
      */
     get multiEntry() {
         return this._multiEntry;
+    }
+
+    /**
+     * This value determines whether the index is a unique constraint.
+     * @type {boolean}
+     */
+    get unique() {
+        return this._unique;
     }
 
     /**

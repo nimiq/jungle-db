@@ -37,6 +37,13 @@ class IIndex {
     get multiEntry() {} // eslint-disable-line no-unused-vars
 
     /**
+     * This value determines whether the index is a unique constraint.
+     * @abstract
+     * @type {boolean}
+     */
+    get unique() {} // eslint-disable-line no-unused-vars
+
+    /**
      * Returns a promise of a set of primary keys, whose associated objects' secondary keys are in the given range.
      * If the optional query is not given, it returns all primary keys in the index.
      * If the query is of type KeyRange, it returns all primary keys for which the secondary key is within this range.

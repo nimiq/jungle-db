@@ -141,7 +141,10 @@ class PersistentIndex extends LMDBBaseBackend {
             super._remove(txn, key, tx.removedValue(key), true);
         }
         for (const [key, value] of tx._modified) {
-            super._put(txn, key, value, !this._unique, true);
+            const result = super._put(txn, key, value, !this._unique, true);
+            if (!result) {
+                throw new Error(`Uniqueness constraint violated for key ${value} on path ${this._keyPath}`);
+            }
         }
     }
 

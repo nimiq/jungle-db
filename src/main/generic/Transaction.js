@@ -399,6 +399,13 @@ class Transaction {
             throw new Error('Transaction already closed');
         }
 
+        // Check indices.
+        const constraints = [];
+        for (const index of this._indices.values()) {
+            constraints.push(index.checkUniqueConstraint(key, value));
+        }
+        await Promise.all(constraints);
+
         const oldValue = await this.get(key);
 
         // Save for indices.

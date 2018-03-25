@@ -266,13 +266,10 @@ class CachedBackend {
      * Moreover, it is only executed on database version updates or on first creation.
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
-     * @param {{multiEntry:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|boolean} [options] An options object (for deprecated usage: multiEntry boolean).
+     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|boolean} [options] An options object (for deprecated usage: multiEntry boolean).
      */
     createIndex(indexName, keyPath, options=false) {
-        let { multiEntry = false, upgradeCondition = null } = (typeof options === 'object' && options !== null) ? options : {};
-        if (typeof options !== 'object' && options !== null) multiEntry = options;
-
-        return this._backend.createIndex(indexName, keyPath, { multiEntry, upgradeCondition });
+        return this._backend.createIndex(indexName, keyPath, options);
     }
 
     /**

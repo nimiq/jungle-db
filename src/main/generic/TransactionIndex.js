@@ -13,7 +13,7 @@ class TransactionIndex extends InMemoryIndex {
     static derive(objectStore, backend) {
         const indices = new Map();
         for (const [name, index] of backend.indices) {
-            indices.set(name, new TransactionIndex(objectStore, backend, name, index.keyPath, index.multiEntry));
+            indices.set(name, new TransactionIndex(objectStore, backend, name, index.keyPath, index.multiEntry, index.unique));
         }
         return indices;
     }
@@ -29,13 +29,35 @@ class TransactionIndex extends InMemoryIndex {
      * @param {Transaction} objectStore The transaction the index should be based on.
      * @param {IObjectStore} backend The backend underlying the transaction.
      * @param {string|Array.<string>} keyPath The key path of the indexed attribute.
-     * @param {boolean} multiEntry Whether the indexed attribute is considered to be iterable or not.
+     * @param {boolean} [multiEntry] Whether the indexed attribute is considered to be iterable or not.
+     * @param {boolean} [unique] Whether there is a unique constraint on the attribute.
      * @protected
      */
-    constructor(objectStore, backend, name, keyPath, multiEntry=false) {
-        super(objectStore, keyPath, multiEntry);
+    constructor(objectStore, backend, name, keyPath, multiEntry = false, unique = false) {
+        super(objectStore, keyPath, multiEntry, unique);
         this._backend = backend;
         this._databaseDir = name;
+    }
+
+    async checkUniqueConstraint(key, value) {
+        if (!this.unique) {
+            return;
+        }
+
+        // Calculate secondary keys.
+        let iKey = this._indexKey(key, value);
+        if (iKey !== undefined) {
+            if (!this.multiEntry || !Array.isArray(iKey)) {
+                iKey = [iKey];
+            }
+            // Check whether they already exist.
+            for (const secondaryKey of iKey) {
+                const count = await this._index.count(KeyRange.only(secondaryKey));
+                if (count > 0) {
+                    throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
+                }
+            }
+        }
     }
 
     /**

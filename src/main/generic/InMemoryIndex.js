@@ -74,6 +74,14 @@ class InMemoryIndex {
     }
 
     /**
+     * This value determines whether the index is a unique constraint.
+     * @type {boolean}
+     */
+    get unique() {
+        return this._unique;
+    }
+
+    /**
      * A helper method to insert a primary-secondary key pair into the tree.
      * @param {string} key The primary key.
      * @param {*} iKey The indexed key.

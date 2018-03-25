@@ -297,11 +297,6 @@ class LMDBBaseBackend {
      * @protected
      */
     _put(txn, key, value, allowOverwrite = true, alreadyEncoded = false) {
-        // Workaround for SIGABRT in node-lmdb
-        if (!allowOverwrite && this._get(txn, key, alreadyEncoded) === null) {
-            return false;
-        }
-
         value = this.encode(value, alreadyEncoded);
 
         // Shortcut for EncodedLMDBTransactions
@@ -310,20 +305,28 @@ class LMDBBaseBackend {
             return true;
         }
 
-        // If it is a low-level transaction
-        switch (this._valueEncoding.encoding) {
-            case JungleDB.Encoding.STRING:
-                txn.putString(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
-                return true;
-            case JungleDB.Encoding.NUMBER:
-                txn.putNumber(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
-                return true;
-            case JungleDB.Encoding.BOOLEAN:
-                txn.putBoolean(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
-                return true;
-            case JungleDB.Encoding.BINARY:
-                txn.putBinary(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
-                return true;
+        try {
+            // Low-level transaction
+            switch (this._valueEncoding.encoding) {
+                case JungleDB.Encoding.STRING:
+                    txn.putString(this._dbBackend, this.encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
+                    return true;
+                case JungleDB.Encoding.NUMBER:
+                    txn.putNumber(this._dbBackend, this.encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
+                    return true;
+                case JungleDB.Encoding.BOOLEAN:
+                    txn.putBoolean(this._dbBackend, this.encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
+                    return true;
+                case JungleDB.Encoding.BINARY:
+                    txn.putBinary(this._dbBackend, this.encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
+                    return true;
+            }
+        } catch (e) {
+            // If no overwrite is allowed, check if it was a duplicate key
+            if (!allowOverwrite && e.message && e.message.indexOf('MDB_KEYEXIST') >= 0) {
+                return false;
+            }
+            throw e;
         }
         throw new Error('Invalid encoding given for LMDBBackend');
     }
