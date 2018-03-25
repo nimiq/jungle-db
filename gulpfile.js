@@ -206,7 +206,7 @@ gulp.task('build-leveldb', function () {
     return gulp.src(LEVELDB_SOURCES, { base: 'src' })
         .pipe(sourcemaps.init())
         .pipe(concat('leveldb.js'))
-        .pipe(uglify(uglify_config))
+        // .pipe(uglify(uglify_config))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'));
 });
@@ -231,7 +231,7 @@ gulp.task('build-lmdb', function () {
     return gulp.src(LMDB_SOURCES, { base: 'src' })
         .pipe(sourcemaps.init())
         .pipe(concat('lmdb.js'))
-        .pipe(uglify(uglify_config))
+        // .pipe(uglify(uglify_config))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'));
 });

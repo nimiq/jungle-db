@@ -259,4 +259,26 @@ describe('Index', () => {
             await db.destroy();
         })().then(done, done.fail);
     });
+
+    it('provides unique indices', (done) => {
+        (async function () {
+            debugger;
+            // Write something into an object store.
+            let db = new JungleDB('indexTest', 1);
+            let st = db.createObjectStore('testStore');
+            st.createIndex('depth', ['a', 'b'], { unique: true });
+            await db.connect();
+
+            await st.put('test', {'val': 123, 'a': {'b': 1}});
+            let threw = false;
+            try {
+                await st.put('test2', {'val': 123, 'a': {'b': 1}});
+            } catch (e) {
+                threw = true;
+            }
+            expect(threw).toBe(true);
+
+            await db.destroy();
+        })().then(done, done.fail);
+    });
 });

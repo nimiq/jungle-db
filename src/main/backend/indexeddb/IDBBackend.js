@@ -62,7 +62,7 @@ class IDBBackend {
         for (const [indexName, { index, upgradeCondition }] of this._indicesToCreate) {
             if (upgradeCondition === null || upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(oldVersion, newVersion))) {
                 const keyPath = Array.isArray(index.keyPath) ? index.keyPath.join('.') : index.keyPath;
-                objectStore.createIndex(indexName, keyPath, {unique: false, multiEntry: index.multiEntry});
+                objectStore.createIndex(indexName, keyPath, {unique: index.unique, multiEntry: index.multiEntry});
             }
         }
         this._indicesToCreate.clear();
@@ -481,15 +481,15 @@ class IDBBackend {
      * Moreover, it is only executed on database version updates or on first creation.
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
-     * @param {{multiEntry:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|boolean} [options] An options object (for deprecated usage: multiEntry boolean).
+     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|boolean} [options] An options object (for deprecated usage: multiEntry boolean).
      */
     createIndex(indexName, keyPath, options=false) {
-        let { multiEntry = false, upgradeCondition = null } = (typeof options === 'object' && options !== null) ? options : {};
+        let { multiEntry = false, upgradeCondition = null, unique = false } = (typeof options === 'object' && options !== null) ? options : {};
         if (typeof options !== 'object' && options !== null) multiEntry = options;
 
         if (this._db.connected) throw new Error('Cannot create index while connected');
         keyPath = keyPath || indexName;
-        const index = new PersistentIndex(this, indexName, keyPath, multiEntry);
+        const index = new PersistentIndex(this, indexName, keyPath, multiEntry, unique);
         this._indices.set(indexName, index);
         this._indicesToCreate.set(indexName, { index, upgradeCondition });
     }
