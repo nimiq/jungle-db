@@ -103,11 +103,14 @@ class PersistentIndex extends LMDBBaseBackend {
         const oldIKey = this._indexKey(key, oldValue);
         const newIKey = this._indexKey(key, value);
 
-        if (oldIKey !== undefined) {
-            this._remove(key, oldIKey, txn);
-        }
-        if (newIKey !== undefined) {
-            this._insert(key, newIKey, txn);
+        // Only update index on changes.
+        if (oldIKey !== newIKey) {
+            if (oldIKey !== undefined) {
+                this._remove(key, oldIKey, txn);
+            }
+            if (newIKey !== undefined) {
+                this._insert(key, newIKey, txn);
+            }
         }
     }
 

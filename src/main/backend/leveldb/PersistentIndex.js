@@ -131,11 +131,14 @@ class PersistentIndex extends LevelDBBackend {
         const oldIKey = this._indexKey(key, oldValue);
         const newIKey = this._indexKey(key, value);
 
-        if (oldIKey !== undefined) {
-            await this._remove(key, oldIKey, internalTx);
-        }
-        if (newIKey !== undefined) {
-            await this._insert(key, newIKey, internalTx);
+        // Only update index on changes.
+        if (oldIKey !== newIKey) {
+            if (oldIKey !== undefined) {
+                await this._remove(key, oldIKey, internalTx);
+            }
+            if (newIKey !== undefined) {
+                await this._insert(key, newIKey, internalTx);
+            }
         }
         return tx ? null : this.applyCombined(internalTx);
     }
@@ -275,7 +278,9 @@ class PersistentIndex extends LevelDBBackend {
                 pKeys = primaryKey;
             } else {
                 pKeys = pKeys || [];
-                pKeys.push(primaryKey);
+                if (!pKeys.includes(primaryKey)) {
+                    pKeys.push(primaryKey);
+                }
             }
             await tx.put(secondaryKey, pKeys);
         }
