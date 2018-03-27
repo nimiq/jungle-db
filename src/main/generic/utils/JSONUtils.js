@@ -8,7 +8,7 @@ class JSONUtils {
     }
 
     static parseType(key, value) {
-        if (value[JSONUtils.TYPE_SYMBOL]) {
+        if (value && value[JSONUtils.TYPE_SYMBOL]) {
             switch (value[JSONUtils.TYPE_SYMBOL]) {
                 case 'Uint8Array':
                     return BufferUtils.fromBase64(value[JSONUtils.VALUE_SYMBOL]);

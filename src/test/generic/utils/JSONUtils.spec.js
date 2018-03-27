@@ -59,4 +59,12 @@ describe('JSONUtils', () => {
         expect(obj2.b).toBe(5);
     });
 
+    it('can handle null values', () => {
+        let obj = { a: null };
+        let obj2 = JSONUtils.parse(JSONUtils.stringify(obj));
+
+        // Compare objects.
+        expect(obj2.a).toBe(null);
+    });
+
 });
