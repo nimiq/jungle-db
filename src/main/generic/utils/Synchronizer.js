@@ -1,6 +1,5 @@
-class Synchronizer extends Observable {
+class Synchronizer {
     constructor() {
-        super();
         this._queue = [];
         this._working = false;
     }
@@ -22,7 +21,6 @@ class Synchronizer extends Observable {
 
     async _doWork() {
         this._working = true;
-        this.fire('work-start', this);
 
         while (this._queue.length) {
             const job = this._queue.shift();
@@ -35,7 +33,6 @@ class Synchronizer extends Observable {
         }
 
         this._working = false;
-        this.fire('work-end', this);
     }
 
     /** @type {boolean} */

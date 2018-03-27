@@ -84,11 +84,10 @@ class InMemoryIndex {
      * A helper method to insert a primary-secondary key pair into the tree.
      * @param {string} key The primary key.
      * @param {*} iKey The indexed key.
-     * @param {IBTree} [tree] The optional tree in which to insert the pair.
      * @throws if the uniqueness constraint is violated.
      */
-    _insert(key, iKey, tree) {
-        tree = tree || this._tree;
+    _insert(key, iKey) {
+        const tree = this._tree;
         if (!this._multiEntry || !Array.isArray(iKey)) {
             iKey = [iKey];
         }
@@ -111,47 +110,40 @@ class InMemoryIndex {
      * @param {string} key The primary key of the pair.
      * @param {*} value The value of the pair. The indexed key will be extracted from this.
      * @param {*} [oldValue] The old value associated with the primary key.
-     * @returns {TreeTransaction} The TreeTransaction that was needed to insert/replace the key-value pair.
      */
     put(key, value, oldValue) {
-        const treeTx = this._tree.transaction();
         const oldIKey = this._indexKey(key, oldValue);
         const newIKey = this._indexKey(key, value);
 
         if (oldIKey !== newIKey) {
             if (oldIKey !== undefined) {
-                this._remove(key, oldIKey, treeTx);
+                this._remove(key, oldIKey);
             }
             if (newIKey !== undefined) {
-                this._insert(key, newIKey, treeTx);
+                this._insert(key, newIKey);
             }
         }
-        return treeTx;
     }
 
     /**
      * Removes a key-value pair from the index.
      * @param {string} key The primary key of the pair.
      * @param {*} oldValue The old value of the pair. The indexed key will be extracted from this.
-     * @returns {TreeTransaction} The TreeTransaction that was needed to remove the key-value pair.
      */
     remove(key, oldValue) {
-        const treeTx = this._tree.transaction();
         const iKey = this._indexKey(key, oldValue);
         if (iKey !== undefined) {
-            this._remove(key, iKey, treeTx);
+            this._remove(key, iKey);
         }
-        return treeTx;
     }
 
     /**
      * A helper method to remove a primary-secondary key pair from the tree.
      * @param {string} key The primary key.
      * @param {*} iKey The indexed key.
-     * @param {IBTree} [tree] The optional tree in which to insert the pair.
      */
-    _remove(key, iKey, tree) {
-        tree = tree || this._tree;
+    _remove(key, iKey) {
+        const tree = this._tree;
         if (!this._multiEntry || !Array.isArray(iKey)) {
             iKey = [iKey];
         }
