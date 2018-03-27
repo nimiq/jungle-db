@@ -41,14 +41,18 @@ describe('Snapshot', () => {
             await objectStore.remove('key2');
             await objectStore.put('key1', 'test');
             await objectStore.put('key2', 'test');
+            await objectStore.put('something_new', 'nothing');
+            await objectStore.put('something_new', 'test');
 
             expect(await objectStore.get('key0')).toBeUndefined();
             expect(await objectStore.get('key1')).toBe('test');
             expect(await objectStore.get('key2')).toBe('test');
+            expect(await objectStore.get('something_new')).toBe('test');
 
             for (let i=0; i<10; ++i) {
                 expect(await snap.get(`key${i}`)).toBe(`value${i}`);
             }
+            expect(await snap.get('something_new')).toBe(undefined);
 
             await snap.abort();
         })().then(done, done.fail);
@@ -310,6 +314,16 @@ describe('Snapshot', () => {
             threw = false;
             try {
                 await snapshot.commit();
+            } catch (e) {
+                threw = true;
+            }
+            expect(threw).toBe(true);
+
+            await snapshot.abort();
+
+            threw = false;
+            try {
+                await snapshot.abort();
             } catch (e) {
                 threw = true;
             }
