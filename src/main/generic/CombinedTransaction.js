@@ -109,6 +109,8 @@ class CombinedTransaction {
      */
     async commit() {
         if (this._isCommittable()) {
+            await this._checkConstraints();
+
             await this._commitBackend();
             return true;
         }
@@ -164,6 +166,22 @@ class CombinedTransaction {
      */
     _isCommittable() {
         return this._transactions.every(tx => tx._isCommittable());
+    }
+
+    /**
+     * Is used to check constraints before committing.
+     * If a constraint is not satisfied, the commitable is aborted and an exception is thrown.
+     * @returns {Promise.<boolean>}
+     * @throws
+     * @protected
+     */
+    async _checkConstraints() {
+        try {
+            await Promise.all(this._transactions.map(tx => tx._checkConstraints()));
+        } catch (e) {
+            await this.abort();
+            throw e;
+        }
     }
 
     /**

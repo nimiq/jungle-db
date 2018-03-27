@@ -263,13 +263,65 @@ describe('Index', () => {
             expect(threw).toBe(true);
 
             threw = false;
-            const tx = st.transaction();
+            let tx = st.transaction();
             try {
                 await tx.put('test2', {'val': 123, 'a': {'b': 1}});
             } catch (e) {
                 threw = true;
             }
+            await tx.abort();
             expect(threw).toBe(true);
+
+            threw = false;
+            tx = st.transaction();
+            try {
+                tx.putSync('test2', {'val': 123, 'a': {'b': 1}});
+                await tx.commit();
+            } catch (e) {
+                threw = true;
+            }
+            expect(threw).toBe(true);
+            expect(tx.state).toBe(Transaction.STATE.ABORTED);
+
+            threw = false;
+            tx = st.transaction();
+            tx.putSync('test2', {'val': 124, 'a': {'b': 1}});
+            try {
+                tx.putSync('test3', {'val': 124, 'a': {'b': 1}});
+            } catch (e) {
+                threw = true;
+            }
+            await tx.abort();
+            expect(threw).toBe(true);
+
+            await db.destroy();
+        })().then(done, done.fail);
+    });
+
+    it('provides unique indices on combined transactions', (done) => {
+        (async function () {
+            // Write something into an object store.
+            let db = new JungleDB('indexTest', 1);
+            let st1 = db.createObjectStore('testStore');
+            st1.createIndex('depth', ['a', 'b'], { unique: true });
+            const st2 = db.createObjectStore('testStore2');
+            await db.connect();
+
+            await st1.put('test', {'val': 123, 'a': {'b': 1}});
+
+            let threw = false;
+            const tx1 = st1.transaction();
+            const tx2 = st2.transaction();
+            try {
+                tx1.putSync('test2', {'val': 123, 'a': {'b': 1}});
+                tx2.putSync('test2', 'ok');
+                await JungleDB.commitCombined(tx1, tx2);
+            } catch (e) {
+                threw = true;
+            }
+            expect(threw).toBe(true);
+            expect(tx1.state).toBe(Transaction.STATE.ABORTED);
+            expect(tx2.state).toBe(Transaction.STATE.ABORTED);
 
             await db.destroy();
         })().then(done, done.fail);

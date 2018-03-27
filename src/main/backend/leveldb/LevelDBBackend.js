@@ -420,25 +420,6 @@ class LevelDBBackend {
     }
 
     /**
-     * The wrapper object stores do not support this functionality
-     * as it is managed by the ObjectStore.
-     * @param {Transaction} [tx]
-     * @returns {Promise.<boolean>}
-     */
-    async commit(tx) {
-        throw new Error('Unsupported operation');
-    }
-
-    /**
-     * The wrapper object stores do not support this functionality
-     * as it is managed by the ObjectStore.
-     * @param {Transaction} [tx]
-     */
-    async abort(tx) {
-        throw new Error('Unsupported operation');
-    }
-
-    /**
      * Returns the index of the given name.
      * If the index does not exist, it returns undefined.
      * @param {string} indexName The name of the requested index.
@@ -575,15 +556,6 @@ class LevelDBBackend {
             indexPromises.close(index.close());
         }
         return Promise.all(indexPromises);
-    }
-
-    /**
-     * Creates a new transaction, ensuring read isolation
-     * on the most recently successfully committed state.
-     * @returns {Transaction} The transaction object.
-     */
-    transaction() {
-        throw new Error('Unsupported operation');
     }
 
     /**

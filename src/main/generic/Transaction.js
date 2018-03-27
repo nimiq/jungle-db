@@ -150,71 +150,6 @@ class Transaction {
     }
 
     /**
-     * Commits a transaction to the underlying backend.
-     * The state is only written to the persistent backend if no other transaction is open.
-     * If the commit was successful, new transactions will always be based on the new state.
-     * There are two outcomes for a commit:
-     * If there was no other transaction committed that was based on the same state,
-     * it will be successful and change the transaction's state to COMMITTED (returning true).
-     * Otherwise, the state will be CONFLICTED and the method will return false.
-     *
-     * Note that transactions may fail since secondary index constraints are *not* checked in transactions.
-     * @param {Transaction} [tx] The transaction to be applied, only used internally.
-     * @returns {Promise.<boolean>} A promise of the success outcome.
-     */
-    async commit(tx) {
-        // Transaction is given, so check whether this is a nested one.
-        if (tx !== undefined) {
-            if (!this._isCommittable(tx)) {
-                await this.abort(tx);
-                return false;
-            }
-            await this._commitInternal(tx);
-            return true;
-        }
-
-        if (this._dependency !== null) {
-            return this._dependency.commit();
-        }
-
-        return this._commitBackend();
-    }
-
-    /**
-     * Aborts a transaction and (if this was the last open transaction) potentially
-     * persists the most recent, committed state.
-     * @param {Transaction} [tx] The transaction to be applied, only used internally.
-     * @returns {Promise.<boolean>} A promise of the success outcome.
-     */
-    async abort(tx) {
-        // Transaction is given, so check whether this is a nested one.
-        if (tx !== undefined) {
-            // Handle snapshots.
-            if (tx instanceof Snapshot) {
-                return this._snapshotManager.abortSnapshot(tx);
-            }
-
-            // Make sure transaction is based on this transaction.
-            if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
-                throw new Error('Can only abort open, nested transactions');
-            }
-            this._nested.delete(tx);
-            // If there are no more nested transactions, change back to OPEN state.
-            if (this._nested.size === 0) {
-                this._state = Transaction.STATE.OPEN;
-                this._nestedCommitted = false;
-            }
-            return true;
-        }
-
-        if (this._dependency !== null) {
-            return this._dependency.abort();
-        }
-
-        return this._abortBackend();
-    }
-
-    /**
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
@@ -686,6 +621,74 @@ class Transaction {
     }
 
     /**
+     * Commits a transaction to the underlying backend.
+     * The state is only written to the persistent backend if no other transaction is open.
+     * If the commit was successful, new transactions will always be based on the new state.
+     * There are two outcomes for a commit:
+     * If there was no other transaction committed that was based on the same state,
+     * it will be successful and change the transaction's state to COMMITTED (returning true).
+     * Otherwise, the state will be CONFLICTED and the method will return false.
+     *
+     * Note that transactions may fail since secondary index constraints are *not* checked in transactions.
+     * @param {Transaction} [tx] The transaction to be applied, only used internally.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     */
+    async commit(tx) {
+        // Transaction is given, so check whether this is a nested one.
+        if (tx !== undefined) {
+            if (!this._isCommittable(tx)) {
+                await this.abort(tx);
+                return false;
+            }
+
+            await this._commitInternal(tx);
+            return true;
+        }
+
+        if (this._dependency !== null) {
+            return this._dependency.commit();
+        }
+
+        await this._checkConstraints();
+
+        return this._commitBackend();
+    }
+
+    /**
+     * Aborts a transaction and (if this was the last open transaction) potentially
+     * persists the most recent, committed state.
+     * @param {Transaction} [tx] The transaction to be applied, only used internally.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     */
+    async abort(tx) {
+        // Transaction is given, so check whether this is a nested one.
+        if (tx !== undefined) {
+            // Handle snapshots.
+            if (tx instanceof Snapshot) {
+                return this._snapshotManager.abortSnapshot(tx);
+            }
+
+            // Make sure transaction is based on this transaction.
+            if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
+                throw new Error('Can only abort open, nested transactions');
+            }
+            this._nested.delete(tx);
+            // If there are no more nested transactions, change back to OPEN state.
+            if (this._nested.size === 0) {
+                this._state = Transaction.STATE.OPEN;
+                this._nestedCommitted = false;
+            }
+            return true;
+        }
+
+        if (this._dependency !== null) {
+            return this._dependency.abort();
+        }
+
+        return this._abortBackend();
+    }
+
+    /**
      * Internally applies a transaction to the transaction's state.
      * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
      * or no changes are applied.
@@ -716,6 +719,7 @@ class Transaction {
         if (this._enableWatchdog) {
             clearTimeout(this._watchdog);
         }
+
         const commitStart = Date.now();
         if (await this._managingBackend.commit(this)) {
             this._state = Transaction.STATE.COMMITTED;
@@ -807,10 +811,17 @@ class Transaction {
         }
         const abortStart = Date.now();
         await this._managingBackend.abort(this);
-        this._state = Transaction.STATE.ABORTED;
+        this._setAborted();
         this._performanceCheck(abortStart, 'abort');
         this._performanceCheck();
         return true;
+    }
+
+    /**
+     * Sets the state to aborted.
+     */
+    _setAborted() {
+        this._state = Transaction.STATE.ABORTED;
     }
 
     /**
@@ -843,6 +854,33 @@ class Transaction {
         // Update indices.
         for (const index of this._indices.values()) {
             index.remove(key, localOldValue);
+        }
+    }
+
+    /**
+     * Is used to check constraints before committing.
+     * If a constraint is not satisfied, the commitable is aborted and an exception is thrown.
+     * @returns {Promise.<boolean>}
+     * @throws
+     * @protected
+     */
+    async _checkConstraints() {
+        // Check unique indices.
+        // TODO: Improve performance (|modified| count queries).
+        const constraintChecks = [];
+        for (const /** @type {TransactionIndex} */ index of this._indices.values()) {
+            if (!index.unique) continue;
+            for (const [key, value] of this._modified) {
+                constraintChecks.push(index.checkUniqueConstraint(key, value));
+            }
+        }
+        if (constraintChecks.length > 0) {
+            try {
+                await Promise.all(constraintChecks);
+            } catch (e) {
+                await this.abort();
+                throw e;
+            }
         }
     }
 }
