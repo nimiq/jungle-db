@@ -123,11 +123,6 @@ class SynchronousTransaction extends Transaction {
 
         const oldValue = this.getSync(key, false);
 
-        // Save for indices.
-        if (!this._originalValues.has(key)) {
-            this._originalValues.set(key, oldValue);
-        }
-
         this._put(key, value, oldValue);
     }
 
@@ -141,10 +136,6 @@ class SynchronousTransaction extends Transaction {
         }
 
         const oldValue = this.getSync(key, false);
-        // Save for indices.
-        if (!this._originalValues.has(key)) {
-            this._originalValues.set(key, oldValue);
-        }
 
         this._remove(key, oldValue);
     }
@@ -164,30 +155,6 @@ class SynchronousTransaction extends Transaction {
      */
     isSynchronous() {
         return true;
-    }
-
-    /**
-     * @override
-     */
-    async _commitBackend() {
-        // Fill original values.
-        if (!this._truncated) {
-            for (const key of this._modified.keys()) {
-                if (this._originalValues.get(key)) continue;
-                this._originalValues.set(key, this._getCached(key, false) || await this._parent.get(key));
-            }
-
-            for (const key of (new Set(this._removed)).values()) {
-                if (this._originalValues.get(key)) continue;
-                const value =  this._getCached(key, false) || await this._parent.get(key);
-                if (value) {
-                    this._originalValues.set(key, value);
-                } else {
-                    this._removed.delete(key);
-                }
-            }
-        }
-        return Transaction.prototype._commitBackend.call(this);
     }
 }
 Class.register(SynchronousTransaction);

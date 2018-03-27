@@ -218,39 +218,46 @@ class InMemoryBackend {
             await this.truncate();
         }
 
+        const originalValues = new Map();
+
         for (const key of tx._removed) {
-            await this._cache.delete(key);
+            const oldValue = this.getSync(key);
+            if (oldValue) {
+                originalValues.set(key, oldValue);
+            }
+            this._cache.delete(key);
         }
         for (const [key, value] of tx._modified) {
-            await this._cache.set(key, this.encode(value));
+            const oldValue = this.getSync(key);
+            if (oldValue) {
+                originalValues.set(key, oldValue);
+            }
+            this._cache.set(key, this.encode(value));
         }
 
         // Update all indices.
-        const indexPromises = [
-            InMemoryBackend._indexApply(this._primaryIndex, tx)
-        ];
+        InMemoryBackend._indexApply(this._primaryIndex, tx, originalValues);
         for (const index of this._indices.values()) {
-            indexPromises.push(InMemoryBackend._indexApply(index, tx));
+            InMemoryBackend._indexApply(index, tx, originalValues);
         }
-        return Promise.all(indexPromises);
     }
 
     /**
      * @param {InMemoryIndex} index
      * @param {Transaction} tx
-     * @returns {Promise}
+     * @param {Map} originalValues
      * @private
      */
-    static async _indexApply(index, tx) {
+    static _indexApply(index, tx, originalValues) {
         if (tx._truncated) {
-            await index.truncate();
+            index.truncate();
         }
 
         for (const key of tx._removed) {
-            await index.remove(key, tx._originalValues.get(key));
+            index.remove(key, originalValues.get(key));
         }
         for (const [key, value] of tx._modified) {
-            await index.put(key, value, tx._originalValues.get(key));
+            index.put(key, value, originalValues.get(key));
         }
     }
 
@@ -258,16 +265,17 @@ class InMemoryBackend {
      * @returns {Promise}
      */
     async truncate() {
+        this.truncateSync();
+    }
+
+    truncateSync() {
         this._cache.clear();
 
         // Truncate all indices.
-        const indexPromises = [
-            this._primaryIndex.truncate()
-        ];
+        this._primaryIndex.truncate()
         for (const index of this._indices.values()) {
-            indexPromises.push(index.truncate());
+            index.truncate();
         }
-        return Promise.all(indexPromises);
     }
 
     /**

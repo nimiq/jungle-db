@@ -350,7 +350,15 @@ class LMDBBaseBackend {
             return;
         }
 
-        txn.del(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
+        try {
+            txn.del(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
+        } catch (e) {
+            // Do not throw error if key was not found
+            if (e.message && e.message.indexOf('MDB_NOTFOUND') >= 0) {
+                return;
+            }
+            throw e;
+        }
     }
 
     /**
