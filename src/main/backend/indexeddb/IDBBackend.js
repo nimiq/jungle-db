@@ -126,39 +126,6 @@ class IDBBackend {
     }
 
     /**
-     * Inserts or replaces a key-value pair.
-     * @param {string} key The primary key to associate the value with.
-     * @param {*} value The value to write.
-     * @returns {Promise} The promise resolves after writing to the current object store finished.
-     */
-    async put(key, value) {
-        const db = this._backend;
-        return new Promise((resolve, reject) => {
-            const putTx = db.transaction([this._tableName], 'readwrite')
-                .objectStore(this._tableName)
-                .put(this.encode(value), key);
-            putTx.onsuccess = event => resolve(event.target.result);
-            putTx.onerror = reject;
-        });
-    }
-
-    /**
-     * Removes the key-value pair of the given key from the object store.
-     * @param {string} key The primary key to delete along with the associated object.
-     * @returns {Promise} The promise resolves after writing to the current object store finished.
-     */
-    async remove(key) {
-        const db = this._backend;
-        return new Promise((resolve, reject) => {
-            const deleteTx = db.transaction([this._tableName], 'readwrite')
-                .objectStore(this._tableName)
-                .delete(key);
-            deleteTx.onsuccess = event => resolve(event.target.result);
-            deleteTx.onerror = reject;
-        });
-    }
-
-    /**
      * Returns a promise of an array of objects whose primary keys fulfill the given query.
      * If the optional query is not given, it returns all objects in the object store.
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.

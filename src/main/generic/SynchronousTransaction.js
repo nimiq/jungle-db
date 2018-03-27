@@ -112,35 +112,6 @@ class SynchronousTransaction extends Transaction {
     }
 
     /**
-     * Inserts or replaces a key-value pair.
-     * @param {string} key The primary key to associate the value with.
-     * @param {*} value The value to write.
-     */
-    putSync(key, value) {
-        if (this._state !== Transaction.STATE.OPEN) {
-            throw new Error('Transaction already closed');
-        }
-
-        const oldValue = this.getSync(key, false);
-
-        this._put(key, value, oldValue);
-    }
-
-    /**
-     * Removes the key-value pair of the given key from the object store.
-     * @param {string} key The primary key to delete along with the associated object.
-     */
-    removeSync(key) {
-        if (this._state !== Transaction.STATE.OPEN) {
-            throw new Error('Transaction already closed');
-        }
-
-        const oldValue = this.getSync(key, false);
-
-        this._remove(key, oldValue);
-    }
-
-    /**
      * @override
      */
     snapshot() {

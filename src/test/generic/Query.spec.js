@@ -6,7 +6,7 @@ describe('Query', () => {
     };
 
     beforeAll((done) => {
-        backend = new InMemoryBackend();
+        backend = JungleDB.createVolatileObjectStore();
 
         (async function () {
             backend.createIndex('test', 'test', false);

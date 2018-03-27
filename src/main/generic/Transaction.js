@@ -103,25 +103,6 @@ class Transaction {
     }
 
     /**
-     * Internally applies a transaction to the transaction's state.
-     * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
-     * or no changes are applied.
-     * @param {Transaction} tx The transaction to apply.
-     * @returns {Promise} The promise resolves after applying the transaction.
-     * @protected
-     */
-    async _apply(tx) {
-        if (!(tx instanceof Transaction)) {
-            throw new Error('Can only apply transactions');
-        }
-
-        // First handle snapshots.
-        await this._snapshotManager.applyTx(tx, this);
-
-        this._applySync(tx);
-    }
-
-    /**
      * Non-async version of _apply that does not update snapshots.
      * Internally applies a transaction to the transaction's state.
      * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
@@ -129,9 +110,9 @@ class Transaction {
      * @param {Transaction} tx The transaction to apply.
      * @protected
      */
-    _applySync(tx) {
+    applySync(tx) {
         if (tx._truncated) {
-            this._truncateSync();
+            this.truncateSync();
         }
         for (const [key, value] of tx._modified) {
             this._put(key, value);
@@ -146,14 +127,14 @@ class Transaction {
      * @returns {Promise} The promise resolves after emptying the object store.
      */
     async truncate() {
-        return this._truncateSync();
+        return this.truncateSync();
     }
 
     /**
      * Non-async variant to empty the object store.
      * @protected
      */
-    _truncateSync() {
+    truncateSync() {
         if (this._state !== Transaction.STATE.OPEN) {
             throw new Error('Transaction already closed');
         }
@@ -200,90 +181,6 @@ class Transaction {
     }
 
     /**
-     * Commits the transaction to the backend.
-     * @returns {Promise.<boolean>} A promise of the success outcome.
-     * @protected
-     */
-    async _commitBackend() {
-        if (this._state !== Transaction.STATE.OPEN) {
-            throw new Error('Transaction already closed or in nested state');
-        }
-        if (this._enableWatchdog) {
-            clearTimeout(this._watchdog);
-        }
-        const commitStart = Date.now();
-        if (await this._managingBackend.commit(this)) {
-            this._state = Transaction.STATE.COMMITTED;
-            this._performanceCheck(commitStart, 'commit');
-            this._performanceCheck();
-            return true;
-        } else {
-            this._state = Transaction.STATE.CONFLICTED;
-            this._performanceCheck(commitStart, 'commit');
-            this._performanceCheck();
-            return false;
-        }
-    }
-
-    /**
-     * @param {number} [startTime]
-     * @param {string} [functionName]
-     * @private
-     */
-    _performanceCheck(startTime=this._startTime, functionName=null) {
-        const executionTime = Date.now() - startTime;
-        functionName = functionName ? ` function '${functionName}'` : '';
-        if (executionTime > Transaction.WATCHDOG_TIMER) {
-            Log.w(Transaction, `Violation: tx id ${this._id}${functionName} took ${(executionTime/1000).toFixed(2)}s (${this.toString()}).`);
-        }
-    }
-
-    /**
-     * Is used to probe whether a transaction can be committed.
-     * This, for example, includes a check whether another transaction has already been committed.
-     * @protected
-     * @param {Transaction} [tx] The transaction to be applied, if not given checks for the this transaction.
-     * @returns {boolean} Whether a commit will be successful.
-     */
-    _isCommittable(tx) {
-        if (tx !== undefined) {
-            // Make sure transaction is based on this transaction.
-            if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
-                throw new Error('Can only commit open, nested transactions');
-            }
-            return !this._nestedCommitted;
-        }
-        return this._managingBackend._isCommittable(this);
-    }
-
-    /**
-     * Is used to commit the transaction to the in memory state.
-     * @protected
-     * @param {Transaction} tx The transaction to be applied.
-     * @returns {Promise} A promise that resolves upon successful application of the transaction.
-     */
-    async _commitInternal(tx) {
-        this._nested.delete(tx);
-        // Apply nested transaction.
-        this._nestedCommitted = true;
-        await this._apply(tx);
-        // If there are no more nested transactions, change back to OPEN state.
-        if (this._nested.size === 0) {
-            this._state = Transaction.STATE.OPEN;
-            this._nestedCommitted = false;
-        }
-    }
-
-    /**
-     * Allows to change the backend of a Transaction when the state has been flushed.
-     * @param parent
-     * @protected
-     */
-    _setParent(parent) {
-        this._parent = parent;
-    }
-
-    /**
      * Aborts a transaction and (if this was the last open transaction) potentially
      * persists the most recent, committed state.
      * @param {Transaction} [tx] The transaction to be applied, only used internally.
@@ -315,31 +212,6 @@ class Transaction {
         }
 
         return this._abortBackend();
-    }
-
-    /**
-     * Aborts a transaction on the backend.
-     * @returns {Promise.<boolean>} A promise of the success outcome.
-     */
-    async _abortBackend() {
-        if (this._state === Transaction.STATE.ABORTED || this._state === Transaction.STATE.CONFLICTED) {
-            return true;
-        }
-        if (this._state !== Transaction.STATE.OPEN && this._state !== Transaction.STATE.NESTED) {
-            throw new Error('Transaction already closed');
-        }
-        if (this._state === Transaction.STATE.NESTED) {
-            await Promise.all(Array.from(this._nested).map(tx => tx.abort()));
-        }
-        if (this._enableWatchdog) {
-            clearTimeout(this._watchdog);
-        }
-        const abortStart = Date.now();
-        await this._managingBackend.abort(this);
-        this._state = Transaction.STATE.ABORTED;
-        this._performanceCheck(abortStart, 'abort');
-        this._performanceCheck();
-        return true;
     }
 
     /**
@@ -388,21 +260,16 @@ class Transaction {
     }
 
     /**
-     * Internal method for inserting/replacing a key-value pair.
+     * Inserts or replaces a key-value pair.
      * @param {string} key The primary key to associate the value with.
      * @param {*} value The value to write.
-     * @param {*} [oldValue] The old value associated with the key to update the indices (if applicable).
-     * @protected
      */
-    _put(key, value, oldValue) {
-        this._removed.delete(key);
-        const localOldValue = this._modified.get(key);
-        this._modified.set(key, value);
-
-        // Update indices.
-        for (const index of this._indices.values()) {
-            index.put(key, value, localOldValue);
+    putSync(key, value) {
+        if (this._state !== Transaction.STATE.OPEN) {
+            throw new Error('Transaction already closed');
         }
+
+        this._put(key, value);
     }
 
     /**
@@ -419,20 +286,15 @@ class Transaction {
     }
 
     /**
-     * Internal method for removing a key-value pair.
+     * Removes the key-value pair of the given key from the object store.
      * @param {string} key The primary key to delete along with the associated object.
-     * @param {*} oldValue The old value associated with the key to update the indices.
-     * @protected
      */
-    _remove(key, oldValue) {
-        this._removed.add(key);
-        const localOldValue = this._modified.get(key);
-        this._modified.delete(key);
-
-        // Update indices.
-        for (const index of this._indices.values()) {
-            index.remove(key, localOldValue);
+    removeSync(key) {
+        if (this._state !== Transaction.STATE.OPEN) {
+            throw new Error('Transaction already closed');
         }
+
+        this._remove(key);
     }
 
     /**
@@ -710,7 +572,6 @@ class Transaction {
         return minKey;
     }
 
-
     /**
      * Returns the count of entries in the given range.
      * If the optional query is not given, it returns the count of entries in the object store.
@@ -773,6 +634,7 @@ class Transaction {
         return tx;
     }
 
+
     /**
      * Creates a nested synchronous transaction, ensuring read isolation.
      * This makes the current transaction read-only until all sub-transactions have been closed (committed/aborted).
@@ -821,6 +683,167 @@ class Transaction {
 
     toStringShort() {
         return `Transaction{id=${this._id}, changes=±${this._modified.size+this._removed.size}, truncated=${this._truncated}, state=${this._state}, dependency=${this._dependency}}`;
+    }
+
+    /**
+     * Internally applies a transaction to the transaction's state.
+     * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
+     * or no changes are applied.
+     * @param {Transaction} tx The transaction to apply.
+     * @returns {Promise} The promise resolves after applying the transaction.
+     * @protected
+     */
+    async _apply(tx) {
+        if (!(tx instanceof Transaction)) {
+            throw new Error('Can only apply transactions');
+        }
+
+        // First handle snapshots.
+        await this._snapshotManager.applyTx(tx, this);
+
+        this.applySync(tx);
+    }
+
+    /**
+     * Commits the transaction to the backend.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     * @protected
+     */
+    async _commitBackend() {
+        if (this._state !== Transaction.STATE.OPEN) {
+            throw new Error('Transaction already closed or in nested state');
+        }
+        if (this._enableWatchdog) {
+            clearTimeout(this._watchdog);
+        }
+        const commitStart = Date.now();
+        if (await this._managingBackend.commit(this)) {
+            this._state = Transaction.STATE.COMMITTED;
+            this._performanceCheck(commitStart, 'commit');
+            this._performanceCheck();
+            return true;
+        } else {
+            this._state = Transaction.STATE.CONFLICTED;
+            this._performanceCheck(commitStart, 'commit');
+            this._performanceCheck();
+            return false;
+        }
+    }
+
+    /**
+     * @param {number} [startTime]
+     * @param {string} [functionName]
+     * @private
+     */
+    _performanceCheck(startTime=this._startTime, functionName=null) {
+        const executionTime = Date.now() - startTime;
+        functionName = functionName ? ` function '${functionName}'` : '';
+        if (executionTime > Transaction.WATCHDOG_TIMER) {
+            Log.w(Transaction, `Violation: tx id ${this._id}${functionName} took ${(executionTime/1000).toFixed(2)}s (${this.toString()}).`);
+        }
+    }
+
+    /**
+     * Is used to probe whether a transaction can be committed.
+     * This, for example, includes a check whether another transaction has already been committed.
+     * @protected
+     * @param {Transaction} [tx] The transaction to be applied, if not given checks for the this transaction.
+     * @returns {boolean} Whether a commit will be successful.
+     */
+    _isCommittable(tx) {
+        if (tx !== undefined) {
+            // Make sure transaction is based on this transaction.
+            if (!this._nested.has(tx) || tx.state !== Transaction.STATE.OPEN) {
+                throw new Error('Can only commit open, nested transactions');
+            }
+            return !this._nestedCommitted;
+        }
+        return this._managingBackend._isCommittable(this);
+    }
+
+    /**
+     * Is used to commit the transaction to the in memory state.
+     * @protected
+     * @param {Transaction} tx The transaction to be applied.
+     * @returns {Promise} A promise that resolves upon successful application of the transaction.
+     */
+    async _commitInternal(tx) {
+        this._nested.delete(tx);
+        // Apply nested transaction.
+        this._nestedCommitted = true;
+        await this._apply(tx);
+        // If there are no more nested transactions, change back to OPEN state.
+        if (this._nested.size === 0) {
+            this._state = Transaction.STATE.OPEN;
+            this._nestedCommitted = false;
+        }
+    }
+
+    /**
+     * Allows to change the backend of a Transaction when the state has been flushed.
+     * @param parent
+     * @protected
+     */
+    _setParent(parent) {
+        this._parent = parent;
+    }
+
+    /**
+     * Aborts a transaction on the backend.
+     * @returns {Promise.<boolean>} A promise of the success outcome.
+     */
+    async _abortBackend() {
+        if (this._state === Transaction.STATE.ABORTED || this._state === Transaction.STATE.CONFLICTED) {
+            return true;
+        }
+        if (this._state !== Transaction.STATE.OPEN && this._state !== Transaction.STATE.NESTED) {
+            throw new Error('Transaction already closed');
+        }
+        if (this._state === Transaction.STATE.NESTED) {
+            await Promise.all(Array.from(this._nested).map(tx => tx.abort()));
+        }
+        if (this._enableWatchdog) {
+            clearTimeout(this._watchdog);
+        }
+        const abortStart = Date.now();
+        await this._managingBackend.abort(this);
+        this._state = Transaction.STATE.ABORTED;
+        this._performanceCheck(abortStart, 'abort');
+        this._performanceCheck();
+        return true;
+    }
+
+    /**
+     * Internal method for inserting/replacing a key-value pair.
+     * @param {string} key The primary key to associate the value with.
+     * @param {*} value The value to write.
+     * @protected
+     */
+    _put(key, value) {
+        this._removed.delete(key);
+        const localOldValue = this._modified.get(key);
+        this._modified.set(key, value);
+
+        // Update indices.
+        for (const index of this._indices.values()) {
+            index.put(key, value, localOldValue);
+        }
+    }
+
+    /**
+     * Internal method for removing a key-value pair.
+     * @param {string} key The primary key to delete along with the associated object.
+     * @protected
+     */
+    _remove(key) {
+        this._removed.add(key);
+        const localOldValue = this._modified.get(key);
+        this._modified.delete(key);
+
+        // Update indices.
+        for (const index of this._indices.values()) {
+            index.remove(key, localOldValue);
+        }
     }
 }
 /** @type {number} Milliseconds to wait until automatically aborting transaction. */

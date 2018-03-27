@@ -69,39 +69,6 @@ class LMDBBackend extends LMDBBaseBackend {
     }
 
     /**
-     * Inserts or replaces a key-value pair.
-     * @param {string} key The primary key to associate the value with.
-     * @param {*} value The value to write.
-     */
-    putSync(key, value) {
-        const txn = this._env.beginTxn();
-        const oldValue = this._get(txn, key);
-        this._put(txn, key, value);
-
-        for (const index of this._indices.values()) {
-            index.put(txn, key, value, oldValue);
-        }
-
-        txn.commit();
-    }
-
-    /**
-     * Removes the key-value pair of the given key from the object store.
-     * @param {string} key The primary key to delete along with the associated object.
-     */
-    removeSync(key) {
-        const txn = this._env.beginTxn();
-        const oldValue = this._get(txn, key);
-        this._remove(txn, key);
-
-        for (const index of this._indices.values()) {
-            index.remove(txn, key, oldValue);
-        }
-
-        txn.commit();
-    }
-
-    /**
      * A check whether a certain key is cached.
      * @param {string} key The key to check.
      * @return {boolean} A boolean indicating whether the key is already in the cache.
@@ -118,25 +85,6 @@ class LMDBBackend extends LMDBBaseBackend {
      */
     async get(key) {
         return this.getSync(key);
-    }
-
-    /**
-     * Inserts or replaces a key-value pair.
-     * @param {string} key The primary key to associate the value with.
-     * @param {*} value The value to write.
-     * @returns {Promise} The promise resolves after writing to the current object store finished.
-     */
-    async put(key, value) {
-        this.putSync(key, value);
-    }
-
-    /**
-     * Removes the key-value pair of the given key from the object store.
-     * @param {string} key The primary key to delete along with the associated object.
-     * @returns {Promise} The promise resolves after writing to the current object store finished.
-     */
-    async remove(key) {
-        this.removeSync(key);
     }
 
     /**
