@@ -13,7 +13,7 @@ describe('ObjectStore', () => {
         (async function () {
             // Add 10 objects.
             for (let i=0; i<10; ++i) {
-                await backend.put(`key${i}`, `value${i}`);
+                await objectStore.put(`key${i}`, `value${i}`);
             }
         })().then(done, done.fail);
 

@@ -143,15 +143,17 @@ class LMDBBaseBackend {
      * Empties the object store.
      * @returns {Promise} The promise resolves after emptying the object store.
      */
-    truncate() {
-        try {
-            this._dbBackend.drop({
-                justFreePages: true
-            });
-        } catch (e) {
-            return Promise.reject(e);
-        }
-        return Promise.resolve();
+    async truncate() {
+        this.truncateSync();
+    }
+
+    /**
+     * Empties the object store.
+     */
+    truncateSync() {
+        this._dbBackend.drop({
+            justFreePages: true
+        });
     }
 
     /**

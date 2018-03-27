@@ -162,61 +162,6 @@ class LevelDBBackend {
     }
 
     /**
-     * Inserts or replaces a key-value pair.
-     * @param {string} key The primary key to associate the value with.
-     * @param {*} value The value to write.
-     * @returns {Promise} The promise resolves after writing to the current object store finished.
-     */
-    async put(key, value) {
-        const oldValue = await this.get(key);
-        let batch = [];
-
-        batch.push({key: key, value: this.encode(value), type: 'put'});
-        for (const index of this._indices.values()) {
-            batch = batch.concat(await index.put(key, value, oldValue));
-        }
-
-        return new Promise((resolve, error) => {
-            this._dbBackend.batch(batch, err => {
-                if (err) {
-                    error(err);
-                    return;
-                }
-                resolve();
-            });
-        });
-    }
-
-    /**
-     * Removes the key-value pair of the given key from the object store.
-     * @param {string} key The primary key to delete along with the associated object.
-     * @returns {Promise} The promise resolves after writing to the current object store finished.
-     */
-    async remove(key) {
-        const oldValue = await this.get(key);
-        // Only update if there was a value with that key.
-        if (oldValue === undefined) {
-            return Promise.resolve();
-        }
-        let batch = [];
-
-        batch.push({key: key, type: 'del'});
-        for (const index of this._indices.values()) {
-            batch = batch.concat(await index.remove(key, oldValue));
-        }
-
-        return new Promise((resolve, error) => {
-            this._dbBackend.batch(batch, err => {
-                if (err) {
-                    error(err);
-                    return;
-                }
-                resolve();
-            });
-        });
-    }
-
-    /**
      * Returns a promise of an array of objects whose primary keys fulfill the given query.
      * If the optional query is not given, it returns all objects in the object store.
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.

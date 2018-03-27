@@ -30,7 +30,7 @@ class Snapshot extends Transaction {
             throw new Error('Can only inherit transactions');
         }
 
-        return super._applySync(tx);
+        return super.applySync(tx);
     }
 
     /**
@@ -81,9 +81,18 @@ class Snapshot extends Transaction {
 
     /**
      * Unsupported operation for snapshots.
+     * @returns {Promise}
      * @override
      */
     async truncate() {
+        throw new Error('Unsupported operation on snapshots');
+    }
+
+    /**
+     * Unsupported operation for snapshots.
+     * @override
+     */
+    truncateSync() {
         throw new Error('Unsupported operation on snapshots');
     }
 
@@ -179,9 +188,25 @@ class Snapshot extends Transaction {
     /**
      * Unsupported operation for snapshots.
      * @override
+     */
+    putSync(key, value) {
+        throw new Error('Unsupported operation on snapshots');
+    }
+
+    /**
+     * Unsupported operation for snapshots.
+     * @override
      * @returns {Promise}
      */
     async remove(key) {
+        throw new Error('Unsupported operation on snapshots');
+    }
+
+    /**
+     * Unsupported operation for snapshots.
+     * @override
+     */
+    removeSync(key) {
         throw new Error('Unsupported operation on snapshots');
     }
 

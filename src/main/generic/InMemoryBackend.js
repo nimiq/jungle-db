@@ -55,56 +55,6 @@ class InMemoryBackend {
     }
 
     /**
-     * Inserts or replaces a key-value pair.
-     * @abstract
-     * @param {string} key The primary key to associate the value with.
-     * @param {*} value The value to write.
-     */
-    putSync(key, value) {
-        const oldValue = this.getSync(key);
-        this._cache.set(key, this.encode(value));
-        this._primaryIndex.put(key, value, oldValue);
-
-        for (const index of this._indices.values()) {
-            index.put(key, value, oldValue);
-        }
-    }
-
-    /**
-     * @param {string} key
-     * @param {*} value
-     * @returns {Promise}
-     */
-    put(key, value) {
-        this.putSync(key, value);
-        return Promise.resolve();
-    }
-
-    /**
-     * Removes the key-value pair of the given key from the object store.
-     * @abstract
-     * @param {string} key The primary key to delete along with the associated object.
-     */
-    removeSync(key) {
-        const oldValue = this.getSync(key);
-        this._cache.delete(key);
-        this._primaryIndex.remove(key, oldValue);
-
-        for (const index of this._indices.values()) {
-            index.remove(key, oldValue);
-        }
-    }
-
-    /**
-     * @param {string} key
-     * @returns {Promise}
-     */
-    remove(key) {
-        this.removeSync(key);
-        return Promise.resolve();
-    }
-
-    /**
      * @param {Query|KeyRange} [query]
      * @returns {Promise.<Array.<*>>}
      */
@@ -215,7 +165,7 @@ class InMemoryBackend {
      */
     async _apply(tx) {
         if (tx._truncated) {
-            await this.truncate();
+            this.truncateSync();
         }
 
         const originalValues = new Map();
@@ -272,7 +222,7 @@ class InMemoryBackend {
         this._cache.clear();
 
         // Truncate all indices.
-        this._primaryIndex.truncate()
+        this._primaryIndex.truncate();
         for (const index of this._indices.values()) {
             index.truncate();
         }
