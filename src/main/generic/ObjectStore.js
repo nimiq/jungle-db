@@ -134,24 +134,6 @@ class ObjectStore {
     }
 
     /**
-     * Inserts or replaces a key-value pair.
-     * @param {string} key The primary key to associate the value with.
-     * @param {*} value The value to write.
-     */
-    putSync(key, value) {
-        throw new Error('Cannot put synchronously');
-    }
-
-    /**
-     * Removes the key-value pair of the given key from the object store.
-     * @abstract
-     * @param {string} key The primary key to delete along with the associated object.
-     */
-    removeSync(key) {
-        throw new Error('Cannot remove synchronously');
-    }
-
-    /**
      * A check whether a certain key is cached.
      * @param {string} key The key to check.
      * @return {boolean} A boolean indicating whether the key is already in the cache.
