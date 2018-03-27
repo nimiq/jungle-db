@@ -110,7 +110,7 @@ class Transaction {
      * @param {Transaction} tx The transaction to apply.
      * @protected
      */
-    applySync(tx) {
+    _applySync(tx) {
         if (tx._truncated) {
             this.truncateSync();
         }
@@ -530,20 +530,6 @@ class Transaction {
     }
 
     /**
-     * This method is not implemented for transactions.
-     */
-    createIndex() {
-        throw new Error('Cannot create index in transaction');
-    }
-
-    /**
-     * This method is not implemented for transactions.
-     */
-    async deleteIndex() {
-        throw new Error('Cannot delete index in transaction');
-    }
-
-    /**
      * Alias for abort.
      * @returns {Promise} The promise resolves after successful abortion of the transaction.
      */
@@ -704,7 +690,7 @@ class Transaction {
         // First handle snapshots.
         await this._snapshotManager.applyTx(tx, this);
 
-        this.applySync(tx);
+        this._applySync(tx);
     }
 
     /**
