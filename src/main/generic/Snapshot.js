@@ -58,7 +58,7 @@ class Snapshot extends Transaction {
             if (this._modified.has(key)) {
                 continue;
             }
-            let oldValue = tx._originalValues.get(key);
+            let oldValue = await this.get(key);
             // If this key is newly introduced,
             // we have to mark it as removed to maintain our state.
             if (!oldValue) {
@@ -74,7 +74,8 @@ class Snapshot extends Transaction {
                 continue;
             }
             // Removed values have to be remembered.
-            this._put(key, tx._originalValues.get(key));
+            let oldValue = await this.get(key);
+            this._put(key, oldValue);
         }
     }
 
@@ -157,7 +158,6 @@ class Snapshot extends Transaction {
         this._truncated = true;
         this._modified.clear();
         this._removed.clear();
-        this._originalValues.clear();
 
         // Update indices.
         for (const index of this._indices.values()) {

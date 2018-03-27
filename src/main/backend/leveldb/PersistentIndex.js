@@ -360,11 +360,11 @@ class PersistentIndex extends LevelDBBackend {
         }
 
         for (const key of tx._removed) {
-            const oldValue = tx._originalValues.get(key);
+            const oldValue = await this._objectStore.get(key);
             await this.remove(key, oldValue, internalTx);
         }
         for (const [key, value] of tx._modified) {
-            const oldValue = tx._originalValues.get(key);
+            const oldValue = await this._objectStore.get(key);
             await this.put(key, value, oldValue, internalTx);
         }
 

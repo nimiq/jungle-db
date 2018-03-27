@@ -33,7 +33,6 @@ class Transaction {
         this._managingBackend = managingBackend || parent;
         this._modified = new Map();
         this._removed = new Set();
-        this._originalValues = new Map();
         this._truncated = false;
         this._indices = TransactionIndex.derive(this, parent);
 
@@ -135,30 +134,10 @@ class Transaction {
             this._truncateSync();
         }
         for (const [key, value] of tx._modified) {
-            // If this transaction has key in its originalValues, we use it.
-            // Otherwise, the original value has to coincide with the transaction's stored original value.
-            let oldValue;
-            if (this._originalValues.has(key)) {
-                oldValue = this._originalValues.get(key);
-            } else {
-                oldValue = tx._originalValues.get(key);
-                this._originalValues.set(key, oldValue);
-            }
-
-            this._put(key, value, oldValue);
+            this._put(key, value);
         }
         for (const key of tx._removed) {
-            // If this transaction has key in its originalValues, we use it.
-            // Otherwise, the original value has to coincide with the transaction's stored original value.
-            let oldValue;
-            if (this._originalValues.has(key)) {
-                oldValue = this._originalValues.get(key);
-            } else {
-                oldValue = tx._originalValues.get(key);
-                this._originalValues.set(key, oldValue);
-            }
-
-            this._remove(key, oldValue);
+            this._remove(key);
         }
     }
 
@@ -182,7 +161,6 @@ class Transaction {
         this._truncated = true;
         this._modified.clear();
         this._removed.clear();
-        this._originalValues.clear();
 
         // Update indices.
         for (const index of this._indices.values()) {
@@ -406,14 +384,7 @@ class Transaction {
         }
         await Promise.all(constraints);
 
-        const oldValue = await this.get(key);
-
-        // Save for indices.
-        if (!this._originalValues.has(key)) {
-            this._originalValues.set(key, oldValue);
-        }
-
-        this._put(key, value, oldValue);
+        this._put(key, value);
     }
 
     /**
@@ -425,11 +396,12 @@ class Transaction {
      */
     _put(key, value, oldValue) {
         this._removed.delete(key);
+        const localOldValue = this._modified.get(key);
         this._modified.set(key, value);
 
         // Update indices.
         for (const index of this._indices.values()) {
-            index.put(key, value, oldValue);
+            index.put(key, value, localOldValue);
         }
     }
 
@@ -443,16 +415,7 @@ class Transaction {
             throw new Error('Transaction already closed');
         }
 
-        const oldValue = await this.get(key);
-        // Only remove if it exists.
-        if (oldValue !== undefined) {
-            // Save for indices.
-            if (!this._originalValues.has(key)) {
-                this._originalValues.set(key, oldValue);
-            }
-
-            this._remove(key, oldValue);
-        }
+        this._remove(key);
     }
 
     /**
@@ -463,11 +426,12 @@ class Transaction {
      */
     _remove(key, oldValue) {
         this._removed.add(key);
+        const localOldValue = this._modified.get(key);
         this._modified.delete(key);
 
         // Update indices.
         for (const index of this._indices.values()) {
-            index.remove(key, oldValue);
+            index.remove(key, localOldValue);
         }
     }
 

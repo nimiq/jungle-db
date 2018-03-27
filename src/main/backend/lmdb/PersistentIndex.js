@@ -164,11 +164,11 @@ class PersistentIndex extends LMDBBaseBackend {
         }
 
         for (const key of tx._removed) {
-            const oldValue = tx._originalValues.get(key);
+            const oldValue = this._objectStore.getSync(key);
             this.remove(key, oldValue, encodedTx);
         }
         for (const [key, value] of tx._modified) {
-            const oldValue = tx._originalValues.get(key);
+            const oldValue = this._objectStore.getSync(key);
             this.put(key, value, oldValue, encodedTx);
         }
 

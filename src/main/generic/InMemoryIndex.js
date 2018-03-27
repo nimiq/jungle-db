@@ -31,9 +31,8 @@ class InMemoryIndex {
 
     /**
      * Reinitialises the index.
-     * @returns {Promise} The promise resolves after emptying the index.
      */
-    async truncate() {
+    truncate() {
         this._tree = new BTree();
     }
 
