@@ -119,11 +119,13 @@ class InMemoryIndex {
         const oldIKey = this._indexKey(key, oldValue);
         const newIKey = this._indexKey(key, value);
 
-        if (oldIKey !== undefined) {
-            this._remove(key, oldIKey, treeTx);
-        }
-        if (newIKey !== undefined) {
-            this._insert(key, newIKey, treeTx);
+        if (oldIKey !== newIKey) {
+            if (oldIKey !== undefined) {
+                this._remove(key, oldIKey, treeTx);
+            }
+            if (newIKey !== undefined) {
+                this._insert(key, newIKey, treeTx);
+            }
         }
         return treeTx;
     }
