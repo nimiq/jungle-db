@@ -280,4 +280,40 @@ describe('Snapshot', () => {
             expect(expectedKeys.size).toBe(0);
         })().then(done, done.fail);
     });
+
+    it('throws errors on forbidden methods', (done) => {
+        (async function () {
+            const snapshot = objectStore.snapshot();
+            expect(() => snapshot.truncateSync()).toThrow();
+            expect(() => snapshot.putSync()).toThrow();
+            expect(() => snapshot.removeSync()).toThrow();
+            expect(() => snapshot.transaction()).toThrow();
+            expect(() => snapshot.synchronousTransaction()).toThrow();
+            expect(() => snapshot.snapshot()).toThrow();
+
+            let threw = false;
+            try {
+                await snapshot.put();
+            } catch (e) {
+                threw = true;
+            }
+            expect(threw).toBe(true);
+
+            threw = false;
+            try {
+                await snapshot.remove();
+            } catch (e) {
+                threw = true;
+            }
+            expect(threw).toBe(true);
+
+            threw = false;
+            try {
+                await snapshot.commit();
+            } catch (e) {
+                threw = true;
+            }
+            expect(threw).toBe(true);
+        })().then(done, done.fail);
+    });
 });
