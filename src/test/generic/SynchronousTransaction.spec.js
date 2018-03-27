@@ -5,7 +5,7 @@ describe('SynchronousTransaction', () => {
 
     beforeEach((done) => {
         // Asynchronous backend.
-        const backend = new DummyBackend();
+        const backend = new InMemoryBackend();
         objectStore = new ObjectStore(backend, backend);
         objectStore.createIndex('i');
 

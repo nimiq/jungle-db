@@ -28,7 +28,7 @@ describe('TestCodec', () => {
     };
 
     beforeEach((done) => {
-        backend = new DummyBackend(TestCodec.instance);
+        backend = new InMemoryBackend('', TestCodec.instance);
 
         objectStore = new ObjectStore(backend, backend);
 

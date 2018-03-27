@@ -16,7 +16,7 @@ describe('Transaction', () => {
     }
 
     beforeEach((done) => {
-        backend = new DummyBackend();
+        backend = new InMemoryBackend();
         allKeys = new Set();
         allValues = new Set();
 

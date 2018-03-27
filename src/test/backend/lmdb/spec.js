@@ -14,6 +14,5 @@ global.Class = {
     }
 };
 
-require('../../generic/DummyBackend.js');
 require('./BinaryCodec.js');
 require('../../generic/TestCodec.js');

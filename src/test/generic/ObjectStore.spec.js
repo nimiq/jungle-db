@@ -6,7 +6,7 @@ describe('ObjectStore', () => {
     };
 
     beforeEach((done) => {
-        backend = new DummyBackend();
+        backend = new InMemoryBackend();
 
         objectStore = new ObjectStore(backend, backend);
 

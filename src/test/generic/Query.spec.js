@@ -6,7 +6,7 @@ describe('Query', () => {
     };
 
     beforeAll((done) => {
-        backend = new DummyBackend();
+        backend = new InMemoryBackend();
 
         (async function () {
             backend.createIndex('test', 'test', false);
