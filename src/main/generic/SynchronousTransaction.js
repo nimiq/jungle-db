@@ -4,9 +4,8 @@
  *
  * WARNING: If not all required key-value-pairs are preloaded, the results of any call on a synchronous transaction
  * might be wrong. Only use synchronous transactions, if unavoidable.
- * @implements {IObjectStore}
- * @implements {ICommittable}
  * @implements {ISynchronousObjectStore}
+ * @implements {ICommittable}
  * @extends {Transaction}
  */
 class SynchronousTransaction extends Transaction {

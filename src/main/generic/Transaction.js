@@ -6,7 +6,7 @@
  * Transactions opened after the successful commit of another transaction will be based on the
  * new state and hence can be committed again.
  * Transactions do *not* check unique constraints of secondary indices before commiting them.
- * @implements {IObjectStore}
+ * @implements {ISynchronousWritableObjectStore}
  * @implements {ICommittable}
  */
 class Transaction {
