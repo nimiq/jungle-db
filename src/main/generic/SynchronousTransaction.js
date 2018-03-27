@@ -111,14 +111,6 @@ class SynchronousTransaction extends Transaction {
     }
 
     /**
-     * @override
-     */
-    snapshot() {
-        if (!this._objectStore.isSynchronous()) throw new Error('Invalid call on SynchronousTransaction');
-        return super.snapshot();
-    }
-
-    /**
      * Checks whether an object store implements the ISynchronousObjectStore interface.
      * @override
      * @returns {boolean} The transaction object.
