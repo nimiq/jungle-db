@@ -15,7 +15,7 @@ class InMemoryBackend {
         /** @type {Map.<string,InMemoryIndex>} */
         this._indices = new Map();
 
-        this._primaryIndex = new InMemoryIndex(this, undefined, false, true);
+        this._primaryIndex = new InMemoryIndex(this, /*keyPath*/ undefined, /*multiEntry*/ false, /*unique*/ true);
         this._tableName = tableName;
         this._codec = codec;
     }

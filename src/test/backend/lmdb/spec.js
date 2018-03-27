@@ -14,5 +14,6 @@ global.Class = {
     }
 };
 
+require('../../generic/UnsynchronousBackend.js');
 require('./BinaryCodec.js');
 require('../../generic/TestCodec.js');

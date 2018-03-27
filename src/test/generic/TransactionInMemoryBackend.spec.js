@@ -16,7 +16,7 @@ describe('Transaction with InMemoryBackend', () => {
     }
 
     beforeEach((done) => {
-        objectStore = JungleDB.createVolatileObjectStore();
+        objectStore = new ObjectStore(new UnsynchronousBackend(new InMemoryBackend()), null);
         allKeys = new Set();
         allValues = new Set();
 

@@ -16,7 +16,7 @@ describe('Transaction with binary codec', () => {
     }
 
     beforeEach((done) => {
-        objectStore = JungleDB.createVolatileObjectStore(BinaryCodec.instance);
+        objectStore = new ObjectStore(new UnsynchronousBackend(new InMemoryBackend('', BinaryCodec.instance)), null);
         allKeys = new Set();
         allValues = new Set();
 

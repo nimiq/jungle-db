@@ -5,8 +5,7 @@ describe('SynchronousTransaction', () => {
 
     beforeEach((done) => {
         // Asynchronous backend.
-        const backend = new InMemoryBackend();
-        objectStore = new ObjectStore(backend, backend);
+        objectStore = new ObjectStore(new UnsynchronousBackend(new InMemoryBackend()), null);
         objectStore.createIndex('i');
 
         (async function () {
@@ -21,10 +20,11 @@ describe('SynchronousTransaction', () => {
     });
 
     afterEach((done) => {
-        if (tx.state === Transaction.STATE.OPEN) {
-            tx.abort().then(done, done.fail);
-        }
-        done();
+        (async function () {
+            if (tx.state === Transaction.STATE.OPEN) {
+                await tx.abort();
+            }
+        })().then(done, done.fail);
     });
 
     it('throws an error if a key is not cached', () => {

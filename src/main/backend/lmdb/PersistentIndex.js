@@ -267,8 +267,8 @@ class PersistentIndex extends LMDBBaseBackend {
      * @private
      */
     _indexKey(key, obj) {
+        if (obj === undefined) return undefined;
         if (this.keyPath) {
-            if (obj === undefined) return undefined;
             return ObjectUtils.byKeyPath(obj, this.keyPath);
         }
         return key;

@@ -24,6 +24,28 @@ class TransactionIndex extends InMemoryIndex {
     }
 
     /**
+     * Inserts a new key-value pair into the index.
+     * For replacing an existing pair, the old value has to be passed as well.
+     * @param {string} key The primary key of the pair.
+     * @param {*} value The value of the pair. The indexed key will be extracted from this.
+     * @param {*} [oldValue] The old value associated with the primary key.
+     * @returns {TreeTransaction} The TreeTransaction that was needed to insert/replace the key-value pair.
+     */
+    put(key, value, oldValue) {
+        const treeTx = this._tree.transaction();
+        const oldIKey = this._indexKey(key, oldValue);
+        const newIKey = this._indexKey(key, value);
+
+        if (oldIKey !== undefined) {
+            this._remove(key, oldIKey, treeTx);
+        }
+        if (newIKey !== undefined) {
+            this._insert(key, newIKey, treeTx);
+        }
+        return treeTx;
+    }
+
+    /**
      * Constructs a new TransactionIndex serving the transaction's changes
      * and unifying the results with the underlying backend.
      * @param {Transaction} objectStore The transaction the index should be based on.

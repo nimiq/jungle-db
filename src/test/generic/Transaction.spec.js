@@ -1,5 +1,5 @@
 describe('Transaction', () => {
-    let backend, tx, allKeys, allValues;
+    let backend, objectStore, tx, allKeys, allValues;
 
     const setEqual = function(actual, expected) {
         return expected.equals(actual);
@@ -16,13 +16,13 @@ describe('Transaction', () => {
     }
 
     beforeEach((done) => {
-        backend = new InMemoryBackend();
+        backend = new ObjectStore(new UnsynchronousBackend(new InMemoryBackend()), null);
+
         allKeys = new Set();
         allValues = new Set();
 
         (async function () {
             backend.createIndex('i');
-            tx = new Transaction(backend, backend, false);
 
             // Add 10 objects.
             for (let i=0; i<10; ++i) {
@@ -32,6 +32,8 @@ describe('Transaction', () => {
                     allValues.add(`value${i}`);
                 }
             }
+
+            tx = backend.transaction();
 
             for (let i=5; i<15; ++i) {
                 await tx.put(`key${i}`, { i: i, sub: `newValue${i}` });
