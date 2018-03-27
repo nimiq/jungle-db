@@ -37,6 +37,16 @@ class ICommittable {
     _isCommittable(tx) {} // eslint-disable-line no-unused-vars
 
     /**
+     * Is used to check constraints before committing.
+     * If a constraint is not satisfied, the commitable is aborted and an exception is thrown.
+     * @abstract
+     * @returns {Promise.<boolean>}
+     * @throws
+     * @protected
+     */
+    async _checkConstraints() {}
+
+    /**
      * Is used to commit the transaction.
      * @abstract
      * @protected
@@ -59,6 +69,12 @@ class ICommittable {
      * @returns {Promise.<boolean>} A promise of the success outcome.
      */
     async _abortBackend() {} // eslint-disable-line no-unused-vars
+
+    /**
+     * Sets the state to aborted.
+     * @abstract
+     */
+    _setAborted() {} // eslint-disable-line no-unused-vars
 
     /**
      * Allows to change the backend of a Transaction when the state has been flushed.

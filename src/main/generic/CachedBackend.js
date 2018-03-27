@@ -186,23 +186,6 @@ class CachedBackend {
     }
 
     /**
-     * Unsupported operation for a cached backend.
-     * @param {Transaction} [tx]
-     * @returns {Promise.<boolean>}
-     */
-    async commit(tx) {
-        throw new Error('Unsupported operation');
-    }
-
-    /**
-     * Unsupported operation for a cached backend.
-     * @param {Transaction} [tx]
-     */
-    async abort(tx) {
-        throw new Error('Unsupported operation');
-    }
-
-    /**
      * Internally applies a transaction to the cache's and backend's state.
      * This needs to be done in batch (as a db level transaction), i.e., either the full state is updated
      * or no changes are applied.
@@ -287,15 +270,6 @@ class CachedBackend {
      */
     close() {
         return this._backend.close();
-    }
-
-    /**
-     * Creates a new transaction, ensuring read isolation
-     * on the most recently successfully committed state.
-     * @returns {Transaction} The transaction object.
-     */
-    transaction() {
-        throw new Error('Unsupported operation');
     }
 
     /**

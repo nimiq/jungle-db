@@ -94,7 +94,12 @@ class ObjectStore {
     async put(key, value) {
         if (!this._backend.connected) throw new Error('JungleDB is not connected');
         const tx = this.transaction();
-        await tx.put(key, value);
+        try {
+            await tx.put(key, value);
+        } catch (err) {
+            await tx.abort();
+            throw err;
+        }
         return tx.commit();
     }
 
@@ -107,7 +112,12 @@ class ObjectStore {
     async remove(key) {
         if (!this._backend.connected) throw new Error('JungleDB is not connected');
         const tx = this.transaction();
-        await tx.remove(key);
+        try {
+            await tx.remove(key);
+        } catch (err) {
+            await tx.abort();
+            throw err;
+        }
         return tx.commit();
     }
 
@@ -433,7 +443,21 @@ class ObjectStore {
                 if (info.parent.isBackend()) {
                     await this._snapshotManager.applyTx(tx, backend);
                 }
-                await backend._apply(tx);
+                try {
+                    await backend._apply(tx);
+                } catch (err) {
+                    // Change pointers in child transactions.
+                    info.abort();
+                    this._transactions.delete(tx.id);
+
+                    // Look for tx on stack and remove it.
+                    const statePosition = this._stateStack.indexOf(info);
+                    if (statePosition >= 0) {
+                        this._stateStack.splice(statePosition, 1);
+                    }
+                    tx._setAborted();
+                    Log.w(ObjectStore, 'Error while applying transaction');
+                }
                 cleanup();
                 return true;
             } else {
