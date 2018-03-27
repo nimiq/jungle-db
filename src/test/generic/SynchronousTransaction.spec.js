@@ -75,12 +75,6 @@ describe('SynchronousTransaction', () => {
         })().then(done, done.fail);
     });
 
-    it('throws errors on forbidden methods', (done) => {
-        (async function () {
-            expect(() => tx.snapshot()).toThrow();
-        })().then(done, done.fail);
-    });
-
     it('does apply nested transactions', (done) => {
         (async function () {
             const tx1 = tx.transaction();
