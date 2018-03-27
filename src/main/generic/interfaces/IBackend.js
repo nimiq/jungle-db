@@ -28,9 +28,9 @@ class IBackend extends IReadableObjectStore {
      * @abstract
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
-     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|boolean} [options] An options object (for deprecated usage: multiEntry boolean).
+     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options] An options object.
      */
-    createIndex(indexName, keyPath, options=false) {} // eslint-disable-line no-unused-vars
+    createIndex(indexName, keyPath, options = {}) {} // eslint-disable-line no-unused-vars
 
     /**
      * Deletes a secondary index from the object store.
@@ -38,5 +38,5 @@ class IBackend extends IReadableObjectStore {
      * @param indexName
      * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
      */
-    deleteIndex(indexName, options={}) {} // eslint-disable-line no-unused-vars
+    deleteIndex(indexName, options = {}) {} // eslint-disable-line no-unused-vars
 }

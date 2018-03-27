@@ -210,13 +210,11 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
-     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|ICodec} [options] An options object (for deprecated usage: A codec for the object store).
-     * @param {boolean} [persistentArg] If set to false, this object store is not persistent.
+     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options] An options object.
      * @returns {IObjectStore}
      */
-    createObjectStore(tableName, options=null, persistentArg=true) {
-        let { codec = null, persistent = persistentArg, upgradeCondition = null } = (typeof options === 'object' && options !== null) ? options : {};
-        if (typeof options === 'object' && options !== null && 'encode' in options && 'decode' in options) codec = options;
+    createObjectStore(tableName, options = {}) {
+        let { codec = null, persistent = true, upgradeCondition = null } = options || {};
 
         if (this._connected) throw new Error('Cannot create ObjectStore while connected');
         if (this._objectStores.has(tableName)) {
@@ -238,7 +236,7 @@ class JungleDB {
      * @param {string} tableName
      * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
      */
-    deleteObjectStore(tableName, options={}) {
+    deleteObjectStore(tableName, options = {}) {
         let { upgradeCondition = null } = options || {};
 
         if (this._connected) throw new Error('Cannot delete ObjectStore while connected');
