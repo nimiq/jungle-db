@@ -9,8 +9,8 @@ describe('Query', () => {
         backend = JungleDB.createVolatileObjectStore();
 
         (async function () {
-            backend.createIndex('test', 'test', false);
-            backend.createIndex('multi', 'multi', true);
+            backend.createIndex('test', 'test', { multiEntry: false });
+            backend.createIndex('multi', 'multi', { multiEntry: true });
 
             // Add 10 objects.
             for (let i=0; i<10; ++i) {
