@@ -520,11 +520,10 @@ class LevelDBBackend {
      * Moreover, it is only executed on database version updates or on first creation.
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
-     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|boolean} [options] An options object (for deprecated usage: multiEntry boolean).
+     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options] An options object.
      */
-    createIndex(indexName, keyPath, options=false) {
-        let { multiEntry = false, upgradeCondition = null, unique = false } = (typeof options === 'object' && options !== null) ? options : {};
-        if (typeof options !== 'object' && options !== null) multiEntry = options;
+    createIndex(indexName, keyPath, options = {}) {
+        let { multiEntry = false, upgradeCondition = null, unique = false } = options || {};
 
         if (this._db.connected) throw new Error('Cannot create index while connected');
         keyPath = keyPath || indexName;
@@ -538,7 +537,7 @@ class LevelDBBackend {
      * @param indexName
      * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
      */
-    deleteIndex(indexName, options={}) {
+    deleteIndex(indexName, options = {}) {
         let { upgradeCondition = null } = options || {};
 
         if (this._db.connected) throw new Error('Cannot delete index while connected');

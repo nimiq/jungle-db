@@ -241,11 +241,10 @@ class InMemoryBackend {
     /**
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
-     * @param {{multiEntry:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|boolean} [options] An options object (for deprecated usage: multiEntry boolean).
+     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options] An options object.
      */
-    createIndex(indexName, keyPath, options=false) {
-        let { multiEntry = false, upgradeCondition = null } = (typeof options === 'object' && options !== null) ? options : {};
-        if (typeof options !== 'object' && options !== null) multiEntry = options;
+    createIndex(indexName, keyPath, options = {}) {
+        let { multiEntry = false, upgradeCondition = null } = options || {};
 
         keyPath = keyPath || indexName;
         const index = new InMemoryIndex(this, keyPath, multiEntry);
@@ -257,7 +256,7 @@ class InMemoryBackend {
      * @param indexName
      * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
      */
-    deleteIndex(indexName, options={}) {
+    deleteIndex(indexName, options = {}) {
         let { upgradeCondition = null } = options || {};
 
         this._indices.delete(indexName);

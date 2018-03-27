@@ -61,28 +61,6 @@ class CachedBackend {
     }
 
     /**
-     * Inserts or replaces a key-value pair.
-     * Stores the new key-value pair in both the cache and the backend.
-     * @param {string} key The primary key to associate the value with.
-     * @param {*} value The value to write.
-     * @returns {Promise} The promise resolves after writing to the current object store finished.
-     */
-    put(key, value) {
-        this._cache.set(key, value);
-        return this._backend.put(key, value);
-    }
-
-    /**
-     * Removes the key-value pair of the given key from the cache and the backend.
-     * @param {string} key The primary key to delete along with the associated object.
-     * @returns {Promise} The promise resolves after writing to the current object store finished.
-     */
-    remove(key) {
-        this._cache.delete(key);
-        return this._backend.remove(key);
-    }
-
-    /**
      * Returns a promise of a set of keys fulfilling the given query by querying the backend.
      * If the optional query is not given, it returns all keys in the object store.
      * If the query is of type KeyRange, it returns all keys of the object store being within this range.
@@ -249,9 +227,9 @@ class CachedBackend {
      * Moreover, it is only executed on database version updates or on first creation.
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
-     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}|boolean} [options] An options object (for deprecated usage: multiEntry boolean).
+     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options] An options object.
      */
-    createIndex(indexName, keyPath, options=false) {
+    createIndex(indexName, keyPath, options = {}) {
         return this._backend.createIndex(indexName, keyPath, options);
     }
 
@@ -260,7 +238,7 @@ class CachedBackend {
      * @param indexName
      * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
      */
-    deleteIndex(indexName, options={}) {
+    deleteIndex(indexName, options = {}) {
         return this._backend.deleteIndex(indexName, options);
     }
 
