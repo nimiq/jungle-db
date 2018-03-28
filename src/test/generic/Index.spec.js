@@ -328,6 +328,12 @@ describe('Index', () => {
     });
 
     it('supports binary key encoding', (done) => {
+        // Karma breaks array buffers
+        spyOn(ComparisonUtils, 'isUint8Array').and.callFake(function(obj) {
+            if (typeof Buffer !== 'undefined' && typeof window === 'undefined' && obj instanceof Buffer) return true;
+            return ArrayBuffer.isView(obj) || obj instanceof ArrayBuffer || (obj.constructor && obj.constructor.name === 'ArrayBuffer');
+        });
+
         (async function () {
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
