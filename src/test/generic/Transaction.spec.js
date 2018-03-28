@@ -258,4 +258,30 @@ describe('Transaction', () => {
             expect(i).toBe(7);
         })().then(done, done.fail);
     });
+
+    it('correctly processes index queries after commit', (done) => {
+        (async function () {
+            await tx.commit();
+            const index = objectStore.index('i');
+            expect(await index.minKeys()).toEqual(new Set(['key1']));
+            expect(await index.maxKeys()).toEqual(new Set(['key14']));
+            expect(await index.minKeys(KeyRange.upperBound(5))).toEqual(new Set(['key1']));
+            expect(await index.minKeys(KeyRange.lowerBound(1, true))).toEqual(new Set(['key2']));
+            expect(await index.minKeys(KeyRange.lowerBound(5, true))).toEqual(new Set(['key6']));
+
+            expect(subValue(await index.minValues())).toEqual(new Set(['value1']));
+            expect(subValue(await index.maxValues())).toEqual(new Set(['newValue14']));
+            expect(subValue(await index.minValues(KeyRange.upperBound(5)))).toEqual(new Set(['value1']));
+            expect(subValue(await index.minValues(KeyRange.lowerBound(1, true)))).toEqual(new Set(['value2']));
+            expect(subValue(await index.minValues(KeyRange.lowerBound(5, true)))).toEqual(new Set(['newValue6']));
+
+            // Ordering on strings might not be as expected!
+            expect(await objectStore.keys()).toEqual(allKeys);
+            expect(await objectStore.keys(KeyRange.upperBound('key5'))).toEqual(new Set(['key1', 'key2', 'key3', 'key4', 'key5', 'key10', 'key11', 'key12', 'key13', 'key14']));
+            expect(await objectStore.keys(KeyRange.lowerBound('key1', true))).toEqual(allKeys.difference(['key1']));
+            expect(await objectStore.keys(KeyRange.lowerBound('key5', true))).toEqual(new Set(['key6', 'key7', 'key8', 'key9']));
+
+            expect(subValue(await objectStore.values())).toEqual(allValues);
+        })().then(done, done.fail);
+    });
 });

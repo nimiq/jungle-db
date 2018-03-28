@@ -1,4 +1,10 @@
 describe('Log', () => {
+
+    beforeAll(() => {
+        spyOn(console, 'log');
+        spyOn(console, 'error');
+    });
+
     it('can log objects', () => {
         expect(() => Log.i('Test', { toString: () => '' })).not.toThrow();
 
