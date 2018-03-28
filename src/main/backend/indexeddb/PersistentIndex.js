@@ -139,7 +139,7 @@ class PersistentIndex {
             const request = this._index(db).openCursor(query, 'prev');
             request.onsuccess = event => {
                 const cursor = event.target.result;
-                if (maxKey === null) {
+                if (cursor && maxKey === null) {
                     maxKey = cursor.key;
                 }
                 // Only iterate until key changes.
@@ -175,7 +175,7 @@ class PersistentIndex {
             const request = index.openKeyCursor ? index.openKeyCursor(query, 'prev') : index.openCursor(query, 'prev');
             request.onsuccess = event => {
                 const cursor = event.target.result;
-                if (maxKey === null) {
+                if (cursor && maxKey === null) {
                     maxKey = cursor.key;
                 }
                 // Only iterate until key changes.
@@ -202,15 +202,15 @@ class PersistentIndex {
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const results = [];
-            let maxKey = null;
+            let minKey = null;
             const request = this._index(db).openCursor(query, 'next');
             request.onsuccess = event => {
                 const cursor = event.target.result;
-                if (maxKey === null) {
-                    maxKey = cursor.key;
+                if (cursor && minKey === null) {
+                    minKey = cursor.key;
                 }
                 // Only iterate until key changes.
-                if (cursor && ComparisonUtils.equals(maxKey, cursor.key)) {
+                if (cursor && ComparisonUtils.equals(minKey, cursor.key)) {
                     try {
                         results.push(this._objectStore.decode(cursor.value, cursor.primaryKey));
                     } catch (e) {
@@ -237,16 +237,16 @@ class PersistentIndex {
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
             const results = new Set();
-            let maxKey = null;
+            let minKey = null;
             const index = this._index(db);
             const request = index.openKeyCursor ? index.openKeyCursor(query, 'next') : index.openCursor(query, 'next');
             request.onsuccess = event => {
                 const cursor = event.target.result;
-                if (maxKey === null) {
-                    maxKey = cursor.key;
+                if (cursor && minKey === null) {
+                    minKey = cursor.key;
                 }
                 // Only iterate until key changes.
-                if (cursor && ComparisonUtils.equals(maxKey, cursor.key)) {
+                if (cursor && ComparisonUtils.equals(minKey, cursor.key)) {
                     results.add(cursor.primaryKey);
                     cursor.continue();
                 } else {

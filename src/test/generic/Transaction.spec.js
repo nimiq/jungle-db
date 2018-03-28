@@ -1,5 +1,5 @@
 describe('Transaction', () => {
-    let backend, objectStore, tx, allKeys, allValues;
+    let jdb, objectStore, tx, allKeys, allValues;
 
     const setEqual = function(actual, expected) {
         return expected.equals(actual);
@@ -16,24 +16,26 @@ describe('Transaction', () => {
     }
 
     beforeEach((done) => {
-        backend = new ObjectStore(new UnsynchronousBackend(new InMemoryBackend()), null);
+        jdb = new JungleDB('test', 1);
+        objectStore = jdb.createObjectStore('testStore');
+        objectStore.createIndex('i', 'i', { keyEncoding: JungleDB.NUMBER_ENCODING });
 
         allKeys = new Set();
         allValues = new Set();
 
         (async function () {
-            backend.createIndex('i');
+            await jdb.connect();
 
             // Add 10 objects.
             for (let i=0; i<10; ++i) {
-                await backend.put(`key${i}`, { i: i, sub: `value${i}` });
+                await objectStore.put(`key${i}`, { i: i, sub: `value${i}` });
                 if (i > 0 && i < 5) {
                     allKeys.add(`key${i}`);
                     allValues.add(`value${i}`);
                 }
             }
 
-            tx = backend.transaction();
+            tx = objectStore.transaction();
 
             for (let i=5; i<15; ++i) {
                 await tx.put(`key${i}`, { i: i, sub: `newValue${i}` });
@@ -45,6 +47,10 @@ describe('Transaction', () => {
         })().then(done, done.fail);
 
         jasmine.addCustomEqualityTester(setEqual);
+    });
+
+    afterEach((done) => {
+        jdb.destroy().then(done, done.fail);
     });
 
     it('correctly processes keys/values queries', (done) => {

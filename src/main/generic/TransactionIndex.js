@@ -123,8 +123,11 @@ class TransactionIndex extends InMemoryIndex {
 
         // Remove keys that have been deleted or modified.
         let sampleElement = Set.sampleElement(backendKeys);
-        const value = await this._backend.get(sampleElement);
-        let maxIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
+        let value = undefined, maxIKey = undefined;
+        if (sampleElement !== undefined) {
+            value = await this._backend.get(sampleElement);
+            maxIKey = ObjectUtils.byKeyPath(value, this.keyPath);
+        }
         backendKeys = backendKeys.difference(this._objectStore._removed);
         backendKeys = backendKeys.difference(this._objectStore._modified.keys());
 
@@ -134,8 +137,10 @@ class TransactionIndex extends InMemoryIndex {
 
             // Remove keys that have been deleted or modified.
             sampleElement = Set.sampleElement(backendKeys);
-            const value = await this._backend.get(sampleElement);
-            maxIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
+            if (sampleElement !== undefined) {
+                value = await this._backend.get(sampleElement);
+                maxIKey = ObjectUtils.byKeyPath(value, this.keyPath);
+            }
             backendKeys = backendKeys.difference(this._objectStore._removed);
             backendKeys = backendKeys.difference(this._objectStore._modified.keys());
 
@@ -197,8 +202,11 @@ class TransactionIndex extends InMemoryIndex {
 
         // Remove keys that have been deleted or modified.
         let sampleElement = Set.sampleElement(backendKeys);
-        const value = await this._backend.get(sampleElement);
-        let minIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
+        let value = undefined, minIKey = undefined;
+        if (sampleElement !== undefined) {
+            value = await this._backend.get(sampleElement);
+            minIKey = ObjectUtils.byKeyPath(value, this.keyPath);
+        }
         backendKeys = backendKeys.difference(this._objectStore._removed);
         backendKeys = backendKeys.difference(this._objectStore._modified.keys());
 
@@ -208,8 +216,10 @@ class TransactionIndex extends InMemoryIndex {
 
             // Remove keys that have been deleted or modified.
             sampleElement = Set.sampleElement(backendKeys);
-            const value = await this._backend.get(sampleElement);
-            minIKey = sampleElement ? ObjectUtils.byKeyPath(value, this.keyPath) : undefined;
+            if (sampleElement !== undefined) {
+                value = await this._backend.get(sampleElement);
+                minIKey = ObjectUtils.byKeyPath(value, this.keyPath);
+            }
             backendKeys = backendKeys.difference(this._objectStore._removed);
             backendKeys = backendKeys.difference(this._objectStore._modified.keys());
 
