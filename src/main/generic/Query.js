@@ -27,6 +27,7 @@ class Query {
             case Query.OPERATORS.WITHIN:
                 return KeyRange.bound(value, value2, false, false);
         }
+        Log.e(`Unknown operator: ${op}`);
         throw new Error('Unknown operator');
     }
 

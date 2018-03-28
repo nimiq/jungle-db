@@ -324,4 +324,9 @@ JungleDB.BINARY_ENCODING = 'binary';
  * @type {ILMDBEncoding}
  */
 JungleDB.STRING_ENCODING = 'ascii';
+/**
+ * A levelDB number encoding.
+ * @type {ILMDBEncoding}
+ */
+JungleDB.NUMBER_ENCODING = JungleDB.GENERIC_ENCODING;
 Class.register(JungleDB);

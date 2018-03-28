@@ -85,7 +85,7 @@ class Snapshot extends Transaction {
      * @override
      */
     async truncate() {
-        throw new Error('Unsupported operation on snapshots');
+        throw new Error('Unsupported operation on snapshots: truncate');
     }
 
     /**
@@ -93,7 +93,7 @@ class Snapshot extends Transaction {
      * @override
      */
     truncateSync() {
-        throw new Error('Unsupported operation on snapshots');
+        throw new Error('Unsupported operation on snapshots: truncateSync');
     }
 
     /**
@@ -102,7 +102,7 @@ class Snapshot extends Transaction {
      * @throws
      */
     async commit(tx) {
-        throw new Error('Cannot commit snapshots');
+        throw new Error('Cannot commit snapshots: commit');
     }
 
     /**
@@ -182,7 +182,7 @@ class Snapshot extends Transaction {
      * @returns {Promise}
      */
     async put(key, value) {
-        throw new Error('Unsupported operation on snapshots');
+        throw new Error('Unsupported operation on snapshots: put');
     }
 
     /**
@@ -190,7 +190,7 @@ class Snapshot extends Transaction {
      * @override
      */
     putSync(key, value) {
-        throw new Error('Unsupported operation on snapshots');
+        throw new Error('Unsupported operation on snapshots: putSync');
     }
 
     /**
@@ -199,7 +199,7 @@ class Snapshot extends Transaction {
      * @returns {Promise}
      */
     async remove(key) {
-        throw new Error('Unsupported operation on snapshots');
+        throw new Error('Unsupported operation on snapshots: remove');
     }
 
     /**
@@ -207,7 +207,7 @@ class Snapshot extends Transaction {
      * @override
      */
     removeSync(key) {
-        throw new Error('Unsupported operation on snapshots');
+        throw new Error('Unsupported operation on snapshots: removeSync');
     }
 
     /**
@@ -223,7 +223,7 @@ class Snapshot extends Transaction {
      * @override
      */
     transaction() {
-        throw new Error('Unsupported operation on snapshots');
+        throw new Error('Unsupported operation on snapshots: transaction');
     }
 
     /**
@@ -231,7 +231,7 @@ class Snapshot extends Transaction {
      * @override
      */
     synchronousTransaction() {
-        throw new Error('Unsupported operation on snapshots');
+        throw new Error('Unsupported operation on snapshots: synchronousTransaction');
     }
 
     /**
@@ -239,7 +239,7 @@ class Snapshot extends Transaction {
      * @override
      */
     snapshot() {
-        throw new Error('Unsupported operation on snapshots');
+        throw new Error('Unsupported operation on snapshots: snapshot');
     }
 }
 Class.register(Snapshot);

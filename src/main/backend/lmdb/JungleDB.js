@@ -402,7 +402,7 @@ JungleDB.JSON_ENCODING = {
  * @type {ILMDBEncoding}
  */
 JungleDB.BINARY_ENCODING = {
-    encode: x => x,
+    encode: x => new Buffer(x),
     decode: x => x,
     encoding: JungleDB.Encoding.BINARY
 };
@@ -419,5 +419,14 @@ JungleDB.STRING_ENCODING = {
     },
     decode: x => x,
     encoding: JungleDB.Encoding.STRING
+};
+/**
+ * A LMDB number encoding.
+ * @type {ILMDBEncoding}
+ */
+JungleDB.NUMBER_ENCODING = {
+    encode: x => x,
+    decode: x => x,
+    encoding: JungleDB.Encoding.NUMBER
 };
 Class.register(JungleDB);

@@ -125,6 +125,7 @@ class EncodedLMDBTransaction {
         if (typeof Buffer !== 'undefined' && typeof window === 'undefined' && data instanceof Buffer) {
             return data.length;
         }
+        Log.e(`Invalid datatype given for LMDBBackend: ${data}`);
         throw new Error('Invalid datatype given for LMDBBackend');
     }
 

@@ -58,14 +58,18 @@ class LMDBBaseBackend {
         try {
             this._dbBackend = this._env.openDbi({
                 name: this._tableName,
-                dupSort: this._dupSort
+                dupSort: this._dupSort,
+                keyIsUint32: this._keyEncoding !== null && this._keyEncoding.encoding === JungleDB.Encoding.NUMBER,
+                dupFixed: this._dupSort && this._keyEncoding !== null && this._keyEncoding.encoding === JungleDB.Encoding.NUMBER
             });
             return false;
         } catch (e) {
             this._dbBackend = this._env.openDbi({
                 name: this._tableName,
                 create: true,
-                dupSort: this._dupSort
+                dupSort: this._dupSort,
+                keyIsUint32: this._keyEncoding !== null && this._keyEncoding.encoding === JungleDB.Encoding.NUMBER,
+                dupFixed: this._dupSort && this._keyEncoding !== null && this._keyEncoding.encoding === JungleDB.Encoding.NUMBER
             });
             return true;
         }

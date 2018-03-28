@@ -268,4 +268,11 @@ class JungleDB {
         return `JungleDB{name=${this._databaseDir}}`;
     }
 }
+/**
+ * Empty encodings.
+ */
+JungleDB.JSON_ENCODING = {};
+JungleDB.BINARY_ENCODING = {};
+JungleDB.STRING_ENCODING = {};
+JungleDB.NUMBER_ENCODING = {};
 Class.register(JungleDB);
