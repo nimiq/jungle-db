@@ -67,6 +67,7 @@ const sources = {
     test: {
         generic: [
             './src/test/generic/UnsynchronousBackend.js',
+            './src/test/generic/TestRunner.js',
             './src/test/generic/**/*.spec.js'
         ],
         indexeddb: [

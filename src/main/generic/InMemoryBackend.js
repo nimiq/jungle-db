@@ -63,7 +63,7 @@ class InMemoryBackend {
             return query.values(this);
         }
         const values = [];
-        for (const key of this.keys(query)) {
+        for (const key of await this.keys(query)) {
             values.push(await this.get(key));
         }
         return Promise.resolve(values);

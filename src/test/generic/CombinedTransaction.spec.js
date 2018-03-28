@@ -1,13 +1,16 @@
-describe('CombinedTransaction', () => {
-    let backend1, backend2, objectStore1, objectStore2;
+describe('CombinedTransactionPlatform', () => {
+    let jdb, backend1, backend2, objectStore1, objectStore2;
 
     beforeEach((done) => {
-        backend1 = new InMemoryBackend('');
-        backend2 = new InMemoryBackend('');
-        objectStore1 = new ObjectStore(backend1, null);
-        objectStore2 = new ObjectStore(backend2, null);
+        jdb = new JungleDB('test', 1);
+        objectStore1 = jdb.createObjectStore('testStore1');
+        objectStore2 = jdb.createObjectStore('testStore2');
 
         (async function () {
+            await jdb.connect();
+            backend1 = objectStore1._backend;
+            backend2 = objectStore2._backend;
+
             // Add 10 objects.
             for (let i=0; i<10; ++i) {
                 if (i < 8) {
@@ -18,6 +21,10 @@ describe('CombinedTransaction', () => {
                 }
             }
         })().then(done, done.fail);
+    });
+
+    afterEach((done) => {
+        jdb.destroy().then(done);
     });
 
     it('commit/abort on individual transactions triggers combined commit/abort', (done) => {

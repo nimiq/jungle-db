@@ -130,7 +130,7 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
-     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options] An options object.
+     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean, keyEncoding:?ILMDBEncoding|?ILevelDBEncoding, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncoding}} [options] An options object.
      * @returns {IObjectStore}
      */
     createObjectStore(tableName, options = {}) {

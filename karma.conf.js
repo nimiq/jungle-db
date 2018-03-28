@@ -18,6 +18,7 @@ module.exports = function (config) {
             'src/test/backend/indexeddb/spec.js',
             'dist/indexeddb.js',
             'src/test/**/UnsynchronousBackend.js',
+            'src/test/**/TestRunner.js',
             'src/test/generic/TestCodec.js',
             'src/test/backend/indexeddb/BinaryCodec.js',
             'src/test/generic/**/*.spec.js',

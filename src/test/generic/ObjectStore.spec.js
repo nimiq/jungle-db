@@ -1,296 +1,269 @@
 describe('ObjectStore', () => {
-    let backend, objectStore;
+    let allKeys = new Set();
+    async function fill(store) {
+        for (let i = 0; i < 10; i++) {
+            await store.put(`key${i}`, `value${i}`);
+            allKeys.add(`key${i}`);
+        }
+    }
 
-    const setEqual = function(actual, expected) {
-        return expected.equals(actual);
-    };
+    const backends = [
+        TestRunner.nativeRunner('test', 1, jdb => jdb.createObjectStore('testStore'), fill),
+        TestRunner.volatileRunner(() => JungleDB.createVolatileObjectStore(), fill)
+    ];
 
-    beforeEach((done) => {
-        backend = new InMemoryBackend();
+    backends.forEach(/** @type {TestRunner} */ runner => {
 
-        objectStore = new ObjectStore(backend, backend);
+        it(`can open a transaction and commit it (${runner.type})`, (done) => {
+            (async function () {
+                const objectStore = await runner.init();
+                
+                const tx = objectStore.transaction();
+                await tx.remove('key0');
+                await tx.put('newKey', 'test');
+                expect(await tx.commit()).toBe(true);
+                expect(tx.state).toBe(Transaction.STATE.COMMITTED);
+                expect(await objectStore.get('key0')).toBe(undefined);
+                expect(await objectStore.get('newKey')).toBe('test');
+                
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
 
-        (async function () {
-            // Add 10 objects.
-            for (let i=0; i<10; ++i) {
-                await objectStore.put(`key${i}`, `value${i}`);
-            }
-        })().then(done, done.fail);
+        it(`can only commit one transaction and ensures read isolation (${runner.type})`, (done) => {
+            (async function () {
+                const objectStore = await runner.init();
+                
+                // Create two transactions on the main state.
+                const tx1 = objectStore.transaction();
+                // Remove a key in one of those.
+                await tx1.remove('key0');
+                await tx1.put('test', 'success');
+                await tx1.put('key1', 'someval');
 
-        jasmine.addCustomEqualityTester(setEqual);
-    });
+                const tx2 = objectStore.transaction();
+                // Ensure read isolation.
+                expect(await tx1.get('key0')).toBe(undefined);
+                expect(await tx2.get('key0')).toBe('value0');
+                expect(await tx1.get('test')).toBe('success');
+                expect(await tx2.get('test')).toBe(undefined);
+                expect(await tx1.get('key1')).toBe('someval');
+                expect(await tx2.get('key1')).toBe('value1');
 
-    it('can open a transaction and commit it', (done) => {
-        (async function () {
-            const tx = objectStore.transaction();
-            await tx.remove('key0');
-            await tx.put('newKey', 'test');
-            expect(await tx.commit()).toBe(true);
-            expect(tx.state).toBe(Transaction.STATE.COMMITTED);
-            expect(await objectStore.get('key0')).toBe(undefined);
-            expect(await objectStore.get('newKey')).toBe('test');
-        })().then(done, done.fail);
-    });
+                // Commit one transaction.
+                expect(await tx1.commit()).toBe(true);
+                expect(tx1.state).toBe(Transaction.STATE.COMMITTED);
 
-    it('can only commit one transaction and ensures read isolation', (done) => {
-        (async function () {
-            // Create two transactions on the main state.
-            const tx1 = objectStore.transaction();
-            // Remove a key in one of those.
-            await tx1.remove('key0');
-            await tx1.put('test', 'success');
-            await tx1.put('key1', 'someval');
+                // Still ensure read isolation.
+                expect(await tx1.get('key0')).toBe(undefined);
+                expect(await tx2.get('key0')).toBe('value0');
+                expect(await tx1.get('test')).toBe('success');
+                expect(await tx2.get('test')).toBe(undefined);
+                expect(await tx1.get('key1')).toBe('someval');
+                expect(await tx2.get('key1')).toBe('value1');
 
-            const tx2 = objectStore.transaction();
-            // Ensure read isolation.
-            expect(await tx1.get('key0')).toBe(undefined);
-            expect(await tx2.get('key0')).toBe('value0');
-            expect(await tx1.get('test')).toBe('success');
-            expect(await tx2.get('test')).toBe(undefined);
-            expect(await tx1.get('key1')).toBe('someval');
-            expect(await tx2.get('key1')).toBe('value1');
+                // Create a third transaction, which should be based on tx1.
+                const tx3 = objectStore.transaction();
+                expect(await tx3.get('key0')).toBe(undefined);
+                expect(await tx3.get('test')).toBe('success');
+                expect(await tx3.get('key1')).toBe('someval');
 
-            // Commit one transaction.
-            expect(await tx1.commit()).toBe(true);
-            expect(tx1.state).toBe(Transaction.STATE.COMMITTED);
+                // More changes
+                await tx3.remove('key2');
+                await tx3.put('test', 'success2');
+                await tx3.put('key0', 'someval');
 
-            // Still ensure read isolation.
-            expect(await tx1.get('key0')).toBe(undefined);
-            expect(await tx2.get('key0')).toBe('value0');
-            expect(await tx1.get('test')).toBe('success');
-            expect(await tx2.get('test')).toBe(undefined);
-            expect(await tx1.get('key1')).toBe('someval');
-            expect(await tx2.get('key1')).toBe('value1');
+                // Still ensure read isolation.
+                expect(await tx1.get('key0')).toBe(undefined);
+                expect(await tx3.get('key0')).toBe('someval');
+                expect(await tx1.get('test')).toBe('success');
+                expect(await tx3.get('test')).toBe('success2');
+                expect(await tx1.get('key1')).toBe('someval');
+                expect(await tx3.get('key1')).toBe('someval');
+                expect(await tx1.get('key2')).toBe('value2');
+                expect(await tx3.get('key2')).toBe(undefined);
 
-            // Create a third transaction, which should be based on tx1.
-            const tx3 = objectStore.transaction();
-            expect(await tx3.get('key0')).toBe(undefined);
-            expect(await tx3.get('test')).toBe('success');
-            expect(await tx3.get('key1')).toBe('someval');
-            expect(await backend.get('key0')).toBe('value0'); // not yet written
-            expect(await backend.get('test')).toBe(undefined); // not yet written
-            expect(await backend.get('key1')).toBe('value1'); // not yet written
+                // Commit third transaction.
+                expect(await tx3.commit()).toBe(true);
+                expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
 
-            // More changes
-            await tx3.remove('key2');
-            await tx3.put('test', 'success2');
-            await tx3.put('key0', 'someval');
+                // Create a fourth transaction, which should be based on tx3.
+                const tx4 = objectStore.transaction();
+                expect(await tx4.get('key0')).toBe('someval');
+                expect(await tx4.get('test')).toBe('success2');
+                expect(await tx4.get('key1')).toBe('someval');
+                expect(await tx4.get('key2')).toBe(undefined);
 
-            // Still ensure read isolation.
-            expect(await tx1.get('key0')).toBe(undefined);
-            expect(await tx3.get('key0')).toBe('someval');
-            expect(await tx1.get('test')).toBe('success');
-            expect(await tx3.get('test')).toBe('success2');
-            expect(await tx1.get('key1')).toBe('someval');
-            expect(await tx3.get('key1')).toBe('someval');
-            expect(await tx1.get('key2')).toBe('value2');
-            expect(await tx3.get('key2')).toBe(undefined);
+                // Abort second transaction and commit empty fourth transaction.
+                expect(await tx2.abort()).toBe(true);
+                expect(await tx4.commit()).toBe(true);
+                expect(tx4.state).toBe(Transaction.STATE.COMMITTED);
 
-            // Commit third transaction.
-            expect(await tx3.commit()).toBe(true);
-            expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
+                // Now everything should be in the backend.
+                expect(await objectStore.get('key0')).toBe('someval');
+                expect(await objectStore.get('test')).toBe('success2');
+                expect(await objectStore.get('key1')).toBe('someval');
+                expect(await objectStore.get('key2')).toBe(undefined);
 
-            // Create a fourth transaction, which should be based on tx3.
-            const tx4 = objectStore.transaction();
-            expect(await tx4.get('key0')).toBe('someval');
-            expect(await tx4.get('test')).toBe('success2');
-            expect(await tx4.get('key1')).toBe('someval');
-            expect(await tx4.get('key2')).toBe(undefined);
-            expect(await backend.get('key0')).toBe('value0'); // not yet written
-            expect(await backend.get('test')).toBe(undefined); // not yet written
-            expect(await backend.get('key1')).toBe('value1'); // not yet written
-            expect(await backend.get('key2')).toBe('value2'); // not yet written
+                // Create a fifth transaction, which should be based on the new state.
+                const tx5 = objectStore.transaction();
+                expect(await tx5.get('key0')).toBe('someval');
+                expect(await tx5.get('test')).toBe('success2');
+                expect(await tx5.get('key1')).toBe('someval');
+                expect(await tx5.get('key2')).toBe(undefined);
+                await tx5.abort();
 
-            // Abort second transaction and commit empty fourth transaction.
-            expect(await tx2.abort()).toBe(true);
-            expect(await tx4.commit()).toBe(true);
-            expect(tx4.state).toBe(Transaction.STATE.COMMITTED);
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
 
-            // Now everything should be in the backend.
-            expect(await backend.get('key0')).toBe('someval');
-            expect(await objectStore.get('key0')).toBe('someval');
-            expect(await backend.get('test')).toBe('success2');
-            expect(await objectStore.get('test')).toBe('success2');
-            expect(await backend.get('key1')).toBe('someval');
-            expect(await objectStore.get('key1')).toBe('someval');
-            expect(await backend.get('key2')).toBe(undefined);
-            expect(await objectStore.get('key2')).toBe(undefined);
+        it(`can correctly handle multi-layered transactions (${runner.type})`, (done) => {
+            (async function () {
+                const objectStore = await runner.init();
+                
+                // Create two transactions on the main state.
+                const tx1 = objectStore.transaction();
+                const tx2 = objectStore.transaction();
+                // Remove a key in one of those.
+                await tx1.remove('key0');
+                // Ensure read isolation.
+                expect(await tx1.get('key0')).toBe(undefined);
+                expect(await tx2.get('key0')).toBe('value0');
 
-            // Create a fifth transaction, which should be based on the new state.
-            const tx5 = objectStore.transaction();
-            expect(await tx5.get('key0')).toBe('someval');
-            expect(await tx5.get('test')).toBe('success2');
-            expect(await tx5.get('key1')).toBe('someval');
-            expect(await tx5.get('key2')).toBe(undefined);
-            await tx5.abort();
-        })().then(done, done.fail);
-    });
+                // Commit one transaction.
+                expect(await tx1.commit()).toBe(true);
+                expect(tx1.state).toBe(Transaction.STATE.COMMITTED);
 
-    it('can correctly handle multi-layered transactions', (done) => {
-        (async function () {
-            // Create two transactions on the main state.
-            const tx1 = objectStore.transaction();
-            const tx2 = objectStore.transaction();
-            // Remove a key in one of those.
-            await tx1.remove('key0');
-            // Ensure read isolation.
-            expect(await tx1.get('key0')).toBe(undefined);
-            expect(await tx2.get('key0')).toBe('value0');
+                // Still ensure read isolation.
+                expect(await tx1.get('key0')).toBe(undefined);
+                expect(await tx2.get('key0')).toBe('value0');
 
-            // Commit one transaction.
-            expect(await tx1.commit()).toBe(true);
-            expect(tx1.state).toBe(Transaction.STATE.COMMITTED);
+                // Create a third transaction, which should be based on tx1.
+                const tx3 = objectStore.transaction();
+                expect(await tx3.get('key0')).toBe(undefined);
 
-            // Still ensure read isolation.
-            expect(await tx1.get('key0')).toBe(undefined);
-            expect(await tx2.get('key0')).toBe('value0');
+                // Should not be able to commit tx2.
+                expect(await tx2.commit()).toBe(false);
+                expect(tx2.state).toBe(Transaction.STATE.CONFLICTED);
 
-            // Create a third transaction, which should be based on tx1.
-            const tx3 = objectStore.transaction();
-            await tx3.put('test', 'successful');
-            expect(await tx3.get('key0')).toBe(undefined);
-            expect(await backend.get('key0')).toBe('value0'); // not yet written
+                // Abort third transaction.
+                expect(await tx3.abort()).toBe(true);
 
-            // Should not be able to commit tx2.
-            expect(await tx2.commit()).toBe(false);
-            expect(tx2.state).toBe(Transaction.STATE.CONFLICTED);
+                // Now tx1 should be in the backend.
+                expect(await objectStore.get('key0')).toBe(undefined);
 
-            // tx1 might be flushed by now. No more transactions possible on top of it.
-            try {
-                tx1.transaction();
-                expect(true).toBe(false);
-            } catch (e) {
-                expect(true).toBe(true);
-            }
+                // Create a fourth transaction, which should be based on the new state.
+                const tx4 = objectStore.transaction();
+                expect(await tx4.get('key0')).toBe(undefined);
+                await tx4.abort();
 
-            // Create another transaction, which should be based on the same backend as tx3.
-            const tx4 = objectStore.transaction();
-            expect(tx3._parent).toBe(tx4._parent);
-            expect(await tx4.get('key0')).toBe(undefined);
-            expect(await tx4.get('test')).toBe(undefined);
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
 
-            // Abort third transaction.
-            expect(await tx3.commit()).toBe(true);
-            expect(await tx4.commit()).toBe(false);
+        it(`correctly processes keys/values queries (${runner.type})`, (done) => {
+            (async function () {
+                const objectStore = await runner.init();
+                
+                // Ordering on strings might not be as expected!
+                expect(await objectStore.keys()).toEqual(allKeys);
+                expect(await objectStore.keys(KeyRange.upperBound('key5'))).toEqual(new Set(['key0', 'key1', 'key2', 'key3', 'key4', 'key5']));
+                expect(await objectStore.keys(KeyRange.lowerBound('key1', true))).toEqual(allKeys.difference(['key0', 'key1']));
+                expect(await objectStore.keys(KeyRange.lowerBound('key5', true))).toEqual(new Set(['key6', 'key7', 'key8', 'key9']));
 
-            // Now tx1 should be in the backend.
-            expect(await backend.get('key0')).toBe(undefined);
-            expect(await objectStore.get('key0')).toBe(undefined);
-            // As well as tx3.
-            expect(await backend.get('test')).toBe('successful');
-            expect(await objectStore.get('test')).toBe('successful');
+                expect(await objectStore.values(KeyRange.only('key5'))).toEqual(['value5']);
 
-            // Create a fourth transaction, which should be based on the new state.
-            const tx5 = objectStore.transaction();
-            expect(await tx5.get('key0')).toBe(undefined);
-            expect(await tx5.get('test')).toBe('successful');
-            await tx5.abort();
-        })().then(done, done.fail);
-    });
+                expect(await objectStore.minKey()).toEqual('key0');
+                expect(await objectStore.maxKey()).toEqual('key9');
+                expect(await objectStore.minValue()).toEqual('value0');
+                expect(await objectStore.maxValue()).toEqual('value9');
 
-    it('does not allow to commit transactions with nested sub-transactions', (done) => {
-        (async function () {
-            // Create two transactions on the main state.
-            const tx1 = objectStore.transaction();
-            expect(tx1.state).toBe(Transaction.STATE.OPEN);
-            const tx2 = tx1.transaction();
-            expect(tx1.state).toBe(Transaction.STATE.NESTED);
-            expect(tx2.state).toBe(Transaction.STATE.OPEN);
-            const tx3 = tx2.transaction();
-            expect(tx2.state).toBe(Transaction.STATE.NESTED);
-            expect(tx3.state).toBe(Transaction.STATE.OPEN);
-            const tx4 = tx2.transaction();
-            expect(tx2.state).toBe(Transaction.STATE.NESTED);
-            expect(tx4.state).toBe(Transaction.STATE.OPEN);
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
 
-            // Should not be able to commit.
-            try {
-                await tx1.commit();
-                done.fail('did not throw when committing outer tx');
-            } catch (e) {
-                // all ok
-            }
+        it(`correctly constructs key streams (${runner.type})`, (done) => {
+            (async function () {
+                const objectStore = await runner.init();
+                
+                let i = 0;
+                await objectStore.keyStream(key => {
+                    expect(key).toBe(`key${i}`);
+                    ++i;
+                    return true;
+                });
+                expect(i).toBe(10);
+                --i;
 
-            // Should not be able to commit.
-            try {
-                await tx2.commit();
-                done.fail('did not throw when committing middle tx');
-            } catch (e) {
-                // all ok
-            }
+                await objectStore.keyStream(key => {
+                    expect(key).toBe(`key${i}`);
+                    --i;
+                    return true;
+                }, false);
+                expect(i).toBe(-1);
 
-            expect(tx1.state).toBe(Transaction.STATE.NESTED);
-            expect(tx2.state).toBe(Transaction.STATE.NESTED);
-            expect(tx3.state).toBe(Transaction.STATE.OPEN);
-            expect(tx4.state).toBe(Transaction.STATE.OPEN);
+                i = 4;
+                await objectStore.keyStream(key => {
+                    expect(key).toBe(`key${i}`);
+                    --i;
+                    return true;
+                }, false, KeyRange.bound('key1', 'key4'));
+                expect(i).toBe(0);
 
-            expect(await tx3.commit()).toBe(true);
-            expect(tx1.state).toBe(Transaction.STATE.NESTED);
-            expect(tx2.state).toBe(Transaction.STATE.NESTED);
-            expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
-            expect(tx4.state).toBe(Transaction.STATE.OPEN);
+                i = 4;
+                await objectStore.keyStream(key => {
+                    expect(key).toBe(`key${i}`);
+                    ++i;
+                    return i < 5;
+                }, true, KeyRange.lowerBound('key3', true));
+                expect(i).toBe(5);
 
-            expect(await tx4.commit()).toBe(false);
-            expect(tx1.state).toBe(Transaction.STATE.NESTED);
-            expect(tx2.state).toBe(Transaction.STATE.OPEN);
-            expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
-            expect(tx4.state).toBe(Transaction.STATE.CONFLICTED);
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
 
-            expect(await tx2.commit()).toBe(true);
-            expect(tx1.state).toBe(Transaction.STATE.OPEN);
-            expect(tx2.state).toBe(Transaction.STATE.COMMITTED);
-            expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
-            expect(tx4.state).toBe(Transaction.STATE.CONFLICTED);
+        it(`correctly constructs value streams (${runner.type})`, (done) => {
+            (async function () {
+                const objectStore = await runner.init();
+                
+                let i = 0;
+                await objectStore.valueStream((value, key) => {
+                    expect(value).toBe(`value${i}`);
+                    expect(key).toBe(`key${i}`);
+                    ++i;
+                    return true;
+                });
+                expect(i).toBe(10);
+                --i;
 
-            expect(await tx1.abort()).toBe(true);
-            expect(tx1.state).toBe(Transaction.STATE.ABORTED);
-            expect(tx2.state).toBe(Transaction.STATE.COMMITTED);
-            expect(tx3.state).toBe(Transaction.STATE.COMMITTED);
-            expect(tx4.state).toBe(Transaction.STATE.CONFLICTED);
-        })().then(done, done.fail);
-    });
+                await objectStore.valueStream((value, key) => {
+                    expect(value).toBe(`value${i}`);
+                    expect(key).toBe(`key${i}`);
+                    --i;
+                    return true;
+                }, false);
+                expect(i).toBe(-1);
 
-    it('aborts nested transactions on outer abort', (done) => {
-        (async function () {
-            // Create two transactions on the main state.
-            const tx1 = objectStore.transaction();
-            expect(tx1.state).toBe(Transaction.STATE.OPEN);
-            const tx2 = tx1.transaction();
-            expect(tx1.state).toBe(Transaction.STATE.NESTED);
-            expect(tx2.state).toBe(Transaction.STATE.OPEN);
-            const tx3 = tx2.transaction();
-            expect(tx2.state).toBe(Transaction.STATE.NESTED);
-            expect(tx3.state).toBe(Transaction.STATE.OPEN);
-            const tx4 = tx2.transaction();
-            expect(tx2.state).toBe(Transaction.STATE.NESTED);
-            expect(tx4.state).toBe(Transaction.STATE.OPEN);
+                i = 4;
+                await objectStore.valueStream((value, key) => {
+                    expect(value).toBe(`value${i}`);
+                    expect(key).toBe(`key${i}`);
+                    --i;
+                    return true;
+                }, false, KeyRange.bound('key1', 'key4'));
+                expect(i).toBe(0);
 
-            await tx1.abort();
-            expect(tx1.state).toBe(Transaction.STATE.ABORTED);
-            expect(tx2.state).toBe(Transaction.STATE.ABORTED);
-            expect(tx3.state).toBe(Transaction.STATE.ABORTED);
-            expect(tx4.state).toBe(Transaction.STATE.ABORTED);
-        })().then(done, done.fail);
-    });
+                i = 4;
+                await objectStore.valueStream((value, key) => {
+                    expect(value).toBe(`value${i}`);
+                    expect(key).toBe(`key${i}`);
+                    ++i;
+                    return i < 5;
+                }, true, KeyRange.lowerBound('key3', true));
+                expect(i).toBe(5);
 
-    it('throws error when stack size is exceeded', (done) => {
-        (async function () {
-            let txC;
-
-            for (let i=0; i<ObjectStore.MAX_STACK_SIZE; ++i) {
-                objectStore.transaction();
-                txC = objectStore.transaction();
-                await txC.commit();
-            }
-
-            // Another transaction should throw a detailed error.
-            objectStore.transaction();
-            txC = objectStore.transaction();
-            let threw = false;
-            await txC.commit().catch(() => {
-                threw = true;
-            });
-            expect(threw).toBe(true);
-        })().then(done, done.fail);
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
     });
 });

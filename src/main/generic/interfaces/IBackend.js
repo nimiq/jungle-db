@@ -28,7 +28,7 @@ class IBackend extends IReadableObjectStore {
      * @abstract
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
-     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean, keyEncoding:?ILMDBEncoding|?ILevelDBEncoding|?IBasicEncoding, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncoding, indexeddbKeyEncoding:?IBasicEncoding}} [options] An options object.
+     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean, keyEncoding:?ILMDBEncoding|?ILevelDBEncoding, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncoding}} [options] An options object.
      */
     createIndex(indexName, keyPath, options = {}) {} // eslint-disable-line no-unused-vars
 

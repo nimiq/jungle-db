@@ -210,11 +210,11 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
-     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options] An options object.
+     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean, keyEncoding:?ILMDBEncoding|?ILevelDBEncoding, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncoding}} [options] An options object.
      * @returns {IObjectStore}
      */
     createObjectStore(tableName, options = {}) {
-        let { codec = null, persistent = true, upgradeCondition = null } = options || {};
+        let { codec = null, persistent = true, upgradeCondition = null, keyEncoding = null, lmdbKeyEncoding = null } = options || {};
 
         if (this._connected) throw new Error('Cannot create ObjectStore while connected');
         if (this._objectStores.has(tableName)) {
@@ -222,7 +222,7 @@ class JungleDB {
         }
 
         const backend = persistent
-            ? new LMDBBackend(this, tableName, codec, options)
+            ? new LMDBBackend(this, tableName, codec, { keyEncoding: lmdbKeyEncoding || keyEncoding })
             : new InMemoryBackend(tableName, codec);
         const objStore = new ObjectStore(backend, this, tableName);
         this._objectStores.set(tableName, objStore);

@@ -331,6 +331,7 @@ describe('Index', () => {
         // Edge does not fully support binary keys (DataError in IDBKeyRange)
         if (typeof window !== 'undefined' && window.navigator.userAgent.indexOf("Edge") > -1) {
             done();
+            return;
         }
 
         // Karma breaks array buffers
