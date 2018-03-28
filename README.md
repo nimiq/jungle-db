@@ -28,6 +28,7 @@ In order to use the LevelDB backend, `var JDB = require('@nimiq/jungle-db/dist/l
 That means that using certain types of indices might fail on Edge.
 If you observe a `DataError` in Edge while using JungleDB,
 it is most likely that you are using one of the features not supported by Edge.
+One of the unsupported features are binary keys.
 
 Then, create a `JungleDB` instance and potential object stores as follows:
 ```javascript
@@ -120,6 +121,14 @@ db.createObjectStore('test', {
 The `valueEncoding` property defines a backend specific encoding.
 While the default JSON encoding is sufficient for most cases, it can be used to optimise storage in case only binary data is stored.
 There is also the possibility to define different backend specific encodings for LevelDB and LMDB using `leveldbValueEncoding` and `lmdbValueEncoding`.
+Possible backend specific encodings are:
+* `JungleDB.JSON_ENCODING` for JSON objects
+* `JungleDB.NUMBER_ENCODING` for numbers
+* `JungleDB.STRING_ENCODING` for strings
+* `JungleDB.BINARY_ENCODING` for binary types
+* `JungleDB.GENERIC_ENCODING` for a generic value (the code automatically determines the encoding and prepends a type byte)
+
+The `createIndex(name, keyPath, options)` method also supports an optional `keyEncoding` option to specify the backend specific encoding of the secondary key.
 
 ### Database Options
 There are options specific to some of the backends. Especially the LMDB backend is highly configurable.

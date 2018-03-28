@@ -328,10 +328,15 @@ describe('Index', () => {
     });
 
     it('supports binary key encoding', (done) => {
+        // Edge does not fully support binary keys (DataError in IDBKeyRange)
+        if (typeof window !== 'undefined' && window.navigator.userAgent.indexOf("Edge") > -1) {
+            done();
+        }
+
         // Karma breaks array buffers
         spyOn(ComparisonUtils, 'isUint8Array').and.callFake(function(obj) {
             if (typeof Buffer !== 'undefined' && typeof window === 'undefined' && obj instanceof Buffer) return true;
-            return ArrayBuffer.isView(obj) || obj instanceof ArrayBuffer || (obj.constructor && obj.constructor.name === 'ArrayBuffer');
+            return ArrayBuffer.isView(obj) || obj instanceof ArrayBuffer || (obj && obj.constructor && obj.constructor.name === 'ArrayBuffer');
         });
 
         (async function () {

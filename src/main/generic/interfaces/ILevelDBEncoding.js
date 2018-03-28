@@ -1,24 +1,9 @@
 /**
  * This interface represents a low level encoding for LevelDB.
  * @interface
+ * @implements {IBasicEncoding}
  */
-class ILMDBEncoding {
-    /**
-     * Encodes an object before storing it in the database.
-     * @abstract
-     * @param {*} obj The object to encode before storing it.
-     * @returns {*} Encoded object.
-     */
-    encode(obj) {} // eslint-disable-line no-unused-vars
-
-    /**
-     * Decodes an object after loading it from the database.
-     * @abstract
-     * @param {*} obj The object to decode.
-     * @returns {*} Decoded object.
-     */
-    decode(obj) {} // eslint-disable-line no-unused-vars
-
+class ILMDBEncoding extends IBasicEncoding {
     /**
      * Whether this encoding stores data as buffers.
      * @type {boolean}
