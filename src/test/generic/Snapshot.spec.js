@@ -11,7 +11,7 @@ describe('Snapshot', () => {
     beforeEach((done) => {
         db = new JungleDB('test', 1);
         objectStore = db.createObjectStore('testStore');
-        objectStore.createIndex('test', ['a', 'b'], true);
+        objectStore.createIndex('test', ['a', 'b'], { keyEncoding: JungleDB.NUMBER_ENCODING });
 
         (async function () {
             await db.connect();

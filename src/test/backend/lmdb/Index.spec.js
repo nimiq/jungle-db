@@ -15,7 +15,7 @@ describe('Index', () => {
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
-            st.createIndex('depth', ['a', 'b']);
+            st.createIndex('depth', ['a', 'b'], { keyEncoding: JungleDB.NUMBER_ENCODING });
             await db.connect();
 
             await st.put('test', {'val': 123, 'a': {'b': 1}});

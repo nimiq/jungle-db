@@ -13,7 +13,7 @@ class PersistentIndex extends LevelDBBackend {
      * @param {boolean} [unique] Whether there is a unique constraint on the attribute.
      * @param {ILevelDBEncoding} [keyEncoding] The key encoding for this index.
      */
-    constructor(objectStore, db, indexName, keyPath, multiEntry = false, unique = false, keyEncoding = JungleDB.GENERIC_ENCODING) {
+    constructor(objectStore, db, indexName, keyPath, multiEntry = false, unique = false, keyEncoding = null) {
         const prefix = `_${objectStore.tableName}-${indexName}`;
         super(db, prefix, /*codec*/ undefined, { keyEncoding });
         this._prefix = prefix;

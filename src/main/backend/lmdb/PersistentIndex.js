@@ -13,7 +13,7 @@ class PersistentIndex extends LMDBBaseBackend {
      * @param {boolean} [unique] Whether there is a unique constraint on the attribute.
      * @param {ILMDBEncoding} [keyEncoding] The key encoding for this index.
      */
-    constructor(objectStore, db, indexName, keyPath, multiEntry = false, unique = false, keyEncoding = GenericValueEncoding) {
+    constructor(objectStore, db, indexName, keyPath, multiEntry = false, unique = false, keyEncoding = null) {
         const prefix = `_${objectStore.tableName}-${indexName}`;
         super(db, prefix, { encode: x => x, decode: x => x, valueEncoding: JungleDB.STRING_ENCODING },
             { keyEncoding: keyEncoding, dupSort: true });

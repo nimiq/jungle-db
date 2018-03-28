@@ -15,8 +15,8 @@ describe('Index', () => {
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
-            st.createIndex('testIndex', 'val');
-            st.createIndex('testIndex2', ['a', 'b']);
+            st.createIndex('testIndex', 'val', { keyEncoding: JungleDB.NUMBER_ENCODING });
+            st.createIndex('testIndex2', ['a', 'b'], { keyEncoding: JungleDB.NUMBER_ENCODING });
 
             await db.connect();
 
@@ -42,7 +42,7 @@ describe('Index', () => {
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
-            st.createIndex('depth', ['treeInfo', 'depth']);
+            st.createIndex('depth', ['treeInfo', 'depth'], { keyEncoding: JungleDB.NUMBER_ENCODING });
 
             await db.connect();
 
@@ -107,7 +107,7 @@ describe('Index', () => {
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
-            st.createIndex('depth', ['treeInfo', 'depth']);
+            st.createIndex('depth', ['treeInfo', 'depth'], { keyEncoding: JungleDB.NUMBER_ENCODING });
 
             await db.connect();
 
@@ -172,7 +172,7 @@ describe('Index', () => {
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
-            st.createIndex('depth', ['a', 'b']);
+            st.createIndex('depth', ['a', 'b'], { keyEncoding: JungleDB.NUMBER_ENCODING });
             await db.connect();
 
             await st.put('test', {'val': 123, 'a': {'b': 1}});
@@ -212,7 +212,7 @@ describe('Index', () => {
             // 2nd connection
             db = new JungleDB('indexTest', 2);
             st = db.createObjectStore('testStore', { upgradeCondition: false });
-            st.createIndex('depth', ['a', 'b']);
+            st.createIndex('depth', ['a', 'b'], { keyEncoding: JungleDB.NUMBER_ENCODING });
             await db.connect();
 
             expect(await st.index('depth').count()).toBe(1);
@@ -236,7 +236,7 @@ describe('Index', () => {
             // 2nd connection
             db = new JungleDB('indexTest', 2);
             st = db.createObjectStore('testStore', { upgradeCondition: false });
-            st.createIndex('depth', ['a', 'b'], { upgradeCondition: true });
+            st.createIndex('depth', ['a', 'b'], { upgradeCondition: true, keyEncoding: JungleDB.NUMBER_ENCODING });
             await db.connect();
 
             expect(await st.index('depth').count()).toBe(1);
@@ -250,7 +250,7 @@ describe('Index', () => {
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st = db.createObjectStore('testStore');
-            st.createIndex('depth', ['a', 'b'], { unique: true });
+            st.createIndex('depth', ['a', 'b'], { unique: true, keyEncoding: JungleDB.NUMBER_ENCODING });
             await db.connect();
 
             await st.put('test', {'val': 123, 'a': {'b': 1}});
@@ -303,7 +303,7 @@ describe('Index', () => {
             // Write something into an object store.
             let db = new JungleDB('indexTest', 1);
             let st1 = db.createObjectStore('testStore');
-            st1.createIndex('depth', ['a', 'b'], { unique: true });
+            st1.createIndex('depth', ['a', 'b'], { unique: true, keyEncoding: JungleDB.NUMBER_ENCODING });
             const st2 = db.createObjectStore('testStore2');
             await db.connect();
 

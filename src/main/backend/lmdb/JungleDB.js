@@ -429,4 +429,9 @@ JungleDB.NUMBER_ENCODING = {
     decode: x => x,
     encoding: JungleDB.Encoding.NUMBER
 };
+/**
+ * A LMDB encoding that can handle generic values.
+ * @type {ILMDBEncoding}
+ */
+JungleDB.GENERIC_ENCODING = GenericValueEncoding;
 Class.register(JungleDB);

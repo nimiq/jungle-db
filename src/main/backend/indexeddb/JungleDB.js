@@ -275,4 +275,5 @@ JungleDB.JSON_ENCODING = {};
 JungleDB.BINARY_ENCODING = {};
 JungleDB.STRING_ENCODING = {};
 JungleDB.NUMBER_ENCODING = {};
+JungleDB.GENERIC_ENCODING = {};
 Class.register(JungleDB);

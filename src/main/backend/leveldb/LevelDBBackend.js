@@ -520,14 +520,14 @@ class LevelDBBackend {
      * Moreover, it is only executed on database version updates or on first creation.
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
-     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncoding}} [options] An options object.
+     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean, keyEncoding:?ILMDBEncoding|?ILevelDBEncoding, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncoding}} [options] An options object.
      */
     createIndex(indexName, keyPath, options = {}) {
-        let { multiEntry = false, upgradeCondition = null, unique = false, leveldbKeyEncoding = JungleDB.GENERIC_ENCODING } = options || {};
+        let { multiEntry = false, upgradeCondition = null, unique = false, keyEncoding = null, leveldbKeyEncoding = null } = options || {};
 
         if (this._db.connected) throw new Error('Cannot create index while connected');
         keyPath = keyPath || indexName;
-        const index = new PersistentIndex(this, this._db, indexName, keyPath, multiEntry, unique, leveldbKeyEncoding);
+        const index = new PersistentIndex(this, this._db, indexName, keyPath, multiEntry, unique, leveldbKeyEncoding || keyEncoding);
         this._indices.set(indexName, index);
         this._indicesToCreate.set(indexName, { index, upgradeCondition });
     }
