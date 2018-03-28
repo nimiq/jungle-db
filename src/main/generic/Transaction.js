@@ -300,7 +300,7 @@ class Transaction {
 
             await this._parent.keyStream(key => {
                 // Iterate over TxKeys as long as they are smaller (ascending) or larger (descending).
-                while (txIt.hasNext() && ((ascending && txIt.peek() < key) || (!ascending && txIt.peek() > key))) {
+                while (txIt.hasNext() && ((ascending && ComparisonUtils.compare(txIt.peek(), key) < 0) || (!ascending && ComparisonUtils.compare(txIt.peek(), key) > 0))) {
                     const currentTxKey = txIt.next();
                     if (!callback(currentTxKey)) {
                         // Do not continue iteration.
@@ -310,7 +310,7 @@ class Transaction {
                 }
                 // Special case: what if next key is identical (-> modified)?
                 // Present modified version and continue.
-                if (txIt.hasNext() && txIt.peek() === key) {
+                if (txIt.hasNext() && ComparisonUtils.equals(txIt.peek(), key)) {
                     const currentTxKey = txIt.next();
                     if (!callback(currentTxKey)) {
                         // Do not continue iteration.
@@ -366,7 +366,7 @@ class Transaction {
 
             await this._parent.valueStream((value, key) => {
                 // Iterate over TxKeys as long as they are smaller (ascending) or larger (descending).
-                while (txIt.hasNext() && ((ascending && txIt.peek() < key) || (!ascending && txIt.peek() > key))) {
+                while (txIt.hasNext() && ((ascending && ComparisonUtils.compare(txIt.peek(), key) < 0) || (!ascending && ComparisonUtils.compare(txIt.peek(), key) > 0))) {
                     const currentTxKey = txIt.next();
                     const value = this._modified.get(currentTxKey);
                     if (!callback(value, currentTxKey)) {
@@ -377,7 +377,7 @@ class Transaction {
                 }
                 // Special case: what if next key is identical (-> modified)?
                 // Present modified version and continue.
-                if (txIt.hasNext() && txIt.peek() === key) {
+                if (txIt.hasNext() && ComparisonUtils.equals(txIt.peek(), key)) {
                     const currentTxKey = txIt.next();
                     const value = this._modified.get(currentTxKey);
                     if (!callback(value, currentTxKey)) {
@@ -453,7 +453,7 @@ class Transaction {
 
         for (const key of this._modified.keys()) {
             // Find better maxKey in modified data.
-            if ((query === null || query.includes(key)) && (maxKey === undefined || key > maxKey)) {
+            if ((query === null || query.includes(key)) && (maxKey === undefined || ComparisonUtils.compare(key, maxKey) > 0)) {
                 maxKey = key;
             }
         }

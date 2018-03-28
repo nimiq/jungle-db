@@ -11,10 +11,11 @@ class PersistentIndex extends LevelDBBackend {
      * If the keyPath is not given, this is a primary index.
      * @param {boolean} [multiEntry] Whether the indexed attribute is considered to be iterable or not.
      * @param {boolean} [unique] Whether there is a unique constraint on the attribute.
+     * @param {ILevelDBEncoding} [keyEncoding] The key encoding for this index.
      */
-    constructor(objectStore, db, indexName, keyPath, multiEntry=false, unique=false) {
+    constructor(objectStore, db, indexName, keyPath, multiEntry = false, unique = false, keyEncoding = JungleDB.GENERIC_ENCODING) {
         const prefix = `_${objectStore.tableName}-${indexName}`;
-        super(db, prefix, undefined, { keyEncoding: JungleDB.GENERIC_ENCODING });
+        super(db, prefix, /*codec*/ undefined, { keyEncoding });
         this._prefix = prefix;
 
         /** @type {LevelDBBackend} */
@@ -132,7 +133,7 @@ class PersistentIndex extends LevelDBBackend {
         const newIKey = this._indexKey(key, value);
 
         // Only update index on changes.
-        if (oldIKey !== newIKey) {
+        if (!ComparisonUtils.equals(oldIKey, newIKey)) {
             if (oldIKey !== undefined) {
                 await this._remove(key, oldIKey, internalTx);
             }

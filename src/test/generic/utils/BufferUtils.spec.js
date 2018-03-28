@@ -49,4 +49,23 @@ describe('BufferUtils', () => {
         expect(BufferUtils.toBase64lex(buf2) < BufferUtils.toBase64lex(buf3)).toBe(true);
         expect(BufferUtils.toBase64lex(buf3) < BufferUtils.toBase64lex(buf4)).toBe(true);
     });
+
+    it('has an equals method', () => {
+        const buffer1 = new Uint8Array([ 116, 101, 115, 116 ]);
+        const buffer2 = new Uint8Array([ 116, 101, 115, 116 ]);
+        const buffer3 = new Uint8Array([ 116, 101, 115, 116, 32, 102, 97, 108, 115, 101 ]);
+
+        expect(BufferUtils.equals(buffer1, buffer2)).toEqual(true);
+        expect(BufferUtils.equals(buffer1, buffer3)).toEqual(false);
+    });
+
+    it('has a compare method', () => {
+        const buffer1 = new Uint8Array([1, 2, 3, 4]);
+        const buffer2 = new Uint8Array([1, 2, 5, 4]);
+        const buffer3 = new Uint8Array([1, 3, 3, 4]);
+
+        expect(BufferUtils.compare(buffer1, buffer2)).toEqual(-1);
+        expect(BufferUtils.compare(buffer1, buffer3)).toEqual(-1);
+        expect(BufferUtils.compare(buffer3, buffer1)).toEqual(1);
+    });
 });

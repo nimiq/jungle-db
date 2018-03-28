@@ -390,7 +390,7 @@ JungleDB.Encoding = {
 };
 /**
  * A LMDB JSON encoding that can handle Uint8Arrays and Sets.
- * @type {{encode: function(val:*):*, decode: function(val:*):*, encoding: JungleDB.Encoding}}
+ * @type {ILMDBEncoding}
  */
 JungleDB.JSON_ENCODING = {
     encode: JSONUtils.stringify,
@@ -399,7 +399,7 @@ JungleDB.JSON_ENCODING = {
 };
 /**
  * A LMDB binary encoding.
- * @type {{encode: function(val:*):*, decode: function(val:*):*, encoding: JungleDB.Encoding}}
+ * @type {ILMDBEncoding}
  */
 JungleDB.BINARY_ENCODING = {
     encode: x => x,
@@ -408,7 +408,7 @@ JungleDB.BINARY_ENCODING = {
 };
 /**
  * A LMDB string encoding.
- * @type {{encode: function(val:*):*, decode: function(val:*):*, encoding: JungleDB.Encoding}}
+ * @type {ILMDBEncoding}
  */
 JungleDB.STRING_ENCODING = {
     encode: x => {

@@ -50,11 +50,11 @@ class KeyRange {
      */
     includes(key) {
         return (this._lower === undefined
-                || this._lower < key
-                || (!this._lowerOpen && this._lower === key))
+                || ComparisonUtils.compare(this._lower, key) < 0
+                || (!this._lowerOpen && ComparisonUtils.equals(this._lower, key)))
             && (this._upper === undefined
-                || this._upper > key
-                || (!this._upperOpen && this._upper === key));
+                || ComparisonUtils.compare(this._upper, key) > 0
+                || (!this._upperOpen && ComparisonUtils.equals(this._upper, key)));
     }
 
     /**

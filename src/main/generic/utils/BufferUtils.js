@@ -113,6 +113,36 @@ class BufferUtils {
         }
         return BufferUtils.fromBase64(base64);
     }
+
+    /**
+     * @param {*} a
+     * @param {*} b
+     * @return {boolean}
+     */
+    static equals(a, b) {
+        if (a.length !== b.length) return false;
+        const viewA = new Uint8Array(a);
+        const viewB = new Uint8Array(b);
+        for (let i = 0; i < a.length; i++) {
+            if (viewA[i] !== viewB[i]) return false;
+        }
+        return true;
+    }
+
+    /**
+     * @param {*} a
+     * @param {*} b
+     * @return {number} -1 if a is smaller than b, 1 if a is larger than b, 0 if a equals b.
+     */
+    static compare(a, b) {
+        if (a.length < b.length) return -1;
+        if (a.length > b.length) return 1;
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] < b[i]) return -1;
+            if (a[i] > b[i]) return 1;
+        }
+        return 0;
+    }
 }
 BufferUtils.BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 BufferUtils._BASE64_LOOKUP = [];

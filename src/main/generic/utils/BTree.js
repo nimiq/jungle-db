@@ -116,7 +116,7 @@ class LeafNode extends Node {
             }
         } else {
             for (let i=0, len=keys.length; i<len; ++i) {
-                if (key === keys[i]) return i;
+                if (ComparisonUtils.equals(key, keys[i])) return i;
             }
         }
         return -1;
@@ -135,7 +135,7 @@ class LeafNode extends Node {
         // Find position to insert.
         for (let i=0, len=insertPos; i<len; ++i) {
             // Key already exists.
-            if (key === this._keys[i]) {
+            if (ComparisonUtils.equals(key, this._keys[i])) {
                 return -1;
             }
             // Update potential position.

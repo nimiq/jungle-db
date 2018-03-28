@@ -285,7 +285,7 @@ class JungleDB {
 }
 /**
  * A LevelDB JSON encoding that can handle Uint8Arrays and Sets.
- * @type {{encode: function(val:*):*, decode: function(val:*):*, buffer: boolean, type: string}}
+ * @type {ILMDBEncoding}
  */
 JungleDB.JSON_ENCODING = {
     encode: JSONUtils.stringify,
@@ -295,7 +295,7 @@ JungleDB.JSON_ENCODING = {
 };
 /**
  * A LevelDB JSON encoding that can handle generic values.
- * @type {{encode: function(val:*):*, decode: function(val:*):*, buffer: boolean, type: string}}
+ * @type {ILMDBEncoding}
  */
 JungleDB.GENERIC_ENCODING = {
     encode: data => {
@@ -316,12 +316,12 @@ JungleDB.GENERIC_ENCODING = {
 };
 /**
  * A levelDB binary encoding.
- * @type {{encode: function(val:*):*, decode: function(val:*):*, encoding: JungleDB.Encoding}}
+ * @type {ILMDBEncoding}
  */
 JungleDB.BINARY_ENCODING = 'binary';
 /**
  * A levelDB string encoding.
- * @type {{encode: function(val:*):*, decode: function(val:*):*, encoding: JungleDB.Encoding}}
+ * @type {ILMDBEncoding}
  */
 JungleDB.STRING_ENCODING = 'ascii';
 Class.register(JungleDB);

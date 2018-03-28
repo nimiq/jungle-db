@@ -143,7 +143,7 @@ class PersistentIndex {
                     maxKey = cursor.key;
                 }
                 // Only iterate until key changes.
-                if (cursor && maxKey === cursor.key) {
+                if (cursor && ComparisonUtils.equals(maxKey, cursor.key)) {
                     try {
                         results.push(this._objectStore.decode(cursor.value, cursor.primaryKey));
                     } catch (e) {
@@ -179,7 +179,7 @@ class PersistentIndex {
                     maxKey = cursor.key;
                 }
                 // Only iterate until key changes.
-                if (cursor && maxKey === cursor.key) {
+                if (cursor && ComparisonUtils.equals(maxKey, cursor.key)) {
                     results.add(cursor.primaryKey);
                     cursor.continue();
                 } else {
@@ -210,7 +210,7 @@ class PersistentIndex {
                     maxKey = cursor.key;
                 }
                 // Only iterate until key changes.
-                if (cursor && maxKey === cursor.key) {
+                if (cursor && ComparisonUtils.equals(maxKey, cursor.key)) {
                     try {
                         results.push(this._objectStore.decode(cursor.value, cursor.primaryKey));
                     } catch (e) {
@@ -246,7 +246,7 @@ class PersistentIndex {
                     maxKey = cursor.key;
                 }
                 // Only iterate until key changes.
-                if (cursor && maxKey === cursor.key) {
+                if (cursor && ComparisonUtils.equals(maxKey, cursor.key)) {
                     results.add(cursor.primaryKey);
                     cursor.continue();
                 } else {

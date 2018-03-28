@@ -11,11 +11,12 @@ class PersistentIndex extends LMDBBaseBackend {
      * If the keyPath is not given, this is a primary index.
      * @param {boolean} [multiEntry] Whether the indexed attribute is considered to be iterable or not.
      * @param {boolean} [unique] Whether there is a unique constraint on the attribute.
+     * @param {ILMDBEncoding} [keyEncoding] The key encoding for this index.
      */
-    constructor(objectStore, db, indexName, keyPath, multiEntry=false, unique=false) {
+    constructor(objectStore, db, indexName, keyPath, multiEntry = false, unique = false, keyEncoding = GenericValueEncoding) {
         const prefix = `_${objectStore.tableName}-${indexName}`;
         super(db, prefix, { encode: x => x, decode: x => x, valueEncoding: JungleDB.STRING_ENCODING },
-            { keyEncoding: GenericValueEncoding, dupSort: true });
+            { keyEncoding: keyEncoding, dupSort: true });
         this._prefix = prefix;
 
         /** @type {LMDBBackend} */
@@ -104,7 +105,7 @@ class PersistentIndex extends LMDBBaseBackend {
         const newIKey = this._indexKey(key, value);
 
         // Only update index on changes.
-        if (oldIKey !== newIKey) {
+        if (!ComparisonUtils.equals(oldIKey, newIKey)) {
             if (oldIKey !== undefined) {
                 this._remove(key, oldIKey, txn);
             }
@@ -351,7 +352,7 @@ class PersistentIndex extends LMDBBaseBackend {
             }
 
             // Continue for as many values as the key is the same.
-            if (key === targetKey) {
+            if (ComparisonUtils.equals(key, targetKey)) {
                 values.push(value);
                 return true;
             }

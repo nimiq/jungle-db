@@ -160,9 +160,9 @@ class TransactionIndex extends InMemoryIndex {
         const iKeyBackend = maxIKey;
         const iKeyTx = ObjectUtils.byKeyPath(valueTx, this.keyPath);
 
-        if (iKeyBackend > iKeyTx) {
+        if (ComparisonUtils.compare(iKeyBackend, iKeyTx) > 0) {
             return backendKeys;
-        } else if (iKeyBackend < iKeyTx) {
+        } else if (ComparisonUtils.compare(iKeyBackend, iKeyTx) < 0) {
             return newKeys;
         }
         return backendKeys.union(newKeys);
@@ -234,9 +234,9 @@ class TransactionIndex extends InMemoryIndex {
         const iKeyBackend = minIKey;
         const iKeyTx = ObjectUtils.byKeyPath(valueTx, this.keyPath);
 
-        if (iKeyBackend < iKeyTx) {
+        if (ComparisonUtils.compare(iKeyBackend, iKeyTx) < 0) {
             return backendKeys;
-        } else if (iKeyBackend > iKeyTx) {
+        } else if (ComparisonUtils.compare(iKeyBackend, iKeyTx) > 0) {
             return newKeys;
         }
         return backendKeys.union(newKeys);

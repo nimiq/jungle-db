@@ -326,4 +326,51 @@ describe('Index', () => {
             await db.destroy();
         })().then(done, done.fail);
     });
+
+    it('supports binary key encoding', (done) => {
+        (async function () {
+            // Write something into an object store.
+            let db = new JungleDB('indexTest', 1);
+            /** @type {ObjectStore} */
+            let st = db.createObjectStore('testStore');
+            st.createIndex('testIndex', 'val', { lmdbKeyEncoding: JungleDB.BINARY_ENCODING, leveldbKeyEncoding: JungleDB.BINARY_ENCODING });
+
+            await db.connect();
+
+            await st.put('test1', {'val': new Uint8Array([1, 2, 3, 4]), 'a': {'b': 1}});
+            await st.put('test2', {'val': new Uint8Array([1, 2, 3, 4]), 'a': {'b': 5}});
+            await st.put('test3', {'val': new Uint8Array([1, 2, 3, 5]), 'a': {'b': 5}});
+            await st.put('test4', {'val': new Uint8Array([1, 2, 4, 4]), 'a': {'b': 6}});
+
+            expect((await st.get('test1')).val).toEqual(new Uint8Array([1, 2, 3, 4]));
+            expect(await st.keys(Query.eq('testIndex', new Uint8Array([1, 2, 3, 4])))).toEqual(new Set(['test1', 'test2']));
+            expect(await st.keys(Query.ge('testIndex', new Uint8Array([1, 2, 3, 5])))).toEqual(new Set(['test3', 'test4']));
+
+            expect(await st.index('testIndex').maxKeys()).toEqual(new Set(['test4']));
+            expect(await st.index('testIndex').minKeys()).toEqual(new Set(['test1', 'test2']));
+
+            await db.destroy();
+        })().then(done, done.fail);
+    });
+
+    it('supports binary key encoding (InMemory)', (done) => {
+        (async function () {
+            // Write something into an object store.
+            /** @type {ObjectStore} */
+            let st = JungleDB.createVolatileObjectStore();
+            st.createIndex('testIndex', 'val');
+
+            await st.put('test1', {'val': new Uint8Array([1, 2, 3, 4]), 'a': {'b': 1}});
+            await st.put('test2', {'val': new Uint8Array([1, 2, 3, 4]), 'a': {'b': 5}});
+            await st.put('test3', {'val': new Uint8Array([1, 2, 3, 5]), 'a': {'b': 5}});
+            await st.put('test4', {'val': new Uint8Array([1, 2, 4, 4]), 'a': {'b': 6}});
+
+            expect((await st.get('test1')).val).toEqual(new Uint8Array([1, 2, 3, 4]));
+            expect(await st.keys(Query.eq('testIndex', new Uint8Array([1, 2, 3, 4])))).toEqual(new Set(['test1', 'test2']));
+            expect(await st.keys(Query.ge('testIndex', new Uint8Array([1, 2, 3, 5])))).toEqual(new Set(['test3', 'test4']));
+
+            expect(await st.index('testIndex').maxKeys()).toEqual(new Set(['test4']));
+            expect(await st.index('testIndex').minKeys()).toEqual(new Set(['test1', 'test2']));
+        })().then(done, done.fail);
+    });
 });
