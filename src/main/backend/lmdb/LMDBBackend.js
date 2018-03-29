@@ -258,10 +258,10 @@ class LMDBBackend extends LMDBBaseBackend {
         }
 
         for (const key of tx._removed) {
-            this._remove(txn, key, undefined, true);
+            this._remove(txn, key, /*value*/ undefined, /*alreadyEncoded*/ true);
         }
         for (const [key, value] of tx._modified) {
-            this._put(txn, key, value, undefined, true);
+            this._put(txn, key, value, /*allowOverwrite*/ true, /*alreadyEncoded*/ true);
         }
 
         for (const [indexName, index] of this._indices) {
