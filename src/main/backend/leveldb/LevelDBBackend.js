@@ -143,9 +143,10 @@ class LevelDBBackend {
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
+     * @param {RetrievalConfig} [options] Advanced retrieval options.
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key) {
+    async get(key, options = {}) {
         return new Promise((resolve, error) => {
             this._dbBackend.get(key, (err, value) => {
                 if (err) {

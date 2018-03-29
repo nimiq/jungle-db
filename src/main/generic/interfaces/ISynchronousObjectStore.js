@@ -13,9 +13,10 @@ class ISynchronousObjectStore extends ISynchronousWritableObjectStore {
      * Resolves to undefined if the key is not present in the object store.
      * @abstract
      * @param {string} key The primary key to look for.
+     * @param {SyncRetrievalConfig} [options] Advanced retrieval options.
      * @returns {*} The object stored under the given key, or undefined if not present.
      */
-    getSync(key) {} // eslint-disable-line no-unused-vars
+    getSync(key, options) {} // eslint-disable-line no-unused-vars
 
     /**
      * A check whether a certain key is cached.

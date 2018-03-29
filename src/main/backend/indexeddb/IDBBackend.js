@@ -106,9 +106,10 @@ class IDBBackend {
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
+     * @param {RetrievalConfig} [options] Advanced retrieval options.
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key) {
+    async get(key, options = {}) {
         const db = this._backend;
         return new Promise((resolve, reject) => {
             const getTx = db.transaction([this._tableName])

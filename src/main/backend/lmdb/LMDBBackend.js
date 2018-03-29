@@ -59,9 +59,11 @@ class LMDBBackend extends LMDBBaseBackend {
      * Returns the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
+     * @param {SyncRetrievalConfig} [options] Advanced retrieval options.
      * @returns {*} The object stored under the given key, or undefined if not present.
      */
-    getSync(key) {
+    getSync(key, options = {}) {
+        // Ignore expectPresence here, since it is a non-cached synchronous backend!
         const txn = this._env.beginTxn({ readOnly: true });
         const value = this._get(txn, key);
         txn.commit();
@@ -81,9 +83,10 @@ class LMDBBackend extends LMDBBaseBackend {
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
+     * @param {RetrievalConfig} [options] Advanced retrieval options.
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key) {
+    async get(key, options = {}) {
         return this.getSync(key);
     }
 

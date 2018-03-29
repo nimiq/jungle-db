@@ -44,18 +44,55 @@ class CachedBackend {
     }
 
     /**
+     * Returns the object stored under the given primary key.
+     * Resolves to undefined if the key is not present in the object store.
+     * @abstract
+     * @param {string} key The primary key to look for.
+     * @param {SyncRetrievalConfig} [options] Advanced retrieval options.
+     * @returns {*} The object stored under the given key, or undefined if not present.
+     */
+    getSync(key, options = {}) {
+        const { expectPresence = true } = options || {};
+
+        if (this._cache.has(key)) {
+            return this._cache.get(key);
+        }
+
+        // Attempt backend
+        if (this._backend.isSynchronous()) {
+            return this._backend.getSync(key, options);
+        }
+
+        if (expectPresence) {
+            throw new Error(`Missing key in cached backend: ${key}`);
+        }
+
+        return undefined;
+    }
+
+    /**
+     * A check whether a certain key is cached.
+     * @param {string} key The key to check.
+     * @return {boolean} A boolean indicating whether the key is already in the cache.
+     */
+    isCached(key) {
+        return this._cache.has(key) || (this._parent.isSynchronous() ? this._parent.isCached(key) : false);
+    }
+
+    /**
      * Returns a promise of the object stored under the given primary key.
      * If the item is in the cache, the cached value will be returned.
      * Otherwise, the value will be fetched from the backend object store..
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
+     * @param {RetrievalConfig} [options] Advanced retrieval options.
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    async get(key) {
+    async get(key, options = {}) {
         if (this._cache.has(key)) {
             return this._cache.get(key);
         }
-        const value = await this._backend.get(key);
+        const value = await this._backend.get(key, options);
         this._cache.set(key, value);
         return value;
     }
@@ -266,7 +303,7 @@ class CachedBackend {
      * @returns {boolean} The transaction object.
      */
     isSynchronous() {
-        return false;
+        return true;
     }
 }
 /** @type {number} Maximum number of cached elements. */

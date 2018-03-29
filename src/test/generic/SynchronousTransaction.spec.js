@@ -38,8 +38,8 @@ describe('SynchronousTransaction', () => {
             await tx.preload(['key0', 'key1', 'test']);
             expect(tx.getSync('key0').sub).toBe('value0');
             expect(tx.getSync('key1').sub).toBe('value1');
-            expect(tx.getSync('key2', false)).toBeUndefined();
-            expect(tx.getSync('test', false)).toBeUndefined();
+            expect(tx.getSync('key2', { expectPresence: false })).toBeUndefined();
+            expect(tx.getSync('test', { expectPresence: false })).toBeUndefined();
 
             expect((await tx.get('key0')).sub).toBe('value0');
             expect((await tx.get('key1')).sub).toBe('value1');
@@ -58,7 +58,7 @@ describe('SynchronousTransaction', () => {
             tx.removeSync('key3');
             expect(tx.getSync('key0').sub).toBe('test');
             expect(tx.getSync('key5').sub).toBe('test2');
-            expect(tx.getSync('key3', false)).toBe(undefined);
+            expect(tx.getSync('key3', { expectPresence: false })).toBe(undefined);
             expect((await tx.get('key0')).sub).toBe('test');
 
             expect(await tx.commit()).toBe(true);
@@ -84,7 +84,7 @@ describe('SynchronousTransaction', () => {
             expect((await tx1.get('key3')).sub).toBe('value3');
 
             await tx1.put('test', 'foobar');
-            expect(tx.getSync('test', false)).toBeUndefined();
+            expect(tx.getSync('test', { expectPresence: false })).toBeUndefined();
             expect(await tx1.commit()).toBe(true);
             expect(tx.getSync('test')).toBe('foobar');
         })().then(done, done.fail);
@@ -95,11 +95,11 @@ describe('SynchronousTransaction', () => {
             const tx1 = tx.synchronousTransaction();
 
             // Can retrieve values from underlying transactions.
-            expect(tx1.getSync('key0', false).sub).toBe('value0');
-            expect(tx1.getSync('key3', false)).toBeUndefined();
+            expect(tx1.getSync('key0', { expectPresence: false }).sub).toBe('value0');
+            expect(tx1.getSync('key3', { expectPresence: false })).toBeUndefined();
 
             tx1.putSync('test', 'foobar');
-            expect(tx.getSync('test', false)).toBeUndefined();
+            expect(tx.getSync('test', { expectPresence: false })).toBeUndefined();
             expect(await tx1.commit()).toBe(true);
             expect(tx.getSync('test')).toBe('foobar');
         })().then(done, done.fail);

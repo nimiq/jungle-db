@@ -52,13 +52,15 @@ class SynchronousTransaction extends Transaction {
     }
 
     /**
-     * @override
+     * @param {string} key
+     * @param {RetrievalConfig} [options] Advanced retrieval options.
      */
-    async get(key) {
+    async get(key, options = {}) {
+        options.expectPresence = false;
         // Use cache or ask parent.
-        let value = this.getSync(key, false);
+        let value = this.getSync(key, options);
         if (!value) {
-            value = await Transaction.prototype.get.call(this, key);
+            value = await Transaction.prototype.get.call(this, key, options);
             this._cache.set(key, value);
         }
         return value;
@@ -67,16 +69,17 @@ class SynchronousTransaction extends Transaction {
     /**
      * Internal method to query cache.
      * @param {string} key
-     * @param {boolean} [expectPresence]
+     * @param {SyncRetrievalConfig} [options] Advanced retrieval options.
      * @return {*} The cached value.
      * @private
      */
-    _getCached(key, expectPresence=true) {
+    _getCached(key, options = {}) {
+        const { expectPresence = true } = options || {};
         const value = this._cache.get(key);
 
         // Use cache only if the parent is not synchronous.
         if (!value && this._parent.isSynchronous()) {
-            return this._parent.getSync(key, expectPresence);
+            return this._parent.getSync(key, options);
         }
 
         if (expectPresence && !value) {
@@ -89,10 +92,10 @@ class SynchronousTransaction extends Transaction {
      * Returns the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
-     * @param {boolean} [expectPresence] Method throws an error if key is not present in transaction or cache.
+     * @param {SyncRetrievalConfig} [options] Advanced retrieval options.
      * @returns {*} The object stored under the given key, or undefined if not present.
      */
-    getSync(key, expectPresence=true) {
+    getSync(key, options = {}) {
         // Order is as follows:
         // 1. check if removed,
         // 2. check if modified,
@@ -107,7 +110,7 @@ class SynchronousTransaction extends Transaction {
         if (this._truncated) {
             return undefined;
         }
-        return this._getCached(key, expectPresence);
+        return this._getCached(key, options);
     }
 
     /**

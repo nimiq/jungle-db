@@ -77,11 +77,12 @@ class ObjectStore {
      * Returns a promise of the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
+     * @param {RetrievalConfig} [options] Advanced retrieval options.
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
-    get(key) {
+    get(key, options = {}) {
         if (!this._backend.connected) throw new Error('JungleDB is not connected');
-        return this._currentState.get(key);
+        return this._currentState.get(key, options);
     }
 
     /**
@@ -125,12 +126,13 @@ class ObjectStore {
      * Returns the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @param {string} key The primary key to look for.
+     * @param {SyncRetrievalConfig} [options] Advanced retrieval options.
      * @returns {*} The object stored under the given key, or undefined if not present.
      */
-    getSync(key) {
+    getSync(key, options = {}) {
         if (!this._backend.connected) throw new Error('JungleDB is not connected');
         if (!this._currentState.isSynchronous()) throw new Error('Only works on synchronous backends');
-        return this._currentState.getSync(key);
+        return this._currentState.getSync(key, options);
     }
 
     /**

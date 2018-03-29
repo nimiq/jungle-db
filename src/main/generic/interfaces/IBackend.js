@@ -39,4 +39,11 @@ class IBackend extends IReadableObjectStore {
      * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
      */
     deleteIndex(indexName, options = {}) {} // eslint-disable-line no-unused-vars
+
+    /**
+     * Checks whether an object store implements the ISynchronousObjectStore interface.
+     * @abstract
+     * @returns {boolean} The transaction object.
+     */
+    isSynchronous() {} // eslint-disable-line no-unused-vars
 }
