@@ -168,15 +168,16 @@ class LevelDBBackend {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    values(query=null) {
+    values(query = null, limit = null) {
         if (query !== null && query instanceof Query) {
-            return query.values(this);
+            return query.values(this, limit);
         }
         return new Promise((resolve, error) => {
             const result = [];
-            this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': true }))
+            this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': true }, limit))
                 .on('data', data => {
                     try {
                         result.push(this.decode(data.value, data.key));
@@ -202,15 +203,16 @@ class LevelDBBackend {
      * If the query is of type KeyRange, it returns all keys of the object store being within this range.
      * If the query is of type Query, it returns all keys fulfilling the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to the query.
      */
-    keys(query=null) {
+    keys(query = null, limit = null) {
         if (query !== null && query instanceof Query) {
-            return query.keys(this);
+            return query.keys(this, limit);
         }
         return new Promise((resolve, error) => {
             const result = new Set();
-            this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': false, 'keys': true }))
+            this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': false, 'keys': true }, limit))
                 .on('data', data => {
                     result.add(data);
                 })

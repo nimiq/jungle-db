@@ -97,9 +97,9 @@ class InMemoryIndex {
                 if (this._unique) {
                     throw new Error(`Uniqueness constraint violated for key ${key} on path ${this._keyPath}`);
                 }
-                tree.currentRecord.add(key);
+                (/** @type {SortedList} */ tree.currentRecord).add(key);
             } else {
-                tree.insert(component, this._unique ? key : Set.from(key));
+                tree.insert(component, this._unique ? key : new SortedList([key], ComparisonUtils.compare));
             }
         }
     }
@@ -150,8 +150,8 @@ class InMemoryIndex {
         // Remove all keys.
         for (const component of iKey) {
             if (tree.seek(component)) {
-                if (!this._unique && tree.currentRecord.size > 1) {
-                    tree.currentRecord.delete(key);
+                if (!this._unique && (/** @type {SortedList} */ tree.currentRecord).length > 1) {
+                    (/** @type {SortedList} */ tree.currentRecord).remove(key);
                 } else {
                     tree.remove(component);
                 }
@@ -178,10 +178,11 @@ class InMemoryIndex {
      * If the optional query is not given, it returns all objects in the index.
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
      * @param {KeyRange} [query] Optional query to check secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null) {
-        const keys = await this.keys(query);
+    async values(query = null, limit = null) {
+        const keys = await this.keys(query, limit);
         return this._retrieveValues(keys);
     }
 
@@ -190,9 +191,10 @@ class InMemoryIndex {
      * If the optional query is not given, it returns all primary keys in the index.
      * If the query is of type KeyRange, it returns all primary keys for which the secondary key is within this range.
      * @param {KeyRange} [query] Optional query to check the secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of primary keys relevant to the query.
      */
-    async keys(query=null) {
+    async keys(query = null, limit = null) {
         let resultSet = new Set();
 
         // Shortcut for exact match.
@@ -200,7 +202,7 @@ class InMemoryIndex {
             if (this._tree.seek(query.lower)) {
                 resultSet = Set.from(this._tree.currentRecord);
             }
-            return resultSet;
+            return resultSet.limit(limit);
         }
 
         // Find lower bound and start from there.
@@ -213,12 +215,17 @@ class InMemoryIndex {
         }
 
         while (!(query instanceof KeyRange) || query.includes(this._tree.currentKey)) {
+            // Limit
+            if (limit !== null && resultSet.size >= limit) {
+                break;
+            }
+
             resultSet = resultSet.union(Set.from(this._tree.currentRecord));
             if (!this._tree.skip()) {
                 break;
             }
         }
-        return resultSet;
+        return resultSet.limit(limit);
     }
 
     /**

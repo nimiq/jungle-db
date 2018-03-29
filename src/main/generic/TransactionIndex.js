@@ -65,21 +65,22 @@ class TransactionIndex extends InMemoryIndex {
      * If the optional query is not given, it returns all primary keys in the index.
      * If the query is of type KeyRange, it returns all primary keys for which the secondary key is within this range.
      * @param {KeyRange} [query] Optional query to check the secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of primary keys relevant to the query.
      */
-    async keys(query=null) {
+    async keys(query = null, limit = null) {
         const promises = [];
         if (this._objectStore._truncated) {
             promises.push(new Set());
         } else {
-            promises.push(this._index.keys(query));
+            promises.push(this._index.keys(query, limit));
         }
-        promises.push(InMemoryIndex.prototype.keys.call(this, query));
-        let [keys, newKeys] = await Promise.all(promises);
+        promises.push(InMemoryIndex.prototype.keys.call(this, query, limit));
+        let [/** @type {Set} */ keys, /** @type {Set} */ newKeys] = await Promise.all(promises);
         // Remove keys that have been deleted or modified.
         keys = keys.difference(this._objectStore._removed);
         keys = keys.difference(this._objectStore._modified.keys());
-        return keys.union(newKeys);
+        return keys.union(newKeys).limit(limit);
     }
 
     /**
@@ -87,10 +88,11 @@ class TransactionIndex extends InMemoryIndex {
      * If the optional query is not given, it returns all objects in the index.
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
      * @param {KeyRange} [query] Optional query to check secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null) {
-        const keys = await this.keys(query);
+    async values(query = null, limit = null) {
+        const keys = await this.keys(query, limit);
         return InMemoryIndex.prototype._retrieveValues.call(this, keys);
     }
 

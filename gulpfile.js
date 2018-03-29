@@ -48,6 +48,7 @@ const sources = {
         './src/main/generic/utils/LRUMap.js',
         './src/main/generic/utils/ObjectUtils.js',
         './src/main/generic/utils/SetUtils.js',
+        './src/main/generic/utils/SortedList.js',
         './src/main/generic/utils/Synchronizer.js',
         './src/main/generic/utils/EncodedTransaction.js',
         './src/main/generic/utils/GenericValueEncoding.js',

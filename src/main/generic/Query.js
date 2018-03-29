@@ -188,10 +188,11 @@ class Query {
     /**
      * Returns a promise of an array of objects fulfilling this query.
      * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to this query.
      */
-    async values(objectStore) {
-        const keys = await this._execute(objectStore);
+    async values(objectStore, limit = null) {
+        const keys = await this._execute(objectStore, limit);
         const resultPromises = [];
         for (const key of keys) {
             resultPromises.push(objectStore.get(key));
@@ -202,28 +203,30 @@ class Query {
     /**
      * Returns a promise of a set of keys fulfilling this query.
      * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to this query.
      */
-    keys(objectStore) {
-        return this._execute(objectStore);
+    keys(objectStore, limit = null) {
+        return this._execute(objectStore, limit);
     }
 
     /**
      * Internal method to execute a query on an object store.
      * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to this query.
      * @private
      */
-    async _execute(objectStore) {
+    async _execute(objectStore, limit = null) {
         switch (this._queryType) {
             case Query.Type.COMBINED:
-                return Promise.resolve(this._executeCombined(objectStore));
+                return Promise.resolve(this._executeCombined(objectStore, limit));
 
             case Query.Type.ADVANCED:
-                return Promise.resolve(this._executeAdvanced(objectStore));
+                return Promise.resolve(this._executeAdvanced(objectStore, limit));
 
             case Query.Type.RANGE:
-                return this._executeRange(objectStore);
+                return this._executeRange(objectStore, limit);
         }
         return Promise.resolve(new Set());
     }
@@ -231,14 +234,15 @@ class Query {
     /**
      * Internal method for and/or operators.
      * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to this query.
      * @private
      */
-    async _executeCombined(objectStore) {
+    async _executeCombined(objectStore, limit = null) {
         // Evaluate children.
         const resultPromises = [];
         for (const query of this._queries) {
-            resultPromises.push(query._execute(objectStore));
+            resultPromises.push(query._execute(objectStore, limit));
         }
         const results = await Promise.all(resultPromises);
 
@@ -247,23 +251,40 @@ class Query {
             if (results.length === 0) {
                 return new Set();
             } else if (results.length === 1) {
-                return results[0];
+                // Limit
+                if (limit === null || limit >= 1) {
+                    return results[0];
+                }
+                return new Set();
             }
 
             // Set intersection of all keys.
             const firstResult = results.shift();
             const intersection = new Set();
+            let count = 0;
             for (const val of firstResult) {
                 if (results.every(result => result.has(val))) {
+                    // Limit
+                    if (limit !== null && count >= limit) break;
+
                     intersection.add(val);
+                    count++;
                 }
             }
             return intersection;
         } else if (this._op === Query.OPERATORS.OR) {
             // Set union of all keys.
             const union = new Set();
+            let count = 0;
             for (const result of results) {
-                result.forEach(val => union.add(val));
+                for (const val of result) {
+                    // Limit
+                    if (limit !== null && count >= limit) break;
+
+                    union.add(val);
+                    count++;
+                }
+                if (limit !== null && count >= limit) break;
             }
             return union;
         }
@@ -273,10 +294,11 @@ class Query {
     /**
      * Internal method for min/max operators.
      * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to this query.
      * @private
      */
-    async _executeAdvanced(objectStore) {
+    async _executeAdvanced(objectStore, limit = null) {
         const index = objectStore.index(this._indexName);
         let results = new Set();
         switch (this._op) {
@@ -287,18 +309,19 @@ class Query {
                 results = await index.minKeys();
                 break;
         }
-        return new Set(results);
+        return new Set(results.limit(limit));
     }
 
     /**
      * Internal method for range operators.
      * @param {IObjectStore} objectStore The object store to execute the query on.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to this query.
      * @private
      */
-    async _executeRange(objectStore) {
+    async _executeRange(objectStore, limit = null) {
         const index = objectStore.index(this._indexName);
-        return new Set(await index.keys(this._keyRange));
+        return new Set(await index.keys(this._keyRange, limit));
     }
 }
 /**

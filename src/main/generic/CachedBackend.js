@@ -153,10 +153,11 @@ class CachedBackend {
      * If the query is of type KeyRange, it returns all keys of the object store being within this range.
      * If the query is of type Query, it returns all keys fulfilling the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to the query.
      */
-    keys(query=null) {
-        return this._backend.keys(query);
+    keys(query = null, limit = null) {
+        return this._backend.keys(query, limit);
     }
 
     /**
@@ -165,10 +166,11 @@ class CachedBackend {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    values(query=null) {
-        return this._backend.values(query);
+    values(query = null, limit = null) {
+        return this._backend.values(query, limit);
     }
 
     /**

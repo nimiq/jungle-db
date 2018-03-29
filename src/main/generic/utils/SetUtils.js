@@ -63,6 +63,26 @@ Set.prototype.equals = function(setB) {
 };
 
 /**
+ * Limits the number of items in the set.
+ * @param {number} [limit] Limits the number of results if given.
+ * @returns {Set}
+ */
+Set.prototype.limit = function(limit = null) {
+    if (limit === null) return this;
+
+    const limitedResults = new Set();
+    let count = 0;
+    for (const val of this) {
+        // Limit
+        if (limit !== null && count >= limit) break;
+
+        limitedResults.add(val);
+        count++;
+    }
+    return limitedResults;
+};
+
+/**
  * Creates a Set from single values and iterables.
  * If arg is not iterable, it creates a new Set with arg as its single member.
  * If arg is iterable, it iterates over arg and puts all items into the Set.
