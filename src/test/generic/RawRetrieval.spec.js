@@ -17,8 +17,7 @@ describe('RawRetrieval', () => {
         it(`can retrieve raw and decoded values from store (${runner.type})`, (done) => {
             (async function () {
                 const objectStore = await runner.init();
-
-                debugger;
+                
                 expect(await objectStore.get('key2')).toEqual({key: 'key2', value: 2});
                 expect(await objectStore.get('key2', {raw: true})).toEqual({k: 'key2', v: 2});
 
