@@ -74,24 +74,36 @@ class LMDBBaseBackend {
     }
 
     /**
-     * Internal method called to decode a single value.
+     * Method called to decode a single value.
      * @param {*} value Value to be decoded.
      * @param {string} key Key corresponding to the value.
      * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
      */
     decode(value, key) {
-        if (value === null) { // LMDB returns null if value is not present.
+        if (value === undefined) {
             return undefined;
         }
-        value = this._valueEncoding.decode(value);
         if (this._codec !== null && this._codec !== undefined) {
-            value = this._codec.decode(value, key);
+            return this._codec.decode(value, key);
         }
         return value;
     }
 
     /**
-     * Internal method called to encode a single value.
+     * Internal method for backend specific decoding.
+     * @param {*} value Value to be decoded.
+     * @returns {*} The decoded value.
+     * @protected
+     */
+    _decode(value) {
+        if (value === null) { // LMDB returns null if value is not present.
+            return undefined;
+        }
+        return this._valueEncoding.decode(value);
+    }
+
+    /**
+     * Method called to encode a single value.
      * @param {*} value Value to be encoded.
      * @param {boolean} [alreadyEncoded] This flag allows to skip the encoding.
      * @returns {*} The encoded value, either by the object store's default or the overriding decoder if given.
@@ -101,21 +113,37 @@ class LMDBBaseBackend {
             return value;
         }
         if (value === undefined) {
-            return null; // LMDB only supports null values
+            return undefined;
         }
         if (this._codec !== null && this._codec !== undefined) {
-            value = this._codec.encode(value);
+            return this._codec.encode(value);
         }
-        value = this._valueEncoding.encode(value);
         return value;
+    }
+
+    /**
+     * Internal method for backend specific decoding.
+     * @param {*} value Value to be decoded.
+     * @returns {*} The decoded value.
+     * @protected
+     */
+    _encode(value, alreadyEncoded = false) {
+        if (alreadyEncoded) {
+            return value;
+        }
+        if (value === undefined) {
+            return null; // LMDB only supports null values
+        }
+        return this._valueEncoding.encode(value);
     }
 
     /**
      * Internal method called to decode a single key.
      * @param {*} key Key to be decoded.
      * @returns {*} The decoded key, either by the object store's default or the overriding decoder if given.
+     * @protected
      */
-    decodeKey(key) {
+    _decodeKey(key) {
         if (key === null || key === undefined) {
             return key;
         }
@@ -130,8 +158,9 @@ class LMDBBaseBackend {
      * @param {*} key Key to be encoded.
      * @param {boolean} [alreadyEncoded] This flag allows to skip the encoding.
      * @returns {*} The encoded key, either by the object store's default or the overriding decoder if given.
+     * @protected
      */
-    encodeKey(key, alreadyEncoded = false) {
+    _encodeKey(key, alreadyEncoded = false) {
         if (key === null || key === undefined) {
             return null; // LMDB only supports null values
         }
@@ -216,10 +245,10 @@ class LMDBBaseBackend {
         let currentKey = null;
         // Find lower bound and start from there.
         if (!(query instanceof KeyRange) || (ascending ? query.lower : query.upper) === undefined) {
-            currentKey = this.decodeKey(ascending ? cursor.goToFirst() : cursor.goToLast());
+            currentKey = this._decodeKey(ascending ? cursor.goToFirst() : cursor.goToLast());
         } else {
             // >= lower / >= upper
-            currentKey = this.decodeKey(cursor.goToRange(this.encodeKey(ascending ? query.lower : query.upper)));
+            currentKey = this._decodeKey(cursor.goToRange(this._encodeKey(ascending ? query.lower : query.upper)));
 
             // Did not find a key
             if (ascending && currentKey === null) {
@@ -230,7 +259,7 @@ class LMDBBaseBackend {
 
             // it might be that it is not included because of lower open
             if (!query.includes(currentKey)) {
-                currentKey = this.decodeKey(ascending ? cursor.goToNext() : cursor.goToPrev());
+                currentKey = this._decodeKey(ascending ? cursor.goToNext() : cursor.goToPrev());
             }
 
             // Did not find a key
@@ -262,7 +291,7 @@ class LMDBBaseBackend {
                 break;
             }
 
-            currentKey = this.decodeKey(ascending ? cursor.goToNext() : cursor.goToPrev());
+            currentKey = this._decodeKey(ascending ? cursor.goToNext() : cursor.goToPrev());
         }
 
         cursor.close();
@@ -273,20 +302,25 @@ class LMDBBaseBackend {
     /**
      * @param txn
      * @param key
-     * @param {boolean} [alreadyEncoded] This flag allows to skip the encoding.
+     * @param {RetrievalConfig} options
      * @returns {*}
      * @protected
      */
-    _get(txn, key, alreadyEncoded = false) {
+    _get(txn, key, options = {}) {
+        let value;
         switch (this._valueEncoding.encoding) {
             case JungleDB.Encoding.STRING:
-                return this.decode(txn.getString(this._dbBackend, this.encodeKey(key, alreadyEncoded)), key);
+                value = this._decode(txn.getString(this._dbBackend, this._encodeKey(key)));
+                return (options && options.raw) ? value : this.decode(value, key);
             case JungleDB.Encoding.NUMBER:
-                return this.decode(txn.getNumber(this._dbBackend, this.encodeKey(key, alreadyEncoded)), key);
+                value = this._decode(txn.getNumber(this._dbBackend, this._encodeKey(key)));
+                return (options && options.raw) ? value : this.decode(value, key);
             case JungleDB.Encoding.BOOLEAN:
-                return this.decode(txn.getBoolean(this._dbBackend, this.encodeKey(key, alreadyEncoded)), key);
+                value = this._decode(txn.getBoolean(this._dbBackend, this._encodeKey(key)));
+                return (options && options.raw) ? value : this.decode(value, key);
             case JungleDB.Encoding.BINARY:
-                return this.decode(txn.getBinary(this._dbBackend, this.encodeKey(key, alreadyEncoded)), key);
+                value = this._decode(txn.getBinary(this._dbBackend, this._encodeKey(key)));
+                return (options && options.raw) ? value : this.decode(value, key);
         }
         throw new Error('Invalid encoding given for LMDBBackend');
     }
@@ -301,11 +335,11 @@ class LMDBBaseBackend {
      * @protected
      */
     _put(txn, key, value, allowOverwrite = true, alreadyEncoded = false) {
-        value = this.encode(value, alreadyEncoded);
+        value = this._encode(this.encode(value, alreadyEncoded), alreadyEncoded);
 
         // Shortcut for EncodedLMDBTransactions
         if (txn instanceof EncodedLMDBTransaction) {
-            txn.put(this.encodeKey(key, alreadyEncoded), value);
+            txn.put(this._encodeKey(key, alreadyEncoded), value);
             return true;
         }
 
@@ -313,16 +347,16 @@ class LMDBBaseBackend {
             // Low-level transaction
             switch (this._valueEncoding.encoding) {
                 case JungleDB.Encoding.STRING:
-                    txn.putString(this._dbBackend, this.encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
+                    txn.putString(this._dbBackend, this._encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
                     return true;
                 case JungleDB.Encoding.NUMBER:
-                    txn.putNumber(this._dbBackend, this.encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
+                    txn.putNumber(this._dbBackend, this._encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
                     return true;
                 case JungleDB.Encoding.BOOLEAN:
-                    txn.putBoolean(this._dbBackend, this.encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
+                    txn.putBoolean(this._dbBackend, this._encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
                     return true;
                 case JungleDB.Encoding.BINARY:
-                    txn.putBinary(this._dbBackend, this.encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
+                    txn.putBinary(this._dbBackend, this._encodeKey(key, alreadyEncoded), value, {noOverwrite: !allowOverwrite});
                     return true;
             }
         } catch (e) {
@@ -345,17 +379,17 @@ class LMDBBaseBackend {
     _remove(txn, key, value, alreadyEncoded = false) {
         // value being undefined is intentional here!
         if (value !== undefined) {
-            value = this.encode(value, alreadyEncoded);
+            value = this._encode(this.encode(value, alreadyEncoded), alreadyEncoded);
         }
 
         // Shortcut for EncodedLMDBTransactions
         if (txn instanceof EncodedLMDBTransaction) {
-            txn.remove(this.encodeKey(key, alreadyEncoded), value);
+            txn.remove(this._encodeKey(key, alreadyEncoded), value);
             return;
         }
 
         try {
-            txn.del(this._dbBackend, this.encodeKey(key, alreadyEncoded), value);
+            txn.del(this._dbBackend, this._encodeKey(key, alreadyEncoded), value);
         } catch (e) {
             // Do not throw error if key was not found
             if (e.message && e.message.indexOf('MDB_NOTFOUND') >= 0) {
@@ -373,7 +407,8 @@ class LMDBBaseBackend {
      */
     _cursorGetCurrent(cursor, callback) {
         const extendedCallback = (key, value) => {
-            key = this.decodeKey(key);
+            key = this._decodeKey(key);
+            value = this._decode(value);
             callback(key, this.decode(value, key));
         };
         switch (this._valueEncoding.encoding) {

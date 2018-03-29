@@ -9,10 +9,12 @@ class CachedBackend {
      * Creates a new instance of the cached layer using the specified backend.
      * @param {IBackend} backend The backend to use.
      */
-    constructor(backend) {
+    constructor(backend, cacheSize = CachedBackend.MAX_CACHE_SIZE, rawCacheSize = 0) {
         this._backend = backend;
         /** @type {Map.<string,*>} */
-        this._cache = new LRUMap(CachedBackend.MAX_CACHE_SIZE);
+        this._cache = new LRUMap(cacheSize);
+        /** @type {Map.<string,*>} */
+        this._rawCache = new LRUMap(rawCacheSize);
     }
 
     /** @type {boolean} */
@@ -44,6 +46,42 @@ class CachedBackend {
     }
 
     /**
+     * @param {string} key
+     * @returns {boolean}
+     * @private
+     */
+    _has(key) {
+        return this._cache.has(key) || this._rawCache.has(key);
+    }
+
+    /**
+     * @param {string} key
+     * @param {RetrievalConfig} [options] Advanced retrieval options.
+     * @returns {boolean}
+     * @private
+     */
+    _get(key, options) {
+        if (options && options.raw) {
+            if (this._rawCache.has(key)) {
+                return this._rawCache.get(key);
+            } else {
+                // Transform to raw if requested
+                const value = this.encode(this._cache.get(key));
+                this._rawCache.set(key, value);
+                return value;
+            }
+        } else {
+            if (this._cache.has(key)) {
+                return this._cache.get(key);
+            } else {
+                const value = this.decode(this._rawCache.get(key), key);
+                this._cache.set(key, value);
+                return value;
+            }
+        }
+    }
+
+    /**
      * Returns the object stored under the given primary key.
      * Resolves to undefined if the key is not present in the object store.
      * @abstract
@@ -52,18 +90,23 @@ class CachedBackend {
      * @returns {*} The object stored under the given key, or undefined if not present.
      */
     getSync(key, options = {}) {
-        const { expectPresence = true } = options || {};
-
-        if (this._cache.has(key)) {
-            return this._cache.get(key);
+        if (this._has(key)) {
+            return this._get(key, options);
         }
 
         // Attempt backend
         if (this._backend.isSynchronous()) {
-            return this._backend.getSync(key, options);
+            const value = this._backend.getSync(key, options);
+            // Cache
+            if (options && options.raw) {
+                this._rawCache.set(key, value);
+            } else {
+                this._cache.set(key, value);
+            }
+            return value;
         }
 
-        if (expectPresence) {
+        if (options && options.expectPresence) {
             throw new Error(`Missing key in cached backend: ${key}`);
         }
 
@@ -76,7 +119,7 @@ class CachedBackend {
      * @return {boolean} A boolean indicating whether the key is already in the cache.
      */
     isCached(key) {
-        return this._cache.has(key) || (this._parent.isSynchronous() ? this._parent.isCached(key) : false);
+        return this._has(key) || (this._parent.isSynchronous() ? this._parent.isCached(key) : false);
     }
 
     /**
@@ -89,11 +132,16 @@ class CachedBackend {
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
     async get(key, options = {}) {
-        if (this._cache.has(key)) {
-            return this._cache.get(key);
+        if (this._has(key)) {
+            return this._get(key, options);
         }
         const value = await this._backend.get(key, options);
-        this._cache.set(key, value);
+        // Cache
+        if (options && options.raw) {
+            this._rawCache.set(key, value);
+        } else {
+            this._cache.set(key, value);
+        }
         return value;
     }
 
@@ -304,6 +352,25 @@ class CachedBackend {
      */
     isSynchronous() {
         return true;
+    }
+
+    /**
+     * Method called to decode a single value.
+     * @param {*} value Value to be decoded.
+     * @param {string} key Key corresponding to the value.
+     * @returns {*} The decoded value.
+     */
+    decode(value, key) {
+        return this._backend.decode(value, key);
+    }
+
+    /**
+     * Method called to encode a single value.
+     * @param {*} value Value to be encoded.
+     * @returns {*} The encoded value.
+     */
+    encode(value) {
+        return this._backend.encode(value);
     }
 }
 /** @type {number} Maximum number of cached elements. */

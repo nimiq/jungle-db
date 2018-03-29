@@ -109,7 +109,7 @@ class LevelDBBackend {
     }
 
     /**
-     * Internal method called to decode a single value.
+     * Method called to decode a single value.
      * @param {*} value Value to be decoded.
      * @param {string} key Key corresponding to the value.
      * @returns {*} The decoded value, either by the object store's default or the overriding decoder if given.
@@ -125,7 +125,7 @@ class LevelDBBackend {
     }
 
     /**
-     * Internal method called to encode a single value.
+     * Method called to encode a single value.
      * @param {*} value Value to be encoded.
      * @returns {*} The encoded value, either by the object store's default or the overriding decoder if given.
      */
@@ -154,7 +154,7 @@ class LevelDBBackend {
                     return;
                 }
                 try {
-                    resolve(this.decode(value, key));
+                    resolve((options && options.raw) ? value : this.decode(value, key));
                 } catch (e) {
                     error(e);
                 }

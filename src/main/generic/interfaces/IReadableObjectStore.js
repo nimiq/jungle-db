@@ -24,6 +24,23 @@ class IReadableObjectStore {
     async get(key, options) {} // eslint-disable-line no-unused-vars
 
     /**
+     * Method called to decode a single value.
+     * @param {*} value Value to be decoded.
+     * @param {string} key Key corresponding to the value.
+     * @returns {*} The decoded value.
+     * @abstract
+     */
+    decode(value, key) {} // eslint-disable-line no-unused-vars
+
+    /**
+     * Method called to encode a single value.
+     * @param {*} value Value to be encoded.
+     * @returns {*} The encoded value.
+     * @abstract
+     */
+    encode(value) {} // eslint-disable-line no-unused-vars
+
+    /**
      * Returns a promise of a set of keys fulfilling the given query.
      * If the optional query is not given, it returns all keys in the object store.
      * If the query is of type KeyRange, it returns all keys of the object store being within this range.

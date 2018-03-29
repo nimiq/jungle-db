@@ -4,11 +4,12 @@ class TestRunner {
      * @param {number} version
      * @param {function(jdb:JungleDB)} setup
      * @param {function(store:ObjectStore):Promise} fill
+     * @param {string} testName
      * @returns {TestRunner}
      */
-    static nativeRunner(name, version, setup, fill) {
+    static nativeRunner(name, version, setup, fill, testName = 'native') {
         let jdb;
-        return new TestRunner('native', (async (additionalSetup) => {
+        return new TestRunner(testName, (async (additionalSetup) => {
             jdb = new JungleDB(name, version);
             // Run store setup
             const store = setup(jdb);
@@ -33,8 +34,8 @@ class TestRunner {
      * @param {function(store:ObjectStore):Promise} fill
      * @returns {TestRunner}
      */
-    static volatileRunner(setup, fill) {
-        return new TestRunner('volatile', (async (additionalSetup) => {
+    static volatileRunner(setup, fill, testName = 'volatile') {
+        return new TestRunner(testName, (async (additionalSetup) => {
             const store = setup();
 
             // Run additional setup (e.g. indices)

@@ -134,7 +134,7 @@ class JungleDB {
      * @returns {IObjectStore}
      */
     createObjectStore(tableName, options = {}) {
-        let { codec = null, persistent = true, upgradeCondition = null, enableLRUCache = true } = options || {};
+        const { codec = null, persistent = true, upgradeCondition = null, enableLruCache = true, lruCacheSize = CachedBackend.MAX_CACHE_SIZE, rawLruCacheSize = 0 } = options || {};
 
         if (this._connected) throw new Error('Cannot create ObjectStore while connected');
         if (this._objectStores.has(tableName)) {
@@ -150,8 +150,8 @@ class JungleDB {
         }
         // Create cache if enabled
         let cachedBackend = backend;
-        if (persistent && enableLRUCache) {
-            cachedBackend = new CachedBackend(backend);
+        if (persistent && enableLruCache) {
+            cachedBackend = new CachedBackend(backend, lruCacheSize, rawLruCacheSize);
         }
 
         const objStore = new ObjectStore(cachedBackend, this, tableName);

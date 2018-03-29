@@ -42,7 +42,8 @@ class InMemoryBackend {
      */
     getSync(key, options = {}) {
         // Ignore expectPresence here, since it is a non-cached synchronous backend!
-        return this.decode(this._cache.get(key), key);
+        const value = this._cache.get(key);
+        return (options && options.raw) ? value : this.decode(value, key);
     }
 
     /**
@@ -267,7 +268,7 @@ class InMemoryBackend {
     }
 
     /**
-     * Internal method called to decode a single value.
+     * Method called to decode a single value.
      * @param {*} value Value to be decoded.
      * @param {string} key Key corresponding to the value.
      * @returns {*} The decoded value.
@@ -283,7 +284,7 @@ class InMemoryBackend {
     }
 
     /**
-     * Internal method called to encode a single value.
+     * Method called to encode a single value.
      * @param {*} value Value to be encoded.
      * @returns {*} The encoded value.
      */

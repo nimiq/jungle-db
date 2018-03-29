@@ -65,7 +65,7 @@ class LMDBBackend extends LMDBBaseBackend {
     getSync(key, options = {}) {
         // Ignore expectPresence here, since it is a non-cached synchronous backend!
         const txn = this._env.beginTxn({ readOnly: true });
-        const value = this._get(txn, key);
+        const value = this._get(txn, key, options);
         txn.commit();
         return value;
     }
@@ -87,7 +87,7 @@ class LMDBBackend extends LMDBBaseBackend {
      * @returns {Promise.<*>} A promise of the object stored under the given key, or undefined if not present.
      */
     async get(key, options = {}) {
-        return this.getSync(key);
+        return this.getSync(key, options);
     }
 
     /**

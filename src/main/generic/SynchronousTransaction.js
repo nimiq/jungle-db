@@ -61,7 +61,11 @@ class SynchronousTransaction extends Transaction {
         let value = this.getSync(key, options);
         if (!value) {
             value = await Transaction.prototype.get.call(this, key, options);
-            this._cache.set(key, value);
+            if (options && options.raw) {
+                this._cache.set(key, this.decode(value, key));
+            } else {
+                this._cache.set(key, value);
+            }
         }
         return value;
     }
@@ -75,7 +79,7 @@ class SynchronousTransaction extends Transaction {
      */
     _getCached(key, options = {}) {
         const { expectPresence = true } = options || {};
-        const value = this._cache.get(key);
+        let value = this._cache.get(key);
 
         // Use cache only if the parent is not synchronous.
         if (!value && this._parent.isSynchronous()) {
@@ -85,6 +89,12 @@ class SynchronousTransaction extends Transaction {
         if (expectPresence && !value) {
             throw new Error(`Missing key in cache: ${key}`);
         }
+
+        // Raw requests
+        if (options && options.raw) {
+            value = this.encode(value);
+        }
+
         return value;
     }
 
@@ -105,6 +115,9 @@ class SynchronousTransaction extends Transaction {
             return undefined;
         }
         if (this._modified.has(key)) {
+            if (options && options.raw) {
+                return this.encode(this._modified.get(key));
+            }
             return this._modified.get(key);
         }
         if (this._truncated) {

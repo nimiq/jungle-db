@@ -596,6 +596,25 @@ class ObjectStore {
         return this._backend.close();
     }
 
+    /**
+     * Method called to decode a single value.
+     * @param {*} value Value to be decoded.
+     * @param {string} key Key corresponding to the value.
+     * @returns {*} The decoded value.
+     */
+    decode(value, key) {
+        return this._backend.decode(value, key);
+    }
+
+    /**
+     * Method called to encode a single value.
+     * @param {*} value Value to be encoded.
+     * @returns {*} The encoded value.
+     */
+    encode(value) {
+        return this._backend.encode(value);
+    }
+
     toStringFull() {
         return `ObjectStore{
     stack=[${this._stateStack.map(tx => `{tx=${tx.toStringShort()}, open=${this._openTransactions.get(tx.id) ? this._openTransactions.get(tx.id).size : 0}}`)}],

@@ -2,7 +2,9 @@
  * @typedef {object} ObjectStoreConfig
  * @property {ICodec} [codec]
  * @property {boolean} [persistent]
- * @property {boolean} [enableLRUCache]
+ * @property {boolean} [enableLruCache] Enables a LRU cache.
+ * @property {number} [lruCacheSize] The maximum number of values stored in the cache (default: 5000)
+ * @property {number} [rawLruCacheSize] The maximum number of raw values stored in the cache (default: 0).
  * @property {boolean|function(oldVersion:number, newVersion:number):boolean} [upgradeCondition]
  * @property {ILMDBEncoding|ILevelDBEncoding} [keyEncoding]
  * @property {ILMDBEncoding} [lmdbKeyEncoding]

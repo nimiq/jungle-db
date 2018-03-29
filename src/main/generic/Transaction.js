@@ -166,12 +166,15 @@ class Transaction {
             return undefined;
         }
         if (this._modified.has(key)) {
+            if (options && options.raw) {
+                return this.encode(this._modified.get(key));
+            }
             return this._modified.get(key);
         }
         if (this._truncated) {
             return undefined;
         }
-        return this._parent.get(key);
+        return this._parent.get(key, options);
     }
 
     /**
@@ -869,6 +872,25 @@ class Transaction {
                 throw e;
             }
         }
+    }
+
+    /**
+     * Method called to decode a single value.
+     * @param {*} value Value to be decoded.
+     * @param {string} key Key corresponding to the value.
+     * @returns {*} The decoded value.
+     */
+    decode(value, key) {
+        return this._objectStore.decode(value, key);
+    }
+
+    /**
+     * Method called to encode a single value.
+     * @param {*} value Value to be encoded.
+     * @returns {*} The encoded value.
+     */
+    encode(value) {
+        return this._objectStore.encode(value);
     }
 }
 /** @type {number} Milliseconds to wait until automatically aborting transaction. */

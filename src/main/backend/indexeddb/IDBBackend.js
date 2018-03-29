@@ -72,7 +72,7 @@ class IDBBackend {
     }
 
     /**
-     * Internal method called to decode a single value.
+     * Method called to decode a single value.
      * @param {*} value Value to be decoded.
      * @param {string} key Key corresponding to the value.
      * @returns {*} The decoded value.
@@ -88,7 +88,7 @@ class IDBBackend {
     }
 
     /**
-     * Internal method called to encode a single value.
+     * Method called to encode a single value.
      * @param {*} value Value to be encoded.
      * @returns {*} The encoded value.
      */
@@ -117,7 +117,7 @@ class IDBBackend {
                 .get(key);
             getTx.onsuccess = event => {
                 try {
-                    resolve(this.decode(event.target.result, key));
+                    resolve((options && options.raw) ? event.target.result : this.decode(event.target.result, key));
                 } catch (e) {
                     reject(e);
                 }
