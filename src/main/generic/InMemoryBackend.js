@@ -241,7 +241,7 @@ class InMemoryBackend {
     /**
      * @param {string} indexName The name of the index.
      * @param {string|Array.<string>} [keyPath] The path to the key within the object. May be an array for multiple levels.
-     * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean, keyEncoding:?ILMDBEncoding|?ILevelDBEncoding, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncoding}} [options] An options object.
+     * @param {IndexConfig} [options] An options object.
      */
     createIndex(indexName, keyPath, options = {}) {
         let { multiEntry = false, unique = false, upgradeCondition = null } = options || {};

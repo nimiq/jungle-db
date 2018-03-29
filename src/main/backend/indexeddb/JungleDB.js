@@ -130,20 +130,30 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
-     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean, keyEncoding:?ILMDBEncoding|?ILevelDBEncoding, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncoding}} [options] An options object.
+     * @param {ObjectStoreConfig} [options] An options object.
      * @returns {IObjectStore}
      */
     createObjectStore(tableName, options = {}) {
-        let { codec = null, persistent = true, upgradeCondition = null } = options || {};
+        let { codec = null, persistent = true, upgradeCondition = null, enableLRUCache = true } = options || {};
 
         if (this._connected) throw new Error('Cannot create ObjectStore while connected');
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
         }
-        const backend = persistent
-            ? new IDBBackend(this, tableName, codec)
-            : new InMemoryBackend(tableName, codec);
-        const cachedBackend = new CachedBackend(backend);
+
+        // Create backend
+        let backend = null;
+        if (persistent) {
+            backend = new IDBBackend(this, tableName, codec);
+        } else {
+            backend = new InMemoryBackend(tableName, codec);
+        }
+        // Create cache if enabled
+        let cachedBackend = backend;
+        if (persistent && enableLRUCache) {
+            cachedBackend = new CachedBackend(backend);
+        }
+
         const objStore = new ObjectStore(cachedBackend, this, tableName);
         this._objectStores.set(tableName, objStore);
         this._objectStoreBackends.set(tableName, { backend, upgradeCondition });

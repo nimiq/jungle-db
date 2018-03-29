@@ -43,7 +43,7 @@ class IJungleDB {
      * the table does not exist yet.
      * @abstract
      * @param {string} tableName The name of the object store.
-     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean, keyEncoding:?ILMDBEncoding|?ILevelDBEncoding, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncoding}} [options] An options object.
+     * @param {ObjectStoreConfig} [options] An options object.
      * @returns {IObjectStore}
      */
     createObjectStore(tableName, options = {}) {} // eslint-disable-line no-unused-vars

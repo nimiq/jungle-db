@@ -191,22 +191,32 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
-     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolea, keyEncoding:?ILMDBEncoding|?ILevelDBEncoding, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncodingn}} [options] An options object.
+     * @param {ObjectStoreConfig} [options] An options object.
      * @returns {IObjectStore}
      */
     createObjectStore(tableName, options = {}) {
-        let { codec = null, persistent = true, upgradeCondition = null, keyEncoding = null, leveldbKeyEncoding = null } = options || {};
+        let { codec = null, persistent = true, upgradeCondition = null, keyEncoding = null, leveldbKeyEncoding = null, enableLRUCache = false } = options || {};
 
         if (this._connected) throw new Error('Cannot create ObjectStore while connected');
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
         }
 
-        // LevelDB already implements a LRU cache. so we don't need to cache it.
-        const backend = persistent
-            ? new LevelDBBackend(this, tableName, codec, { keyEncoding: leveldbKeyEncoding || keyEncoding })
-            : new InMemoryBackend(tableName, codec);
-        const objStore = new ObjectStore(backend, this, tableName);
+        // LevelDB already implements a LRU cache. so we don't need to cache it (by default).
+        // Create backend
+        let backend = null;
+        if (persistent) {
+            backend = new LevelDBBackend(this, tableName, codec, { keyEncoding: leveldbKeyEncoding || keyEncoding });
+        } else {
+            backend = new InMemoryBackend(tableName, codec);
+        }
+        // Create cache if enabled
+        let cachedBackend = backend;
+        if (persistent && enableLRUCache) {
+            cachedBackend = new CachedBackend(backend);
+        }
+
+        const objStore = new ObjectStore(cachedBackend, this, tableName);
         this._objectStores.set(tableName, objStore);
         this._objectStoreBackends.push({ backend, upgradeCondition });
         return objStore;

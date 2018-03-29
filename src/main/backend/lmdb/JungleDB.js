@@ -210,21 +210,31 @@ class JungleDB {
      * If a call is newly introduced, but the database version did not change,
      * the table does not exist yet.
      * @param {string} tableName The name of the object store.
-     * @param {{codec:?ICodec, persistent:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean, keyEncoding:?ILMDBEncoding|?ILevelDBEncoding, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncoding}} [options] An options object.
+     * @param {ObjectStoreConfig} [options] An options object.
      * @returns {IObjectStore}
      */
     createObjectStore(tableName, options = {}) {
-        let { codec = null, persistent = true, upgradeCondition = null, keyEncoding = null, lmdbKeyEncoding = null } = options || {};
+        let { codec = null, persistent = true, upgradeCondition = null, keyEncoding = null, lmdbKeyEncoding = null, enableLRUCache = false } = options || {};
 
         if (this._connected) throw new Error('Cannot create ObjectStore while connected');
         if (this._objectStores.has(tableName)) {
             return this._objectStores.get(tableName);
         }
 
-        const backend = persistent
-            ? new LMDBBackend(this, tableName, codec, { keyEncoding: lmdbKeyEncoding || keyEncoding })
-            : new InMemoryBackend(tableName, codec);
-        const objStore = new ObjectStore(backend, this, tableName);
+        // Create backend
+        let backend = null;
+        if (persistent) {
+            backend = new LMDBBackend(this, tableName, codec, { keyEncoding: lmdbKeyEncoding || keyEncoding });
+        } else {
+            backend = new InMemoryBackend(tableName, codec);
+        }
+        // Create cache if enabled
+        let cachedBackend = backend;
+        if (persistent && enableLRUCache) {
+            cachedBackend = new CachedBackend(backend);
+        }
+
+        const objStore = new ObjectStore(cachedBackend, this, tableName);
         this._objectStores.set(tableName, objStore);
         this._objectStoreBackends.push({ backend, upgradeCondition });
         return objStore;
