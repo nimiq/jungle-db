@@ -49,9 +49,10 @@ class IIndex {
      * If the query is of type KeyRange, it returns all primary keys for which the secondary key is within this range.
      * @abstract
      * @param {KeyRange} [query] Optional query to check the secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of primary keys relevant to the query.
      */
-    async keys(query=null) {} // eslint-disable-line no-unused-vars
+    async keys(query = null, limit = null) {} // eslint-disable-line no-unused-vars
 
     /**
      * Returns a promise of an array of objects whose secondary keys fulfill the given query.
@@ -59,9 +60,10 @@ class IIndex {
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
      * @abstract
      * @param {KeyRange} [query] Optional query to check secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null) {} // eslint-disable-line no-unused-vars
+    async values(query = null, limit = null) {} // eslint-disable-line no-unused-vars
 
     /**
      * Returns a promise of an array of objects whose secondary key is maximal for the given range.

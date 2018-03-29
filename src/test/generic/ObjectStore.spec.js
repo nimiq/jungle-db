@@ -265,5 +265,27 @@ describe('ObjectStore', () => {
                 await runner.destroy();
             })().then(done, done.fail);
         });
+
+        it(`correctly processes limited queries (${runner.type})`, (done) => {
+            (async function () {
+                const objectStore = await runner.init();
+
+                function expectLimited(given, expected, limit) {
+                    const size = Array.isArray(given) ? given.length : given.size;
+                    expect(size).toBe(limit);
+                    expect(new Set(given)).toEqual(new Set(given).intersection(new Set(expected)));
+                }
+
+                // Ordering on strings might not be as expected!
+                expectLimited(await objectStore.keys(/*query*/ null, 5), allKeys, 5);
+                expectLimited(await objectStore.keys(KeyRange.upperBound('key5'), 2), new Set(['key0', 'key1', 'key2', 'key3', 'key4', 'key5']), 2);
+                expectLimited(await objectStore.keys(KeyRange.lowerBound('key1', true), 1), allKeys.difference(['key0', 'key1']), 1);
+                expectLimited(await objectStore.keys(KeyRange.lowerBound('key5', true), 3), new Set(['key6', 'key7', 'key8', 'key9']), 3);
+
+                expectLimited(await objectStore.values(KeyRange.only('key5'), 0), ['value5'], 0);
+
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
     });
 });

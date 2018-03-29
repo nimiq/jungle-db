@@ -152,14 +152,15 @@ class ObjectStore {
      * If the query is of type KeyRange, it returns all keys of the object store being within this range.
      * If the query is of type Query, it returns all keys fulfilling the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to the query.
      */
-    keys(query=null) {
+    keys(query = null, limit = null) {
         if (!this._backend.connected) throw new Error('JungleDB is not connected');
         if (query !== null && query instanceof Query) {
-            return query.keys(this._currentState);
+            return query.keys(this._currentState, limit);
         }
-        return this._currentState.keys(query);
+        return this._currentState.keys(query, limit);
     }
 
     /**
@@ -168,14 +169,15 @@ class ObjectStore {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    values(query=null) {
+    values(query = null, limit = null) {
         if (!this._backend.connected) throw new Error('JungleDB is not connected');
         if (query !== null && query instanceof Query) {
-            return query.values(this._currentState);
+            return query.values(this._currentState, limit);
         }
-        return this._currentState.values(query);
+        return this._currentState.values(query, limit);
     }
 
     /**

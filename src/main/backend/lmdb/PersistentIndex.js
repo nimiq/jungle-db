@@ -181,10 +181,11 @@ class PersistentIndex extends LMDBBaseBackend {
      * If the optional query is not given, it returns all objects in the index.
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
      * @param {KeyRange} [query] Optional query to check secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null) {
-        const results = this._getValues(query);
+    async values(query = null, limit = null) {
+        const results = this._getValues(query, limit);
         return this._retrieveValues(results);
     }
 
@@ -193,10 +194,11 @@ class PersistentIndex extends LMDBBaseBackend {
      * If the optional query is not given, it returns all primary keys in the index.
      * If the query is of type KeyRange, it returns all primary keys for which the secondary key is within this range.
      * @param {KeyRange} [query] Optional query to check the secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of primary keys relevant to the query.
      */
-    async keys(query=null) {
-        const results = this._getValues(query);
+    async keys(query = null, limit = null) {
+        const results = this._getValues(query, limit);
         return Set.from(results);
     }
 
@@ -327,13 +329,16 @@ class PersistentIndex extends LMDBBaseBackend {
 
     /**
      * @param {KeyRange} [query]
+     * @param {number} [limit]
      * @return {Array.<string>}
      * @private
      */
-    _getValues(query) {
+    _getValues(query, limit = null) {
         let result = [];
         this._readStream((value, key) => {
+            if (limit !== null && result.length >= limit) return false;
             result.push(value);
+            return true;
         }, true, query);
         return result;
     }

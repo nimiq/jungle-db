@@ -105,8 +105,9 @@ class PersistentIndex extends LevelDBBackend {
                             }
                             pKeys = primaryKey;
                         } else {
-                            pKeys = pKeys || [];
-                            pKeys.push(primaryKey);
+                            pKeys = new SortedList((pKeys || []), ComparisonUtils.compare);
+                            pKeys.add(primaryKey);
+                            pKeys = pKeys.values();
                         }
                         tx.put(secondaryKey, pKeys);
                     }
@@ -166,11 +167,12 @@ class PersistentIndex extends LevelDBBackend {
      * If the optional query is not given, it returns all objects in the index.
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
      * @param {KeyRange} [query] Optional query to check secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null) {
-        const results = await LevelDBBackend.prototype.values.call(this, query);
-        return this._retrieveValues(results);
+    async values(query = null, limit = null) {
+        const results = await LevelDBBackend.prototype.values.call(this, query, limit);
+        return this._retrieveValues(results, limit);
     }
 
     /**
@@ -178,11 +180,12 @@ class PersistentIndex extends LevelDBBackend {
      * If the optional query is not given, it returns all primary keys in the index.
      * If the query is of type KeyRange, it returns all primary keys for which the secondary key is within this range.
      * @param {KeyRange} [query] Optional query to check the secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of primary keys relevant to the query.
      */
-    async keys(query=null) {
-        const results = await LevelDBBackend.prototype.values.call(this, query);
-        return Set.from(this._retrieveKeys(results));
+    async keys(query = null, limit = null) {
+        const results = await LevelDBBackend.prototype.values.call(this, query, limit);
+        return Set.from(this._retrieveKeys(results, limit));
     }
 
     /**
@@ -278,10 +281,11 @@ class PersistentIndex extends LevelDBBackend {
                 }
                 pKeys = primaryKey;
             } else {
-                pKeys = pKeys || [];
-                if (!pKeys.includes(primaryKey)) {
-                    pKeys.push(primaryKey);
+                pKeys = new SortedList((pKeys || []), ComparisonUtils.compare);
+                if (!pKeys.has(primaryKey)) {
+                    pKeys.add(primaryKey);
                 }
+                pKeys = pKeys.values(); // Convert to list
             }
             await tx.put(secondaryKey, pKeys);
         }
@@ -302,8 +306,9 @@ class PersistentIndex extends LevelDBBackend {
             let pKeys = await tx.get(secondaryKey);
             if (pKeys) {
                 if (!this._unique && pKeys.length > 1) {
-                    pKeys.splice(pKeys.indexOf(primaryKey), 1);
-                    await tx.put(secondaryKey, pKeys);
+                    pKeys = new SortedList(pKeys, ComparisonUtils.compare);
+                    pKeys.remove(primaryKey);
+                    await tx.put(secondaryKey, pKeys.values());
                 } else {
                     await tx.remove(secondaryKey);
                 }
@@ -314,12 +319,13 @@ class PersistentIndex extends LevelDBBackend {
     /**
      * A helper method to retrieve the values corresponding to a set of keys.
      * @param {Array.<string|Array.<string>>} results The set of keys to get the corresponding values for.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of values.
      * @protected
      */
-    async _retrieveValues(results) {
+    async _retrieveValues(results, limit = null) {
         const valuePromises = [];
-        for (const key of this._retrieveKeys(results)) {
+        for (const key of this._retrieveKeys(results, limit)) {
             valuePromises.push(this._objectStore.get(key));
         }
         return Promise.all(valuePromises);
@@ -328,17 +334,20 @@ class PersistentIndex extends LevelDBBackend {
     /**
      * A helper method to retrieve the values corresponding to a set of keys.
      * @param {Array.<string|Array.<string>>} results The set of keys to get the corresponding values for.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Array.<string>} A promise of the array of values.
      * @protected
      */
-    _retrieveKeys(results) {
+    _retrieveKeys(results, limit = null) {
         const keys = [];
         for (const result of results) {
             if (Array.isArray(result)) {
                 for (const key of result) {
+                    if (limit !== null && keys.length >= limit) return keys;
                     keys.push(key);
                 }
             } else {
+                if (limit !== null && keys.length >= limit) return keys;
                 keys.push(result);
             }
         }

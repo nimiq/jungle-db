@@ -98,16 +98,19 @@ class LMDBBackend extends LMDBBaseBackend {
      * If the query is of type KeyRange, it returns all objects whose primary keys are within this range.
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null) {
+    async values(query = null, limit = null) {
         if (query !== null && query instanceof Query) {
-            return query.values(this);
+            return query.values(this, limit);
         }
 
         let result = [];
         this._readStream((value, key) => {
+            if (limit !== null && result.length >= limit) return false;
             result.push(value);
+            return true;
         }, true, query);
         return result;
     }
@@ -118,15 +121,18 @@ class LMDBBackend extends LMDBBaseBackend {
      * If the query is of type KeyRange, it returns all keys of the object store being within this range.
      * If the query is of type Query, it returns all keys fulfilling the query.
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to the query.
      */
-    async keys(query = null) {
+    async keys(query = null, limit = null) {
         if (query !== null && query instanceof Query) {
-            return query.keys(this);
+            return query.keys(this, limit);
         }
         let resultSet = new Set();
         this._readStream((value, key) => {
+            if (limit !== null && resultSet.size >= limit) return false;
             resultSet.add(key);
+            return true;
         }, true, query, true);
         return resultSet;
     }

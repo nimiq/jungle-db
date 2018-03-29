@@ -71,9 +71,10 @@ class PersistentIndex {
      * If the optional query is not given, it returns all objects in the index.
      * If the query is of type KeyRange, it returns all objects whose secondary keys are within this range.
      * @param {KeyRange} [query] Optional query to check secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null) {
+    async values(query = null, limit = null) {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
@@ -82,6 +83,12 @@ class PersistentIndex {
             request.onsuccess = event => {
                 const cursor = event.target.result;
                 if (cursor) {
+                    // Limit
+                    if (limit !== null && results.length >= limit) {
+                        resolve(results);
+                        return;
+                    }
+
                     try {
                         results.push(this._objectStore.decode(cursor.value, cursor.primaryKey));
                     } catch (e) {
@@ -101,9 +108,10 @@ class PersistentIndex {
      * If the optional query is not given, it returns all primary keys in the index.
      * If the query is of type KeyRange, it returns all primary keys for which the secondary key is within this range.
      * @param {KeyRange} [query] Optional query to check the secondary keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of primary keys relevant to the query.
      */
-    async keys(query=null) {
+    async keys(query = null, limit = null) {
         query = IDBTools.convertKeyRange(query);
         const db = await this._objectStore.backend;
         return new Promise((resolve, reject) => {
@@ -113,6 +121,12 @@ class PersistentIndex {
             openCursorRequest.onsuccess = event => {
                 const cursor = event.target.result;
                 if (cursor) {
+                    // Limit
+                    if (limit !== null && results.size >= limit) {
+                        resolve(results);
+                        return;
+                    }
+
                     results.add(cursor.primaryKey);
                     cursor.continue();
                 } else {

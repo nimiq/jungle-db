@@ -47,9 +47,10 @@ class IReadableObjectStore {
      * If the query is of type Query, it returns all keys fulfilling the query.
      * @abstract
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Set.<string>>} A promise of the set of keys relevant to the query.
      */
-    async keys(query=null) {} // eslint-disable-line no-unused-vars
+    async keys(query = null, limit = null) {} // eslint-disable-line no-unused-vars
 
     /**
      * Returns a promise of an array of objects whose primary keys fulfill the given query.
@@ -58,9 +59,10 @@ class IReadableObjectStore {
      * If the query is of type Query, it returns all objects whose primary keys fulfill the query.
      * @abstract
      * @param {Query|KeyRange} [query] Optional query to check keys against.
+     * @param {number} [limit] Limits the number of results if given.
      * @returns {Promise.<Array.<*>>} A promise of the array of objects relevant to the query.
      */
-    async values(query=null) {} // eslint-disable-line no-unused-vars
+    async values(query = null, limit = null) {} // eslint-disable-line no-unused-vars
 
     /**
      * Iterates over the keys in a given range and direction.

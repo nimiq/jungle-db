@@ -61,14 +61,15 @@ class InMemoryBackend {
 
     /**
      * @param {Query|KeyRange} [query]
+     * @param {number} [limit]
      * @returns {Promise.<Array.<*>>}
      */
-    async values(query=null) {
+    async values(query = null, limit = null) {
         if (query !== null && query instanceof Query) {
-            return query.values(this);
+            return query.values(this, limit);
         }
         const values = [];
-        for (const key of await this.keys(query)) {
+        for (const key of await this.keys(query, limit)) {
             values.push(await this.get(key));
         }
         return Promise.resolve(values);
@@ -76,13 +77,14 @@ class InMemoryBackend {
 
     /**
      * @param {Query|KeyRange} [query]
+     * @param {number} [limit]
      * @returns {Promise.<Set.<string>>}
      */
-    keys(query=null) {
+    keys(query = null, limit = null) {
         if (query !== null && query instanceof Query) {
-            return query.keys(this);
+            return query.keys(this, limit);
         }
-        return this._primaryIndex.keys(query);
+        return this._primaryIndex.keys(query, limit);
     }
 
     /**
