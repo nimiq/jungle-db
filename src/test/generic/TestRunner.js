@@ -8,9 +8,16 @@ class TestRunner {
      */
     static nativeRunner(name, version, setup, fill) {
         let jdb;
-        return new TestRunner('native', (async () => {
+        return new TestRunner('native', (async (additionalSetup) => {
             jdb = new JungleDB(name, version);
+            // Run store setup
             const store = setup(jdb);
+
+            // Run additional setup (e.g. indices)
+            if (additionalSetup) {
+                additionalSetup(store);
+            }
+
             await jdb.connect();
             if (fill) {
                 await fill(store);
@@ -27,8 +34,14 @@ class TestRunner {
      * @returns {TestRunner}
      */
     static volatileRunner(setup, fill) {
-        return new TestRunner('volatile', (async () => {
+        return new TestRunner('volatile', (async (additionalSetup) => {
             const store = setup();
+
+            // Run additional setup (e.g. indices)
+            if (additionalSetup) {
+                additionalSetup(store);
+            }
+
             if (fill) {
                 await fill(store);
             }
@@ -43,8 +56,12 @@ class TestRunner {
         this._destroy = destroy || (() => {});
     }
 
-    async init() {
-        this._store = await this._setup();
+    /**
+     * @param {function(store:ObjectStore)} [additionalSetup]
+     * @returns {Promise<null|*>}
+     */
+    async init(additionalSetup) {
+        this._store = await this._setup(additionalSetup);
         return this._store;
     }
 

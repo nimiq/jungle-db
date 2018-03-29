@@ -244,10 +244,10 @@ class InMemoryBackend {
      * @param {{multiEntry:?boolean, unique:?boolean, upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean, keyEncoding:?ILMDBEncoding|?ILevelDBEncoding, lmdbKeyEncoding:?ILMDBEncoding, leveldbKeyEncoding:?ILevelDBEncoding}} [options] An options object.
      */
     createIndex(indexName, keyPath, options = {}) {
-        let { multiEntry = false, upgradeCondition = null } = options || {};
+        let { multiEntry = false, unique = false, upgradeCondition = null } = options || {};
 
         keyPath = keyPath || indexName;
-        const index = new InMemoryIndex(this, keyPath, multiEntry);
+        const index = new InMemoryIndex(this, keyPath, multiEntry, unique);
         this._indices.set(indexName, index);
     }
 
