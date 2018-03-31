@@ -119,7 +119,7 @@ class CachedBackend {
      * @return {boolean} A boolean indicating whether the key is already in the cache.
      */
     isCached(key) {
-        return this._has(key) || (this._parent.isSynchronous() ? this._parent.isCached(key) : false);
+        return this._has(key) || (this._backend.isSynchronous() ? this._backend.isCached(key) : false);
     }
 
     /**
