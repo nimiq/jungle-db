@@ -399,4 +399,28 @@ describe('CombinedTransactionPlatform', () => {
             expect(objectStore3._stateStack.length).toBe(0);
         })().then(done, done.fail);
     });
+
+    it('can do a combined commit for cached stores', (done) => {
+        (async function () {
+            // Write something into an object store.
+            const db = new JungleDB('cachedTest', 1);
+            const objectStore1 = db.createObjectStore('testStore1');
+            const objectStore2 = db.createObjectStore('testStore2', {enableLruCache: true});
+
+            await db.connect();
+
+            // Create two transactions in different object stores.
+            const tx1 = objectStore1.transaction();
+            const tx2 = objectStore2.transaction();
+            await tx1.put('key1', 'newValue1');
+            await tx2.put('key1', 'newValue2');
+
+            // Commit both (which should immediately update the backend as well).
+            expect(await JungleDB.commitCombined(tx1, tx2)).toBe(true);
+            expect(await objectStore1.get('key1')).toBe('newValue1');
+            expect(await objectStore2.get('key1')).toBe('newValue2');
+
+            await db.destroy();
+        })().then(done, done.fail);
+    });
 });
