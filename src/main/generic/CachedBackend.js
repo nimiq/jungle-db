@@ -119,7 +119,9 @@ class CachedBackend {
      * @return {boolean} A boolean indicating whether the key is already in the cache.
      */
     isCached(key) {
-        return this._has(key) || (this._backend.isSynchronous() ? this._backend.isCached(key) : false);
+        // Since the cache may change quickly, don't promise anything to the upper layers.
+        // But we can still answer their getSync requests if we have it in the cache.
+        return false;
     }
 
     /**

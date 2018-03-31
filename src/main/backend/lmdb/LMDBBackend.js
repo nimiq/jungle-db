@@ -76,7 +76,9 @@ class LMDBBackend extends LMDBBaseBackend {
      * @return {boolean} A boolean indicating whether the key is already in the cache.
      */
     isCached(key) {
-        return true;
+        // Under the assumption that caching it in memory is faster than accessing the LMDB,
+        // we don't promise anything here, but still allow getSync requests.
+        return false;
     }
 
     /**
