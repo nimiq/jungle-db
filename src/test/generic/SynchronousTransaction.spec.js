@@ -104,4 +104,41 @@ describe('SynchronousTransaction', () => {
             expect(tx.getSync('test')).toBe('foobar');
         })().then(done, done.fail);
     });
+
+    async function fill(store) {
+        // Add 10 objects.
+        for (let i=0; i<10; ++i) {
+            await store.put(`key${i}`, `value${i}`);
+        }
+    }
+
+    const backends = [
+        TestRunner.nativeRunner('test', 1, jdb => jdb.createObjectStore('testStore', {cenableLruCache: false}), fill, 'without-cache'),
+        TestRunner.volatileRunner(() => JungleDB.createVolatileObjectStore(), fill),
+        TestRunner.nativeRunner('test', 1, jdb => jdb.createObjectStore('testStore', {enableLruCache: true, lruCacheSize: 1}), fill, 'with-value-cache')
+    ];
+
+    backends.forEach(/** @type {TestRunner} */ runner => {
+
+        it(`caches asynchronously retrieved values (${runner.type})`, (done) => {
+            (async function () {
+                const st = await runner.init();
+                const tx1 = st.synchronousTransaction();
+
+                // Put value into cache.
+                expect(await st.get('key3')).toBe('value3');
+
+                // Can retrieve values from underlying transactions.
+                expect(await tx1.get('key3')).toBe('value3');
+
+                // Overwrite value in cache.
+                expect(await st.get('key1')).toBe('value1');
+
+                expect(tx1.getSync('key3', { expectPresence: false })).toBe('value3');
+
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
+
+    });
 });

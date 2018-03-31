@@ -58,8 +58,10 @@ class SynchronousTransaction extends Transaction {
     async get(key, options = {}) {
         options.expectPresence = false;
         // Use cache or ask parent.
-        let value = this.getSync(key, options);
-        if (!value) {
+        let value;
+        if (this.isCached(key)) {
+            value = this.getSync(key, options);
+        } else {
             value = await Transaction.prototype.get.call(this, key, options);
             if (options && options.raw) {
                 this._cache.set(key, this.decode(value, key));
