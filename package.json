@@ -28,7 +28,7 @@
     "level-sublevel": "^6.6.1",
     "leveldown": "^3.0.0",
     "levelup": "^2.0.2",
-    "node-lmdb": "^0.5.1"
+    "node-lmdb": "0.5.1"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",
