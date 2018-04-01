@@ -232,4 +232,26 @@ describe('JungleDB', () => {
             await db.destroy();
         })().then(done, done.fail);
     });
+
+    it('can delete stores with indices', (done) => {
+        (async function () {
+            // Write something into an object store.
+            let db = new JungleDB('test', 1);
+            let st = db.createObjectStore('testStore');
+            st.createIndex('test');
+            await db.connect();
+            await st.put('test', {'test': 'succeeded'});
+            expect(await st.index('test').count()).toBe(1);
+            await db.close();
+
+            // Create another index
+            db = new JungleDB('test', 2);
+            db.deleteObjectStore('testStore', {indexNames: ['test']});
+            st = db.createObjectStore('testStore');
+            st.createIndex('test');
+            await db.connect();
+            expect(await st.index('test').count()).toBe(0);
+            await db.destroy();
+        })().then(done, done.fail);
+    });
 });

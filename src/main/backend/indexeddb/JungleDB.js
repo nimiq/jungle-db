@@ -165,7 +165,7 @@ class JungleDB {
      * Deletes an object store.
      * This method has to be called before connecting to the database.
      * @param {string} tableName
-     * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
+     * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}, indexNames:Array.<string>} [options]
      */
     deleteObjectStore(tableName, options = {}) {
         let { upgradeCondition = null } = options || {};

@@ -364,7 +364,6 @@ describe('Index', () => {
                     return;
                 }
 
-                if (runner.type === 'native') debugger;
                 let i = 0;
                 await index.valueStream((value, key) => {
                     i++;

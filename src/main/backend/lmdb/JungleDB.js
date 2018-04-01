@@ -251,13 +251,13 @@ class JungleDB {
      * Deletes an object store.
      * This method has to be called before connecting to the database.
      * @param {string} tableName
-     * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}} [options]
+     * @param {{upgradeCondition:?boolean|?function(oldVersion:number, newVersion:number):boolean}, indexNames:Array.<string>} [options]
      */
     deleteObjectStore(tableName, options = {}) {
-        let { upgradeCondition = null } = options || {};
+        let { upgradeCondition = null, indexNames = [] } = options || {};
 
         if (this._connected) throw new Error('Cannot delete ObjectStore while connected');
-        this._objectStoresToDelete.push({ tableName, upgradeCondition });
+        this._objectStoresToDelete.push({ tableName, upgradeCondition, indexNames });
     }
 
     /**
@@ -348,9 +348,12 @@ class JungleDB {
         // Upgrade database.
         if (this._dbVersion > storedVersion) {
             // Delete object stores, if requested.
-            for (const { tableName, upgradeCondition } of this._objectStoresToDelete) {
+            for (const { tableName, upgradeCondition, indexNames } of this._objectStoresToDelete) {
                 if (upgradeCondition === null || upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(storedVersion, this._dbVersion))) {
                     LMDBBaseBackend.truncate(this._db, tableName);
+                    for (const indexName of indexNames) {
+                        LMDBBaseBackend.truncate(this._db, `_${tableName}-${indexName}`);
+                    }
                 }
             }
             this._objectStoresToDelete = [];
