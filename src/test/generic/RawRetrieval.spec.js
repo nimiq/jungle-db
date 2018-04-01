@@ -7,7 +7,7 @@ describe('RawRetrieval', () => {
 
     const backends = [
         TestRunner.nativeRunner('test', 1, jdb => jdb.createObjectStore('testStore', {codec: TestCodec.instance, enableLruCache: false}), fill, 'without-cache'),
-        TestRunner.volatileRunner(() => JungleDB.createVolatileObjectStore(TestCodec.instance), fill),
+        TestRunner.volatileRunner(() => JungleDB.createVolatileObjectStore({codec: TestCodec.instance}), fill),
         TestRunner.nativeRunner('test', 1, jdb => jdb.createObjectStore('testStore', {codec: TestCodec.instance, enableLruCache: true}), fill, 'with-value-cache'),
         TestRunner.nativeRunner('test', 1, jdb => jdb.createObjectStore('testStore', {codec: TestCodec.instance, enableLruCache: true, rawLruCacheSize: 100}), fill, 'with-raw-cache')
     ];
