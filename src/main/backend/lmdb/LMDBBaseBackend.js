@@ -250,6 +250,12 @@ class LMDBBaseBackend {
             // >= lower / >= upper
             currentKey = this._decodeKey(cursor.goToRange(this._encodeKey(ascending ? query.lower : query.upper)));
 
+            // goToRange only goes to the first occurence of the key,
+            // so we need to jump manually to the last occurence of the key
+            if (!ascending && this._dupSort) {
+                currentKey = this._decodeKey(cursor.goToLastDup());
+            }
+
             // Did not find a key
             if (ascending && currentKey === null) {
                 cursor.close();

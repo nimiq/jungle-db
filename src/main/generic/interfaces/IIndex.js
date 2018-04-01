@@ -106,6 +106,32 @@ class IIndex {
     async minKeys(query=null) {} // eslint-disable-line no-unused-vars
 
     /**
+     * Iterates over the primary keys in a given range of secondary keys and direction.
+     * The order is determined by the secondary keys first and by the primary keys second.
+     * The callback is called for each primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @abstract
+     * @param {function(key:string):boolean} callback A predicate called for each key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    keyStream(callback, ascending=true, query=null) {} // eslint-disable-line no-unused-vars
+
+    /**
+     * Iterates over the values of the store in a given range of secondary keys and direction.
+     * The order is determined by the secondary keys first and by the primary keys second.
+     * The callback is called for each value and primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @abstract
+     * @param {function(value:*, key:string):boolean} callback A predicate called for each value and key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolved after all elements have been streamed.
+     */
+    valueStream(callback, ascending=true, query=null) {} // eslint-disable-line no-unused-vars
+
+    /**
      * Returns the count of entries, whose secondary key is in the given range.
      * If the optional query is not given, it returns the count of entries in the index.
      * If the query is of type KeyRange, it returns the count of entries, whose secondary key is within the given range.

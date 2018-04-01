@@ -289,6 +289,128 @@ describe('Index', () => {
                 await runner.destroy();
             })().then(done, done.fail);
         });
+
+        it(`correctly constructs key streams (${runner.type})`, (done) => {
+            (async function () {
+                // Write something into an object store.
+                let st = await runner.init(st => {
+                    st.createIndex('depth', ['a'], {keyEncoding: JungleDB.NUMBER_ENCODING});
+                });
+
+                await st.put('test1', {'v': 1, 'a': 123});
+                await st.put('test3', {'v': 3, 'a': 123});
+                await st.put('test2', {'v': 2, 'a': 123});
+                await st.put('test0', {'v': 0, 'a': 124});
+
+                const index = st.index('depth');
+
+                let i = 1;
+                await index.keyStream(key => {
+                    if (i === 4) i = 0;
+                    expect(key).toBe(`test${i}`);
+                    i++;
+                    return true;
+                });
+                expect(i).toBe(1);
+
+                i = 0;
+                await index.keyStream(key => {
+                    expect(key).toBe(`test${i}`);
+                    if (i === 0) i = 4;
+                    i--;
+                    return true;
+                }, false);
+                expect(i).toBe(0);
+
+                i = 3;
+                await index.keyStream(key => {
+                    expect(key).toBe(`test${i}`);
+                    i--;
+                    return true;
+                }, false, KeyRange.only(123));
+                expect(i).toBe(0);
+
+                i = 1;
+                await index.keyStream(key => {
+                    expect(key).toBe(`test${i}`);
+                    i++;
+                    return key !== 'test3';
+                }, true, KeyRange.lowerBound(121, true));
+                expect(i).toBe(4);
+
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
+
+        it(`correctly constructs value streams (${runner.type})`, (done) => {
+            (async function () {
+                // Write something into an object store.
+                let st = await runner.init(st => {
+                    st.createIndex('depth', ['a'], {keyEncoding: JungleDB.NUMBER_ENCODING});
+                });
+
+                await st.put('test1', {'v': 1, 'a': 123});
+                await st.put('test3', {'v': 3, 'a': 123});
+                await st.put('test2', {'v': 2, 'a': 123});
+                await st.put('test0', {'v': 0, 'a': 124});
+
+                const index = st.index('depth');
+
+                // Value streams currently do not work reliably in LevelDB
+                if (typeof LevelDBBackend !== 'undefined' && runner.type === 'native') {
+                    let threw = false;
+                    try {
+                        await index.valueStream(() => {});
+                    } catch (e) {
+                        threw = true;
+                    }
+                    expect(threw).toBe(true);
+                    await runner.destroy();
+                    return;
+                }
+
+                await st.get('test3');
+                let i = 1;
+                await index.valueStream((value, key) => {
+                    if (i === 4) i = 0;
+                    expect(key).toBe(`test${i}`);
+                    expect(value.v).toBe(i);
+                    i++;
+                    return true;
+                });
+                expect(i).toBe(1);
+
+                i = 0;
+                await index.valueStream((value, key) => {
+                    expect(key).toBe(`test${i}`);
+                    expect(value.v).toBe(i);
+                    if (i === 0) i = 4;
+                    i--;
+                    return true;
+                }, false);
+                expect(i).toBe(0);
+
+                i = 3;
+                await index.valueStream((value, key) => {
+                    expect(key).toBe(`test${i}`);
+                    expect(value.v).toBe(i);
+                    i--;
+                    return true;
+                }, false, KeyRange.only(123));
+                expect(i).toBe(0);
+
+                i = 1;
+                await index.valueStream((value, key) => {
+                    expect(key).toBe(`test${i}`);
+                    expect(value.v).toBe(i);
+                    i++;
+                    return key !== 'test3';
+                }, true, KeyRange.lowerBound(121, true));
+                expect(i).toBe(4);
+
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
     });
 
     it('only fills the index once', (done) => {

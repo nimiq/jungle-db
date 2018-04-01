@@ -235,6 +235,127 @@ class PersistentIndex extends LevelDBBackend {
     }
 
     /**
+     * Iterates over the primary keys in a given range of secondary keys and direction.
+     * The order is determined by the secondary keys first and by the primary keys second.
+     * The callback is called for each primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(key:string):boolean} callback A predicate called for each key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    keyStream(callback, ascending=true, query=null) {
+        return new Promise((resolve, error) => {
+            const stream = this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false, 'reverse': !ascending }));
+            let stopped = false;
+            stream.on('data', data => {
+                try {
+                    if (this._unique) {
+                        // Check unique entry
+                        if (!callback(data)) {
+                            stopped = true;
+                            stream.pause();
+                            stream.destroy();
+                        }
+                    } else {
+                        // Check all entries
+                        if (ascending) {
+                            for (let i = 0; i < data.length; i++) {
+                                if (!callback(data[i])) {
+                                    stopped = true;
+                                    stream.pause();
+                                    stream.destroy();
+                                    break;
+                                }
+                            }
+                        } else {
+                            for (let i = data.length - 1; i >= 0; i--) {
+                                if (!callback(data[i])) {
+                                    stopped = true;
+                                    stream.pause();
+                                    stream.destroy();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    error(e);
+                }
+            }).on('error', err => {
+                if (!stopped) {
+                    error(err);
+                }
+            }).on('end', () => {
+                resolve();
+            }).on('close', () => {
+                resolve();
+            });
+        });
+    }
+
+    /**
+     * Iterates over the values of the store in a given range of secondary keys and direction.
+     * The order is determined by the secondary keys first and by the primary keys second.
+     * The callback is called for each value and primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(value:*, key:string):boolean} callback A predicate called for each value and key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolved after all elements have been streamed.
+     */
+    async valueStream(callback, ascending=true, query=null) {
+        throw new Error('This method does not work reliably using LevelDB');
+        // return new Promise((resolve, error) => {
+        //     const stream = this._dbBackend.createReadStream(LevelDBTools.convertKeyRange(query, { 'values': true, 'keys': false, 'reverse': !ascending }));
+        //     let stopped = false;
+        //     stream.on('data', async data => {
+        //         try {
+        //             stream.pause();
+        //             let keys = data;
+        //             if (this._unique) {
+        //                 keys = [data];
+        //             }
+        //
+        //             // Check all entries
+        //             if (ascending) {
+        //                 for (let i = 0; i < keys.length; i++) {
+        //                     const value = await this._objectStore.get(keys[i]);
+        //                     if (!callback(value, keys[i])) {
+        //                         stopped = true;
+        //                         stream.pause();
+        //                         stream.destroy();
+        //                         break;
+        //                     }
+        //                 }
+        //             } else {
+        //                 for (let i = keys.length - 1; i >= 0; i--) {
+        //                     const value = await this._objectStore.get(keys[i]);
+        //                     if (!callback(value, keys[i])) {
+        //                         stopped = true;
+        //                         stream.pause();
+        //                         stream.destroy();
+        //                         break;
+        //                     }
+        //                 }
+        //             }
+        //             stream.resume();
+        //         } catch (e) {
+        //             error(e);
+        //         }
+        //     }).on('error', err => {
+        //         if (!stopped) {
+        //             error(err);
+        //         }
+        //     }).on('end', () => {
+        //         resolve();
+        //     }).on('close', () => {
+        //         resolve();
+        //     });
+        // });
+    }
+
+    /**
      * Returns the count of entries, whose secondary key is in the given range.
      * If the optional query is not given, it returns the count of entries in the index.
      * If the query is of type KeyRange, it returns the count of entries, whose secondary key is within the given range.

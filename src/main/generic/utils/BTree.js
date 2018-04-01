@@ -108,11 +108,11 @@ class LeafNode extends Node {
         // Find item matching the query.
         if (near === BTree.NEAR_MODE.GE) {
             for (let i=0, len=keys.length; i<len; ++i) {
-                if (key <= keys[i]) return i;
+                if (ComparisonUtils.compare(key, keys[i]) <= 0) return i;
             }
         } else if (near === BTree.NEAR_MODE.LE) {
             for (let i=keys.length - 1; i>=0; --i) {
-                if (key >= keys[i]) return i;
+                if (ComparisonUtils.compare(key, keys[i]) >= 0) return i;
             }
         } else {
             for (let i=0, len=keys.length; i<len; ++i) {
@@ -139,7 +139,7 @@ class LeafNode extends Node {
                 return -1;
             }
             // Update potential position.
-            if (key <= this._keys[i]) {
+            if (ComparisonUtils.compare(key, this._keys[i]) <= 0) {
                 insertPos = i;
                 break;
             }
@@ -192,7 +192,7 @@ class LeafNode extends Node {
         // Update parent: find position of old leaf.
         let pos = paNod.keys.length-1;
         for (let i=pos; i>=0; --i) {
-            if (paNod.keys[i] === frKey) {
+            if (ComparisonUtils.equals(paNod.keys[i], frKey)) {
                 pos = i;
                 break;
             }
@@ -268,7 +268,7 @@ class InnerNode extends Node {
         let insertPos = len;
         // Find position to insert.
         for (let i=0; i<len; ++i) {
-            if (key <= this._keys[i]) {
+            if (ComparisonUtils.compare(key, this._keys[i]) <= 0) {
                 insertPos = i;
                 break;
             }
@@ -882,7 +882,7 @@ class BTree {
         // TODO: it might be that there is no exact key match, then we do not need to skip!
         if (lower !== undefined) {
             let success = this.seek(lower, BTree.NEAR_MODE.GE);
-            if (success && lowerOpen) {
+            if (success && lowerOpen && ComparisonUtils.equals(lower, this.currentKey)) {
                 success = this.skip();
             }
             return success;
@@ -901,7 +901,7 @@ class BTree {
         // TODO: it might be that there is no exact key match, then we do not need to skip!
         if (upper !== undefined) {
             let success = this.seek(upper, BTree.NEAR_MODE.LE);
-            if (success && upperOpen) {
+            if (success && upperOpen && ComparisonUtils.equals(upper, this.currentKey)) {
                 success = this.skip(-1);
             }
             return success;

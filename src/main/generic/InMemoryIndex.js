@@ -115,7 +115,7 @@ class InMemoryIndex {
         const oldIKey = this._indexKey(key, oldValue);
         const newIKey = this._indexKey(key, value);
 
-        if (oldIKey !== newIKey) {
+        if (!ComparisonUtils.equals(oldIKey, newIKey)) {
             if (oldIKey !== undefined) {
                 this._remove(key, oldIKey);
             }
@@ -229,7 +229,8 @@ class InMemoryIndex {
     }
 
     /**
-     * Iterates over the keys in a given range and direction.
+     * Iterates over the primary keys in a given range of secondary keys and direction.
+     * The order is determined by the secondary keys first and by the primary keys second.
      * The callback is called for each primary key fulfilling the query
      * until it returns false and stops the iteration.
      * @param {function(key:string):boolean} callback A predicate called for each key until returning false.
@@ -238,10 +239,6 @@ class InMemoryIndex {
      * @returns {Promise} The promise resolves after all elements have been streamed.
      */
     keyStream(callback, ascending=true, query=null) {
-        if (!this._unique) {
-            throw new Error('Unsupported operation for non-unique indices');
-        }
-
         // Find lower bound and start from there.
         if (!(query instanceof KeyRange)) {
             if (ascending) {
@@ -261,10 +258,29 @@ class InMemoryIndex {
             }
         }
 
+        outer:
         while (!(query instanceof KeyRange) || query.includes(this._tree.currentKey)) {
-            if (!callback(this._tree.currentRecord)) {
-                break;
+            if (this._unique) {
+                // Check unique entry
+                if (!callback(this._tree.currentRecord)) break;
+            } else {
+                // Check all entries
+                const keys = this._tree.currentRecord.values();
+                if (ascending) {
+                    for (let i = 0; i < keys.length; i++) {
+                        if (!callback(keys[i])) {
+                            break outer;
+                        }
+                    }
+                } else {
+                    for (let i = keys.length - 1; i >= 0; i--) {
+                        if (!callback(keys[i])) {
+                            break outer;
+                        }
+                    }
+                }
             }
+
             if (!this._tree.skip(ascending ? 1 : -1)) {
                 break;
             }
@@ -273,7 +289,8 @@ class InMemoryIndex {
     }
 
     /**
-     * Iterates over the keys and values in a given range and direction.
+     * Iterates over the values of the store in a given range of secondary keys and direction.
+     * The order is determined by the secondary keys first and by the primary keys second.
      * The callback is called for each value and primary key fulfilling the query
      * until it returns false and stops the iteration.
      * @param {function(value:*, key:string):boolean} callback A predicate called for each value and key until returning false.
@@ -282,10 +299,6 @@ class InMemoryIndex {
      * @returns {Promise} The promise resolved after all elements have been streamed.
      */
     async valueStream(callback, ascending=true, query=null) {
-        if (!this._unique) {
-            throw new Error('Unsupported operation for non-unique indices');
-        }
-
         // Find lower bound and start from there.
         if (!(query instanceof KeyRange)) {
             if (ascending) {
@@ -305,10 +318,29 @@ class InMemoryIndex {
             }
         }
 
+        outer:
         while (!(query instanceof KeyRange) || query.includes(this._tree.currentKey)) {
-            if (!callback(await this._objectStore.get(this._tree.currentRecord), this._tree.currentRecord)) {
-                break;
+            if (this._unique) {
+                // Check unique entry
+                if (!callback(await this._objectStore.get(this._tree.currentRecord), this._tree.currentRecord)) break; // eslint-disable-line no-await-in-loop
+            } else {
+                // Check all entries
+                const keys = this._tree.currentRecord.values();
+                if (ascending) {
+                    for (let i = 0; i < keys.length; i++) {
+                        if (!callback(await this._objectStore.get(keys[i]), keys[i])) { // eslint-disable-line no-await-in-loop
+                            break outer;
+                        }
+                    }
+                } else {
+                    for (let i = keys.length - 1; i >= 0; i--) {
+                        if (!callback(await this._objectStore.get(keys[i]), keys[i])) { // eslint-disable-line no-await-in-loop
+                            break outer;
+                        }
+                    }
+                }
             }
+
             if (!this._tree.skip(ascending ? 1 : -1)) {
                 break;
             }

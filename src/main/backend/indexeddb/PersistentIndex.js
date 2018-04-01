@@ -272,6 +272,79 @@ class PersistentIndex {
     }
 
     /**
+     * Iterates over the primary keys in a given range of secondary keys and direction.
+     * The order is determined by the secondary keys first and by the primary keys second.
+     * The callback is called for each primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(key:string):boolean} callback A predicate called for each key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolves after all elements have been streamed.
+     */
+    async keyStream(callback, ascending=true, query=null) {
+        query = IDBTools.convertKeyRange(query);
+        const db = await this._objectStore.backend;
+        return new Promise((resolve, reject) => {
+            const index = this._index(db);
+            const openCursorRequest = index.openKeyCursor
+                ? index.openKeyCursor(query, ascending ? 'next' : 'prev')
+                : index.openCursor(query, ascending ? 'next' : 'prev');
+            openCursorRequest.onsuccess = event => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    try {
+                        if (callback(cursor.primaryKey)) {
+                            cursor.continue();
+                        } else {
+                            resolve();
+                        }
+                    } catch (e) {
+                        reject(e);
+                    }
+                } else {
+                    resolve();
+                }
+            };
+            openCursorRequest.onerror = () => reject(openCursorRequest.error);
+        });
+    }
+
+    /**
+     * Iterates over the values of the store in a given range of secondary keys and direction.
+     * The order is determined by the secondary keys first and by the primary keys second.
+     * The callback is called for each value and primary key fulfilling the query
+     * until it returns false and stops the iteration.
+     * @param {function(value:*, key:string):boolean} callback A predicate called for each value and key until returning false.
+     * @param {boolean} ascending Determines the direction of traversal.
+     * @param {KeyRange} query An optional KeyRange to narrow down the iteration space.
+     * @returns {Promise} The promise resolved after all elements have been streamed.
+     */
+    async valueStream(callback, ascending=true, query=null) {
+        query = IDBTools.convertKeyRange(query);
+        const db = await this._objectStore.backend;
+        return new Promise((resolve, reject) => {
+            const openCursorRequest = this._index(db).openCursor(query, ascending ? 'next' : 'prev');
+            openCursorRequest.onsuccess = event => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    try {
+                        if (callback(this._objectStore.decode(cursor.value, cursor.primaryKey), cursor.primaryKey)) {
+                            cursor.continue();
+                        } else {
+                            resolve();
+                        }
+                    } catch (e) {
+                        reject(e);
+                    }
+                } else {
+                    resolve();
+                }
+            };
+            openCursorRequest.onerror = () => reject(openCursorRequest.error);
+        });
+    }
+
+    /**
      * Returns the count of entries, whose secondary key is in the given range.
      * If the optional query is not given, it returns the count of entries in the index.
      * If the query is of type KeyRange, it returns the count of entries, whose secondary key is within the given range.

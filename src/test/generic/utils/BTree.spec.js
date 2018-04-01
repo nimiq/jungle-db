@@ -138,4 +138,15 @@ describe('BTree', () => {
         expect(btree.currentKey).toBe(4);
         expect(btree.currentRecord).toBe('value4');
     });
+
+    it('can go to open bounds', () => {
+        const btree = new BTree();
+
+        btree.insert(123, 'test');
+        btree.insert(124, 'test');
+
+        expect(btree.goToLowerBound(1, true)).toBe(true);
+        expect(btree.currentKey).toBe(123);
+        expect(btree.currentRecord).toBe('test');
+    });
 });
