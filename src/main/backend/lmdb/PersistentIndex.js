@@ -15,7 +15,7 @@ class PersistentIndex extends LMDBBaseBackend {
      */
     constructor(objectStore, db, indexName, keyPath, multiEntry = false, unique = false, keyEncoding = null) {
         const prefix = `_${objectStore.tableName}-${indexName}`;
-        super(db, prefix, { encode: x => x, decode: x => x, valueEncoding: JungleDB.STRING_ENCODING },
+        super(db, prefix, { encode: x => x, decode: x => x, valueEncoding: objectStore._keyEncoding || JungleDB.STRING_ENCODING },
             { keyEncoding: keyEncoding, dupSort: true });
         this._prefix = prefix;
 
