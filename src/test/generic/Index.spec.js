@@ -208,6 +208,87 @@ describe('Index', () => {
                 await runner.destroy();
             })().then(done, done.fail);
         });
+
+        it(`returns ordered results (${runner.type})`, (done) => {
+            (async function () {
+                // Write something into an object store.
+                let st = await runner.init(st => {
+                    st.createIndex('depth', ['a'], {keyEncoding: JungleDB.NUMBER_ENCODING});
+                });
+
+                await st.put('test1', {'v': 1, 'a': 123});
+                await st.put('test3', {'v': 3, 'a': 123});
+                await st.put('test2', {'v': 2, 'a': 123});
+                await st.put('test0', {'v': 0, 'a': 124});
+
+                let keys = await st.index('depth').keys();
+                let i = 1;
+                for (const key of keys) {
+                    if (i === 4) i = 0;
+                    expect(key).toBe(`test${i}`);
+                    i++;
+                }
+
+                let values = await st.index('depth').values();
+                i = 1;
+                for (const value of values) {
+                    if (i === 4) i = 0;
+                    expect(value.v).toBe(i);
+                    i++;
+                }
+
+                keys = await st.index('depth').keys(KeyRange.only(123));
+                i = 1;
+                for (const key of keys) {
+                    expect(key).toBe(`test${i}`);
+                    i++;
+                }
+
+                values = await st.index('depth').values(KeyRange.only(123));
+                i = 1;
+                for (const value of values) {
+                    expect(value.v).toBe(i);
+                    i++;
+                }
+
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
+
+        it(`correctly processes limited queries (${runner.type})`, (done) => {
+            (async function () {
+                const st = await runner.init(st => {
+                    st.createIndex('depth', ['a'], {keyEncoding: JungleDB.NUMBER_ENCODING});
+                });
+
+                function expectLimited(given, expected, limit) {
+                    const size = Array.isArray(given) ? given.length : given.size;
+                    expect(size).toBe(limit);
+                    expect(new Set(given)).toEqual(new Set(given).intersection(new Set(expected)));
+                }
+
+                await st.put('test1', {'v': 1, 'a': 123});
+                await st.put('test3', {'v': 3, 'a': 123});
+                await st.put('test2', {'v': 2, 'a': 123});
+                await st.put('test0', {'v': 0, 'a': 124});
+
+                let keys = await st.index('depth').keys(/*query*/ null, 2);
+                expectLimited(keys, new Set(['test1', 'test2']), 2);
+
+                let values = await st.index('depth').values(/*query*/ null, 3);
+                values = values.map(o => o.v);
+                expectLimited(values, [1, 2, 3], 3);
+
+                keys = await st.index('depth').keys(KeyRange.only(123), 1);
+                expectLimited(keys, new Set(['test1']), 1);
+
+                values = await st.index('depth').values(KeyRange.only(123), 0);
+                values = values.map(o => o.v);
+                expectLimited(values, [], 0);
+
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
     });
 
     it('only fills the index once', (done) => {

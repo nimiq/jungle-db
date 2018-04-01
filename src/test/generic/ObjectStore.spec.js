@@ -287,5 +287,48 @@ describe('ObjectStore', () => {
                 await runner.destroy();
             })().then(done, done.fail);
         });
+
+        it(`returns ordered results (${runner.type})`, (done) => {
+            (async function () {
+                // Write something into an object store.
+                let st = await runner.init();
+                await st.truncate();
+
+                await st.put('test1', {'v': 1, 'a': 123});
+                await st.put('test3', {'v': 3, 'a': 123});
+                await st.put('test2', {'v': 2, 'a': 123});
+                await st.put('test0', {'v': 0, 'a': 124});
+
+                let keys = await st.keys();
+                let i = 0;
+                for (const key of keys) {
+                    expect(key).toBe(`test${i}`);
+                    i++;
+                }
+
+                let values = await st.values();
+                i = 0;
+                for (const value of values) {
+                    expect(value.v).toBe(i);
+                    i++;
+                }
+
+                keys = await st.keys(KeyRange.lowerBound('test2'));
+                i = 2;
+                for (const key of keys) {
+                    expect(key).toBe(`test${i}`);
+                    i++;
+                }
+
+                values = await st.values(KeyRange.upperBound('test1'));
+                i = 0;
+                for (const value of values) {
+                    expect(value.v).toBe(i);
+                    i++;
+                }
+
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
     });
 });
