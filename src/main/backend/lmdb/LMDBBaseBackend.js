@@ -246,6 +246,13 @@ class LMDBBaseBackend {
         // Find lower bound and start from there.
         if (!(query instanceof KeyRange) || (ascending ? query.lower : query.upper) === undefined) {
             currentKey = this._decodeKey(ascending ? cursor.goToFirst() : cursor.goToLast());
+
+            // Did not find a key
+            if (currentKey === null) {
+                cursor.close();
+                txn.commit();
+                return;
+            }
         } else {
             // >= lower / >= upper
             currentKey = this._decodeKey(cursor.goToRange(this._encodeKey(ascending ? query.lower : query.upper)));

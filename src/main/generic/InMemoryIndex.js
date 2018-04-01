@@ -207,7 +207,9 @@ class InMemoryIndex {
 
         // Find lower bound and start from there.
         if (!(query instanceof KeyRange)) {
-            this._tree.goTop();
+            if (!this._tree.goTop()) {
+                return resultSet; // Empty
+            }
         } else {
             if (!this._tree.goToLowerBound(query.lower, query.lowerOpen)) {
                 return resultSet; // empty
@@ -242,9 +244,13 @@ class InMemoryIndex {
         // Find lower bound and start from there.
         if (!(query instanceof KeyRange)) {
             if (ascending) {
-                this._tree.goTop();
+                if (!this._tree.goTop()) {
+                    return Promise.resolve();
+                }
             } else {
-                this._tree.goBottom();
+                if (!this._tree.goBottom()) {
+                    return Promise.resolve();
+                }
             }
         } else {
             if (ascending) {
@@ -302,9 +308,13 @@ class InMemoryIndex {
         // Find lower bound and start from there.
         if (!(query instanceof KeyRange)) {
             if (ascending) {
-                this._tree.goTop();
+                if (!this._tree.goTop()) {
+                    return;
+                }
             } else {
-                this._tree.goBottom();
+                if (!this._tree.goBottom()) {
+                    return;
+                }
             }
         } else {
             if (ascending) {

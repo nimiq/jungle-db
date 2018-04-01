@@ -349,11 +349,6 @@ describe('Index', () => {
                     st.createIndex('depth', ['a'], {keyEncoding: JungleDB.NUMBER_ENCODING});
                 });
 
-                await st.put('test1', {'v': 1, 'a': 123});
-                await st.put('test3', {'v': 3, 'a': 123});
-                await st.put('test2', {'v': 2, 'a': 123});
-                await st.put('test0', {'v': 0, 'a': 124});
-
                 const index = st.index('depth');
 
                 // Value streams currently do not work reliably in LevelDB
@@ -369,8 +364,20 @@ describe('Index', () => {
                     return;
                 }
 
+                let i = 0;
+                await index.valueStream((value, key) => {
+                    i++;
+                    return true;
+                });
+                expect(i).toBe(0);
+
+                await st.put('test1', {'v': 1, 'a': 123});
+                await st.put('test3', {'v': 3, 'a': 123});
+                await st.put('test2', {'v': 2, 'a': 123});
+                await st.put('test0', {'v': 0, 'a': 124});
+
                 await st.get('test3');
-                let i = 1;
+                i = 1;
                 await index.valueStream((value, key) => {
                     if (i === 4) i = 0;
                     expect(key).toBe(`test${i}`);
