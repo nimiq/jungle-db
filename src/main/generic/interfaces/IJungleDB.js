@@ -60,10 +60,10 @@ class IJungleDB {
     /**
      * Creates a volatile object store (non-persistent).
      * @abstract
-     * @param {function(obj:*):*} [codec] A codec for the object store.
-     * @returns {IObjectStore}
+     * @param {{codec:?ICodec}} [options] An options object.
+     * @returns {ObjectStore}
      */
-    static createVolatileObjectStore(codec=null) {} // eslint-disable-line no-unused-vars
+    static createVolatileObjectStore(options = {}) {} // eslint-disable-line no-unused-vars
 
     /**
      * Is used to commit multiple transactions atomically.
