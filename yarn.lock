@@ -5462,7 +5462,7 @@ node-abi@^2.2.0:
   dependencies:
     semver "^5.4.1"
 
-node-lmdb@^0.5.1:
+node-lmdb@0.5.1:
   version "0.5.1"
   resolved "https://registry.yarnpkg.com/node-lmdb/-/node-lmdb-0.5.1.tgz#a1ac3a8641ccd22512d0d8da17569547ef4b1a25"
   dependencies:
