@@ -259,7 +259,7 @@ class LMDBBaseBackend {
 
             // goToRange only goes to the first occurence of the key,
             // so we need to jump manually to the last occurence of the key
-            if (!ascending && this._dupSort) {
+            if (!ascending && currentKey !== null && this._dupSort) {
                 currentKey = this._decodeKey(cursor.goToLastDup());
             }
 

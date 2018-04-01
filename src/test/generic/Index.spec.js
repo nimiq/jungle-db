@@ -364,11 +364,19 @@ describe('Index', () => {
                     return;
                 }
 
+                if (runner.type === 'native') debugger;
                 let i = 0;
                 await index.valueStream((value, key) => {
                     i++;
                     return true;
                 });
+                expect(i).toBe(0);
+
+                i = 0;
+                await index.valueStream((value, key) => {
+                    i++;
+                    return true;
+                }, false, KeyRange.only(123));
                 expect(i).toBe(0);
 
                 await st.put('test1', {'v': 1, 'a': 123});

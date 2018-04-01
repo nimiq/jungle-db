@@ -67,7 +67,7 @@ class JungleDB {
 
         // Delete existing ObjectStores.
         for (const { tableName, upgradeCondition } of this._objectStoresToDelete) {
-            if (upgradeCondition === null || upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(event.oldVersion, event.newVersion))) {
+            if (db.objectStoreNames.contains(tableName) && (upgradeCondition === null || upgradeCondition === true || (typeof upgradeCondition === 'function' && upgradeCondition(event.oldVersion, event.newVersion)))) {
                 db.deleteObjectStore(tableName);
             }
         }
