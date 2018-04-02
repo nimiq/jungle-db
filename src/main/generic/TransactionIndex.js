@@ -39,7 +39,14 @@ class TransactionIndex extends InMemoryIndex {
         this._databaseDir = name;
     }
 
-    async checkUniqueConstraint(key, value) {
+    /**
+     * Checks for a violation of a unique constraint depending on whether the pair is already in the store or not.
+     * @param {*} key
+     * @param {*} value
+     * @param {boolean} [isInStore]
+     * @returns {Promise<void>}
+     */
+    async checkUniqueConstraint(key, value, isInStore = true) {
         if (!this.unique) {
             return;
         }
@@ -52,8 +59,8 @@ class TransactionIndex extends InMemoryIndex {
             }
             // Check whether they already exist.
             for (const secondaryKey of iKey) {
-                const count = await this._index.count(KeyRange.only(secondaryKey));
-                if (count > 0) {
+                const count = await this.count(KeyRange.only(secondaryKey));
+                if (count > (isInStore ? 1 : 0)) {
                     throw new Error(`Uniqueness constraint violated for key ${secondaryKey} on path ${this._keyPath}`);
                 }
             }

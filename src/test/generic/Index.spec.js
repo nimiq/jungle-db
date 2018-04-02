@@ -209,6 +209,7 @@ describe('Index', () => {
                 // TODO: Fix behaviour when keys are replaced
                 await st.put('test2', {'val': 124, 'a': {'b': 2}});
                 await st.put('test3', {'val': 125, 'a': {'b': 3}});
+
                 threw = false;
                 tx = st.transaction();
                 tx.removeSync('test');

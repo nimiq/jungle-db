@@ -191,7 +191,7 @@ class Transaction {
         // Check indices.
         const constraints = [];
         for (const index of this._indices.values()) {
-            constraints.push(index.checkUniqueConstraint(key, value));
+            constraints.push(index.checkUniqueConstraint(key, value, /*isInStore*/ false));
         }
         await Promise.all(constraints);
 
