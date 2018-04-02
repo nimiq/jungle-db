@@ -113,4 +113,16 @@ describe('LRUMap', () => {
             expect(lru.has(`key${i}`)).toBe(i !== 0);
         }
     });
+
+    it('works with empty LRU maps', () => {
+        const lru = new LRUMap(0);
+
+        // Fill map.
+        for (let i=0; i<3; ++i) {
+            lru.set(`key${i}`, `value${i}`);
+        }
+
+        // Check contents.
+        expect(lru.size).toBe(0);
+    });
 });

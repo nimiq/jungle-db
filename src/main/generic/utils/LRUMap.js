@@ -146,8 +146,10 @@ class LRUMap {
         if (this.size >= this._maxSize) {
             this.evict();
         }
-        this._map.set(key, value);
-        this.access(key);
+        if (this.size < this._maxSize) {
+            this._map.set(key, value);
+            this.access(key);
+        }
     }
 
     /**
