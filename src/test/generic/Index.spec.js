@@ -205,6 +205,24 @@ describe('Index', () => {
                 await tx.abort();
                 expect(threw).toBe(true);
 
+                // Test that we can remove values and put them into the store again
+                // TODO: Fix behaviour when keys are replaced
+                await st.put('test2', {'val': 124, 'a': {'b': 2}});
+                await st.put('test3', {'val': 125, 'a': {'b': 3}});
+                threw = false;
+                tx = st.transaction();
+                tx.removeSync('test');
+                tx.removeSync('test2');
+                tx.removeSync('test3');
+                try {
+                    tx.putSync('test4', {'val': 123, 'a': {'b': 1}});
+                    tx.putSync('test5', {'val': 125, 'a': {'b': 3}});
+                } catch (e) {
+                    threw = true;
+                }
+                await tx.abort();
+                expect(threw).toBe(false);
+
                 await runner.destroy();
             })().then(done, done.fail);
         });
