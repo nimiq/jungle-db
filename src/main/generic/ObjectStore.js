@@ -619,7 +619,7 @@ class ObjectStore {
 
     toStringFull() {
         return `ObjectStore{
-    stack=[${this._stateStack.map(tx => `{tx=${tx.toStringShort()}, open=${this._openTransactions.get(tx.id) ? this._openTransactions.get(tx.id).size : 0}}`)}],
+    stack=[${this._stateStack.map(tx => `{tx=${tx}, open=${this._openTransactions.get(tx.id) ? this._openTransactions.get(tx.id).size : 0}}`)}],
     db=${this._db}/${this._name ? this._name : 'unnamed'}
 }`;
     }
@@ -743,5 +743,9 @@ class TransactionInfo {
      */
     isFlushable() {
         return this.parent && this.parent.numOpenChildren === 0 && (this.transaction.dependency === null || this.parent.isBackend());
+    }
+
+    toString() {
+        return this.transaction.toStringShort();
     }
 }
