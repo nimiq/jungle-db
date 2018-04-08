@@ -110,8 +110,15 @@ class LRUMap {
      * @private
      */
     _access(key) {
-        this._accessQueue.remove(key);
-        this._accessQueue.push(key);
+        /*
+         * Just removing and inserting the key again may take seconds (yes, seconds!).
+         * This is due to the JavaScript Map implementation as illustrated in this benchmark:
+         * https://gist.github.com/paberr/1d916343631c0e42f8311a6f2782f30d
+         *
+         * 100,000 accesses using Map remove/insert: ~4s
+         * 100,000 accesses using optimised version: ~9ms
+         */
+        this._accessQueue.moveBack(key);
     }
 
     /**
