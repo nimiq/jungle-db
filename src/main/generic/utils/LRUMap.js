@@ -17,10 +17,8 @@ class LRUMap {
         this._maxSize = maxSize;
         /** @type {Map.<K,V>} */
         this._map = new Map();
-        /** @type {Map.<K,number>} */
-        this._numAccesses = new Map();
-        /** @type {LinkedList.<K>} */
-        this._accessQueue = new LinkedList();
+        /** @type {UniqueLinkedList.<K>} */
+        this._accessQueue = new UniqueLinkedList();
     }
 
     /**
@@ -35,7 +33,6 @@ class LRUMap {
      * Clears the map.
      */
     clear() {
-        this._numAccesses.clear();
         this._accessQueue.clear();
         return this._map.clear();
     }
@@ -46,6 +43,7 @@ class LRUMap {
      * @returns {boolean} Whether an entry was deleted.
      */
     delete(key) {
+        this._accessQueue.remove(key);
         return this._map.delete(key);
     }
 
@@ -72,7 +70,7 @@ class LRUMap {
      * @returns {V} The value the key maps to (or undefined if not present).
      */
     get(key) {
-        this.access(key);
+        this._access(key);
         return this._map.get(key);
     }
 
@@ -100,19 +98,7 @@ class LRUMap {
     evict(k=1) {
         while (k > 0 && this._accessQueue.length > 0) {
             const oldest = this._accessQueue.shift();
-            let accesses = this._numAccesses.get(oldest);
-            --accesses;
-            this._numAccesses.set(oldest, accesses);
-            // Check if not used in the meanwhile.
-            if (accesses !== 0) {
-                continue;
-            }
-            // Otherwise delete that.
-            this._numAccesses.delete(oldest);
-            // If it was not present however, we need to search further.
-            if (!this.delete(oldest)) {
-                continue;
-            }
+            this._map.delete(oldest);
             --k;
         }
     }
@@ -121,17 +107,10 @@ class LRUMap {
      * Marks a key as accessed.
      * This implicitly makes the key the most recently used key.
      * @param {K} key The key to mark as accessed.
+     * @private
      */
-    access(key) {
-        if (!this._map.has(key)) {
-            return;
-        }
-        let accesses = 0;
-        if (this._numAccesses.has(key)) {
-            accesses = this._numAccesses.get(key);
-        }
-        ++accesses;
-        this._numAccesses.set(key, accesses);
+    _access(key) {
+        this._accessQueue.remove(key);
         this._accessQueue.push(key);
     }
 
@@ -148,7 +127,7 @@ class LRUMap {
         }
         if (this.size < this._maxSize) {
             this._map.set(key, value);
-            this.access(key);
+            this._access(key);
         }
     }
 

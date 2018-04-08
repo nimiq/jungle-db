@@ -22,6 +22,8 @@ describe('LRUMap', () => {
             lru.set(`key${i}`, `value${i}`);
         }
 
+        expect(lru.size).toBe(2);
+
         // Check contents.
         for (let i=0; i<3; ++i) {
             expect(lru.has(`key${i}`)).toEqual(i > 0);
@@ -38,6 +40,8 @@ describe('LRUMap', () => {
                 lru.get(`key0`);
             }
         }
+
+        expect(lru.size).toBe(2);
 
         // Check contents.
         for (let i=0; i<3; ++i) {
@@ -73,6 +77,8 @@ describe('LRUMap', () => {
 
         lru.evict(2);
 
+        expect(lru.size).toBe(1);
+
         // Check contents.
         for (const [key, value] of lru) {
             expect(key).toEqual('key2');
@@ -90,6 +96,8 @@ describe('LRUMap', () => {
 
         lru.clear();
 
+        expect(lru.size).toBe(0);
+
         // Check contents.
         for (const [key, value] of lru) {
             expect(true).toBe(false);
@@ -99,8 +107,6 @@ describe('LRUMap', () => {
 
     it('does not exceed maxSize', () => {
         const lru = new LRUMap(3);
-
-        lru.access('test');
 
         // Fill map.
         for (let i=0; i<4; ++i) {
