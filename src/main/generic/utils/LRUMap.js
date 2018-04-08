@@ -19,8 +19,8 @@ class LRUMap {
         this._map = new Map();
         /** @type {Map.<K,number>} */
         this._numAccesses = new Map();
-        /** @type {Array.<K>} */
-        this._accessQueue = [];
+        /** @type {LinkedList.<K>} */
+        this._accessQueue = new LinkedList();
     }
 
     /**
@@ -36,7 +36,7 @@ class LRUMap {
      */
     clear() {
         this._numAccesses.clear();
-        this._accessQueue = [];
+        this._accessQueue.clear();
         return this._map.clear();
     }
 

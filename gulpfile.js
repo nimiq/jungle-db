@@ -45,6 +45,7 @@ const sources = {
         './src/main/generic/utils/ComparisonUtils.js',
         './src/main/generic/utils/JSONUtils.js',
         './src/main/generic/utils/Log.js',
+        './src/main/generic/utils/LinkedList.js',
         './src/main/generic/utils/LRUMap.js',
         './src/main/generic/utils/ObjectUtils.js',
         './src/main/generic/utils/SetUtils.js',
