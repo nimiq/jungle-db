@@ -271,7 +271,7 @@ class LMDBBaseBackend {
             }
 
             // it might be that it is not included because of lower open
-            if (!query.includes(currentKey)) {
+            if (!query.includes(currentKey) && (ascending ? query.lowerOpen : query.upperOpen)) {
                 currentKey = this._decodeKey(ascending ? cursor.goToNext() : cursor.goToPrev());
             }
 
