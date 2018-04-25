@@ -371,6 +371,8 @@ class ObjectStore {
         if (info.parent && info.parent.numOpenChildren === 0) {
             await this._flattenState();
         }
+
+        this._transactions.delete(tx.id);
         return true;
     }
 
