@@ -368,6 +368,8 @@ class JungleDB {
             backend.init(storedVersion, this._dbVersion);
         }
 
+        this._connected = true;
+
         // Upgrade database (part 2).
         if (this._dbVersion > storedVersion) {
             // Call user defined function if requested.
@@ -375,8 +377,6 @@ class JungleDB {
                 await this._onUpgradeNeeded(storedVersion, this._dbVersion, this);
             }
         }
-
-        this._connected = true;
     }
 
     /**
@@ -422,7 +422,7 @@ JungleDB.JSON_ENCODING = {
  * @type {ILMDBEncoding}
  */
 JungleDB.BINARY_ENCODING = {
-    encode: x => new Buffer(x),
+    encode: x => Buffer.from(x),
     decode: x => x,
     encoding: JungleDB.Encoding.BINARY
 };

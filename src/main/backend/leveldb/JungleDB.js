@@ -153,6 +153,8 @@ class JungleDB {
         // The order of the above promises does not matter.
         await Promise.all(promises);
 
+        this._connected = true;
+
         // Upgrade database (part 2).
         if (this._dbVersion > storedVersion) {
             // Call user defined function if requested.
@@ -160,8 +162,6 @@ class JungleDB {
                 await this._onUpgradeNeeded(storedVersion, this._dbVersion, this);
             }
         }
-
-        this._connected = true;
     }
 
     /** @type {boolean} Whether a connection is established. */

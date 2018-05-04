@@ -17,6 +17,7 @@ class JungleDB {
         if (dbVersion <= 0) throw new Error('The version provided must not be less or equal to 0');
         this._databaseDir = name;
         this._dbVersion = dbVersion;
+        this._oldDbVersion = null;
         this._onUpgradeNeeded = options.onUpgradeNeeded;
         this._connected = false;
         this._objectStores = new Map();
@@ -44,9 +45,15 @@ class JungleDB {
         const that = this;
 
         return new Promise((resolve, reject) => {
-            request.onsuccess = () => {
+            request.onsuccess = async () => {
                 that._connected = true;
                 that._db = request.result;
+
+                // Call user defined function if requested.
+                if (that._oldDbVersion !== null && that._onUpgradeNeeded) {
+                    await that._onUpgradeNeeded(that._oldDbVersion, that._dbVersion, that);
+                }
+
                 resolve(request.result);
             };
 
@@ -87,12 +94,10 @@ class JungleDB {
             // Create indices.
             backend.init(IDBobjStore, event.oldVersion, event.newVersion);
         }
-        this._objectStoreBackends.clear();
 
-        // Call user defined function if requested.
-        if (this._onUpgradeNeeded) {
-            await this._onUpgradeNeeded(event.oldVersion, event.newVersion, this);
-        }
+        this._oldDbVersion = event.oldVersion;
+
+        this._objectStoreBackends.clear();
     }
 
     /** @type {IDBDatabase} The underlying IDBDatabase. */

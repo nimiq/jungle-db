@@ -254,4 +254,43 @@ describe('JungleDB', () => {
             await db.destroy();
         })().then(done, done.fail);
     });
+
+    it('can change entries in onUpgradeNeeded callback', (done) => {
+        (async function () {
+            // Write something into an object store.
+            let upgraded = false;
+            let db = new JungleDB('test', 1, {
+                onUpgradeNeeded: () => {
+                    upgraded = true;
+                }
+            });
+            let st = db.createObjectStore('testStore');
+            await db.connect();
+            expect(upgraded).toBe(true);
+            await st.put('test', 'value');
+            await st.put('test2', 'value2');
+            await db.close();
+
+            // Create another index
+            upgraded = false;
+            db = new JungleDB('test', 2, {
+                onUpgradeNeeded: async (oldVersion, newVersion, jdb) => {
+                    upgraded = true;
+                    const st = jdb.getObjectStore('testStore');
+                    const tx = st.transaction();
+                    await st.valueStream((value, key) => {
+                        tx.putSync(key, 'new' + value);
+                        return true;
+                    });
+                    await tx.commit();
+                }
+            });
+            st = db.createObjectStore('testStore');
+            await db.connect();
+            expect(upgraded).toBe(true);
+            expect(await st.get('test')).toBe('newvalue');
+            expect(await st.get('test2')).toBe('newvalue2');
+            await db.destroy();
+        })().then(done, done.fail);
+    });
 });
