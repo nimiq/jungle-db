@@ -5413,9 +5413,9 @@ node-abi@^2.2.0:
   dependencies:
     semver "^5.4.1"
 
-node-lmdb@0.5.1:
-  version "0.5.1"
-  resolved "https://registry.yarnpkg.com/node-lmdb/-/node-lmdb-0.5.1.tgz#a1ac3a8641ccd22512d0d8da17569547ef4b1a25"
+node-lmdb@paberr/node-lmdb#af876c67055cc7cf0b3c1949e472484aa34410de:
+  version "0.5.4"
+  resolved "https://codeload.github.com/paberr/node-lmdb/tar.gz/af876c67055cc7cf0b3c1949e472484aa34410de"
   dependencies:
     bindings "^1.2.1"
     nan "^2.6.2"

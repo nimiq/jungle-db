@@ -333,6 +333,9 @@ describe('JungleDB', () => {
             expect(upgraded).toBe(true);
             expect(await st.get('test')).toBeUndefined();
             expect(await st2.get('test2')).toBeUndefined();
+            await st2.put('test2', 'value2');
+            expect(await st2.get('test2')).toBe('value2');
+            await st2.truncate();
             await db.destroy();
         })().then(done, done.fail);
     });
