@@ -357,9 +357,6 @@ class JungleDB {
                 }
             }
             this._objectStoresToDelete = [];
-
-            // The order of the above promises does not matter.
-            this._writeDBVersion(this._dbVersion);
         }
 
         // Create new ObjectStores.
@@ -376,6 +373,9 @@ class JungleDB {
             if (this._onUpgradeNeeded) {
                 await this._onUpgradeNeeded(storedVersion, this._dbVersion, this);
             }
+
+            // The order of the above promises does not matter.
+            this._writeDBVersion(this._dbVersion);
         }
     }
 

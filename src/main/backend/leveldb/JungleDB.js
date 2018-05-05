@@ -140,7 +140,6 @@ class JungleDB {
 
             // The order of the above promises does not matter.
             await Promise.all(promises);
-            await this._writeDBVersion(this._dbVersion);
             promises = [];
         }
 
@@ -161,6 +160,8 @@ class JungleDB {
             if (this._onUpgradeNeeded) {
                 await this._onUpgradeNeeded(storedVersion, this._dbVersion, this);
             }
+
+            await this._writeDBVersion(this._dbVersion);
         }
     }
 
