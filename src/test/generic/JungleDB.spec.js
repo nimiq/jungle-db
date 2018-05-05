@@ -293,4 +293,47 @@ describe('JungleDB', () => {
             await db.destroy();
         })().then(done, done.fail);
     });
+
+    it('can truncate tables in onUpgradeNeeded callback', (done) => {
+        (async function () {
+            // Write something into an object store.
+            let upgraded = false;
+            let db = new JungleDB('test', 1, {
+                onUpgradeNeeded: () => {
+                    upgraded = true;
+                }
+            });
+            let st = db.createObjectStore('testStore');
+            let st2 = db.createObjectStore('testStore2');
+            await db.connect();
+            expect(upgraded).toBe(true);
+            await st.put('test', 'value');
+            await st2.put('test2', 'value2');
+            await db.close();
+
+            // Create another index
+            upgraded = false;
+            db = new JungleDB('test', 2, {
+                onUpgradeNeeded: async (oldVersion, newVersion, jdb) => {
+                    upgraded = true;
+                    const st = jdb.getObjectStore('testStore');
+                    const tx = st.transaction();
+                    await tx.truncate();
+
+                    const st2 = jdb.getObjectStore('testStore2');
+                    const tx2 = st2.transaction();
+                    await tx2.truncate();
+
+                    await JungleDB.commitCombined(tx, tx2);
+                }
+            });
+            st = db.createObjectStore('testStore');
+            st2 = db.createObjectStore('testStore2');
+            await db.connect();
+            expect(upgraded).toBe(true);
+            expect(await st.get('test')).toBeUndefined();
+            expect(await st2.get('test2')).toBeUndefined();
+            await db.destroy();
+        })().then(done, done.fail);
+    });
 });
