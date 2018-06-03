@@ -152,6 +152,10 @@ const db = new JDB.JungleDB('myDatabase', 2, {
 });
 ```
 
+## Documentation
+
+A large fraction of the code is documented using [ESDoc](https://esdoc.org) and a hosted version of this documentation can be found [here](https://doc.esdoc.org/github.com/nimiq-network/jungle-db/).
+
 ## Installing from Source
 
 1. Clone this repository `git clone https://github.com/nimiq-network/jungle-db`.
