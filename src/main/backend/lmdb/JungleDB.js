@@ -276,10 +276,10 @@ class JungleDB {
 
         if (thresholdSize > 0 && info.mapSize - sizeUsed < thresholdSize) {
             Log.i(JungleDB, 'Database needs resize (thresholdSize)');
-            Log.i(JungleDB, `DB map size: ${info.mapSize / (1024 * 1024)} MB`);
-            Log.i(JungleDB, `Used: ${sizeUsed / (1024 * 1024)} MB`);
-            Log.i(JungleDB, `Available: ${(info.mapSize - sizeUsed) / (1024 * 1024)} MB`);
-            Log.i(JungleDB, `Needed: ${thresholdSize / (1024 * 1024)} MB`);
+            Log.i(JungleDB, `DB map size: ${(info.mapSize / (1024 * 1024)).toFixed(2)} MB`);
+            Log.i(JungleDB, `Used: ${(sizeUsed / (1024 * 1024)).toFixed(2)} MB`);
+            Log.i(JungleDB, `Available: ${((info.mapSize - sizeUsed) / (1024 * 1024)).toFixed(2)} MB`);
+            Log.i(JungleDB, `Needed: ${(thresholdSize / (1024 * 1024)).toFixed(2)} MB`);
             return true;
         }
 
@@ -289,10 +289,10 @@ class JungleDB {
         if (sizeUsed / info.mapSize > resizePercentage)
         {
             Log.i(JungleDB, 'Database needs resize (resizePercentage)');
-            Log.i(JungleDB, `DB map size: ${info.mapSize / (1024 * 1024)} MB`);
-            Log.i(JungleDB, `Used: ${sizeUsed / (1024 * 1024)} MB`);
-            Log.i(JungleDB, `Available: ${(info.mapSize - sizeUsed) / (1024 * 1024)} MB`);
-            Log.i(JungleDB, `Percentage full: ${sizeUsed / info.mapSize * 100} %`);
+            Log.i(JungleDB, `DB map size: ${(info.mapSize / (1024 * 1024)).toFixed(2)} MB`);
+            Log.i(JungleDB, `Used: ${(sizeUsed / (1024 * 1024)).toFixed(2)} MB`);
+            Log.i(JungleDB, `Available: ${((info.mapSize - sizeUsed) / (1024 * 1024)).toFixed(2)} MB`);
+            Log.i(JungleDB, `Percentage full: ${(sizeUsed / info.mapSize * 100).toFixed(2)} %`);
             return true;
         }
         return false;
@@ -310,7 +310,7 @@ class JungleDB {
         let newMapSize = info.mapSize + sizeAdd;
         newMapSize += newMapSize % stat.pageSize;
 
-        Log.i(JungleDB, `Resize to ${newMapSize / (1024 * 1024)} MB`);
+        Log.i(JungleDB, `Resize to ${(newMapSize / (1024 * 1024)).toFixed(2)} MB`);
 
         this._db.resize(newMapSize);
     }

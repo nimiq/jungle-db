@@ -5358,7 +5358,7 @@ mute-stream@0.0.7:
   version "0.0.7"
   resolved "https://registry.yarnpkg.com/mute-stream/-/mute-stream-0.0.7.tgz#3075ce93bc21b8fab43e1bc4da7e8115ed1e7bab"
 
-nan@^2.6.2, nan@^2.9.2, nan@~2.10.0:
+nan@^2.10.0, nan@^2.9.2, nan@~2.10.0:
   version "2.10.0"
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.10.0.tgz#96d0cd610ebd58d4b4de9cc0c6828cda99c7548f"
 
@@ -5413,12 +5413,12 @@ node-abi@^2.2.0:
   dependencies:
     semver "^5.4.1"
 
-node-lmdb@paberr/node-lmdb#af876c67055cc7cf0b3c1949e472484aa34410de:
-  version "0.5.4"
-  resolved "https://codeload.github.com/paberr/node-lmdb/tar.gz/af876c67055cc7cf0b3c1949e472484aa34410de"
+node-lmdb@0.6.0:
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/node-lmdb/-/node-lmdb-0.6.0.tgz#14be5f650e1a560aeb86174e0cc85d95945d870a"
   dependencies:
     bindings "^1.2.1"
-    nan "^2.6.2"
+    nan "^2.10.0"
 
 node-pre-gyp@^0.9.0:
   version "0.9.1"
