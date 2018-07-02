@@ -14,7 +14,7 @@ class JungleDB {
      * after modifying the database structure.
      * @param {string} databaseDir The name of the database.
      * @param {number} dbVersion The current version of the database.
-     * @param {{maxDbs:?number, maxDbSize:?number, minResize:?number, autoResize:?boolean, onUpgradeNeeded:?function(oldVersion:number, newVersion:number, jdb:JungleDB)}} [options]
+     * @param {{maxDbs:?number, maxDbSize:?number, useWritemap:?boolean, minResize:?number, autoResize:?boolean, onUpgradeNeeded:?function(oldVersion:number, newVersion:number, jdb:JungleDB)}} [options]
      */
     constructor(databaseDir, dbVersion, options = {}) {
         if (dbVersion <= 0) throw new Error('The version provided must not be less or equal to 0');
@@ -163,7 +163,8 @@ class JungleDB {
         this._db.open({
             path: this._databaseDir,
             mapSize: this._options.maxDbSize || (1024*1024*5), // 5MB default
-            maxDbs: (this._options.maxDbs + 1) || numDbs // default, always add 1 for the internal db
+            maxDbs: (this._options.maxDbs + 1) || numDbs, // default, always add 1 for the internal db
+            useWritemap: this._options.useWritemap || false,
         });
 
         // Check if resize is needed.
