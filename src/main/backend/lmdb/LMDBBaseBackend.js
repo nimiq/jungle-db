@@ -55,10 +55,12 @@ class LMDBBaseBackend {
      * @returns {boolean} object store was newly created
      */
     init(oldVersion, newVersion) {
+        const valueEncoding = this._valueEncoding;
         try {
             this._dbBackend = this._env.openDbi({
                 name: this._tableName,
                 dupSort: this._dupSort,
+                integerDup: valueEncoding !== null && valueEncoding.encoding === JungleDB.Encoding.NUMBER,
                 keyIsUint32: this._keyEncoding !== null && this._keyEncoding.encoding === JungleDB.Encoding.NUMBER
             });
             return false;
@@ -67,6 +69,7 @@ class LMDBBaseBackend {
                 name: this._tableName,
                 create: true,
                 dupSort: this._dupSort,
+                integerDup: valueEncoding !== null && valueEncoding.encoding === JungleDB.Encoding.NUMBER,
                 keyIsUint32: this._keyEncoding !== null && this._keyEncoding.encoding === JungleDB.Encoding.NUMBER
             });
             return true;

@@ -614,4 +614,43 @@ describe('Index', () => {
             expect(await st.index('testIndex').minKeys()).toEqual(new Set(['test1', 'test2']));
         })().then(done, done.fail);
     });
+
+    const backends2 = [
+        TestRunner.nativeRunner('indexTest', 1, jdb => jdb.createObjectStore('testStore', { keyEncoding: JDB.JungleDB.NUMBER_ENCODING })),
+        TestRunner.volatileRunner(() => JungleDB.createVolatileObjectStore())
+    ];
+
+    backends2.forEach(/** @type {TestRunner} */ runner => {
+
+        it(`returns ordered results advanced (${runner.type})`, (done) => {
+            (async function () {
+                // Write something into an object store.
+                let st = await runner.init(st => {
+                    st.createIndex('sender', ['sender'], { keyEncoding: JungleDB.NUMBER_ENCODING });
+                });
+
+                await st.put(101, {'sender': 123});
+                await st.put(10136, {'sender': 123});
+                await st.put(11315, {'sender': 123});
+                await st.put(1133, {'sender': 123});
+                await st.put(12788, {'sender': 123});
+                await st.put(14331, {'sender': 123});
+                await st.put(15861, {'sender': 123});
+                await st.put(2303, {'sender': 123});
+                await st.put(3763, {'sender': 123});
+                await st.put(5678, {'sender': 123});
+                await st.put(7311, {'sender': 123});
+                await st.put(8715, {'sender': 123});
+
+                let lastKey = 0;
+                const keys = await st.index('sender').valueStream((value, key) => {
+                    expect(key).toBeGreaterThanOrEqual(lastKey);
+                    lastKey = key;
+                    return true;
+                }, /*ascending*/ true, JDB.KeyRange.only(123));
+
+                await runner.destroy();
+            })().then(done, done.fail);
+        });
+    });
 });
