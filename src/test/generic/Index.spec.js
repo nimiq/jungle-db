@@ -642,6 +642,19 @@ describe('Index', () => {
                 await st.put(7311, {'sender': 123});
                 await st.put(8715, {'sender': 123});
 
+                // Value streams currently do not work reliably in LevelDB
+                if (typeof LevelDBBackend !== 'undefined' && runner.type === 'native') {
+                    let threw = false;
+                    try {
+                        await st.index('sender').valueStream(() => {});
+                    } catch (e) {
+                        threw = true;
+                    }
+                    expect(threw).toBe(true);
+                    await runner.destroy();
+                    return;
+                }
+
                 let lastKey = 0;
                 const keys = await st.index('sender').valueStream((value, key) => {
                     expect(key).toBeGreaterThanOrEqual(lastKey);
