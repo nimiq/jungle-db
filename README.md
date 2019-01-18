@@ -1,6 +1,6 @@
 # jungle-db [![Build Status](https://travis-ci.org/nimiq-network/jungle-db.svg?branch=master)](https://travis-ci.org/nimiq-network/jungle-db)
 
-JungleDB is a simple database abstraction layer for NodeJS (LevelDB or LMDB) and browsers (IndexedDB) supporting advanced features such as transactions with read-isolation and secondary indices.
+JungleDB is a simple database abstraction layer for NodeJS (LMDB or LevelDB) and browsers (IndexedDB) supporting advanced features such as transactions with read-isolation and secondary indices.
 
 ## Quickstart
 
@@ -18,11 +18,11 @@ Depending on your target and preferences, include one of the files in the dist f
 
 * Modern Browsers: `indexeddb.js`
 * Browser backwards compatibility: `indexeddb-babel.js`
-* NodeJS LevelDB: `leveldb.js`
 * NodeJS LMDB: `lmdb.js`
+* NodeJS LevelDB: `leveldb.js` (*not recommended*)
 
 In NodeJS, you can use `var JDB = require('@nimiq/jungle-db');` to include the LMDB backend.
-In order to use the LevelDB backend, `var JDB = require('@nimiq/jungle-db/dist/leveldb.js');` has to be used.
+In order to use the LevelDB backend, `var JDB = require('@nimiq/jungle-db/dist/leveldb.js');` has to be used. Note that the usage of LevelDB is *not recommended*. LMDB should be preferred for most use cases.
 
 **Note on Edge browser:** At the time of writing, Edge does not provide full IndexedDB support.
 That means that using certain types of indices might fail on Edge.
