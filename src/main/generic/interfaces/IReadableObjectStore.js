@@ -11,7 +11,7 @@ class IReadableObjectStore {
      * @abstract
      * @type {Map.<string,IIndex>}
      */
-    get indices() {} // eslint-disable-line no-unused-vars
+    get indices() { return null; } // eslint-disable-line no-unused-vars
 
     /**
      * Returns a promise of the object stored under the given primary key.
@@ -173,7 +173,7 @@ class IReadableObjectStore {
     async close() {} // eslint-disable-line no-unused-vars
 
     /** @type {boolean} */
-    get connected() {}  // eslint-disable-line no-unused-vars
+    get connected() { return false; }  // eslint-disable-line no-unused-vars
 
     /**
      * Checks whether an object store implements the ISynchronousObjectStore interface.

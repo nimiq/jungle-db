@@ -12,7 +12,7 @@ class IBTree {
      * @abstract
      * @type {number}
      */
-    get length() {} // eslint-disable-line no-unused-vars
+    get length() { return 0; } // eslint-disable-line no-unused-vars
 
     /**
      * The current key as returned by any operation.
@@ -20,7 +20,7 @@ class IBTree {
      * @abstract
      * @type {*}
      */
-    get currentKey() {} // eslint-disable-line no-unused-vars
+    get currentKey() { return null; } // eslint-disable-line no-unused-vars
 
     /**
      * The current record as returned by any operation.
@@ -28,7 +28,7 @@ class IBTree {
      * @abstract
      * @type {*}
      */
-    get currentRecord() {} // eslint-disable-line no-unused-vars
+    get currentRecord() { return null; } // eslint-disable-line no-unused-vars
 
     /**
      * Inserts a new key-record pair into the BTree, if there is no entry for that key.

@@ -25,7 +25,7 @@ class IJungleDB {
     async destroy() {} // eslint-disable-line no-unused-vars
 
     /** @type {boolean} Whether a connection is established. */
-    get connected() {} // eslint-disable-line no-unused-vars
+    get connected() { return false; } // eslint-disable-line no-unused-vars
 
     /**
      * Returns the ObjectStore object for a given table name.

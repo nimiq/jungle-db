@@ -8,11 +8,11 @@ class ILMDBEncoding extends IBasicEncoding {
      * Whether this encoding stores data as buffers.
      * @type {boolean}
      */
-    get buffer() {}
+    get buffer() { return false; }
 
     /**
      * A name for this encoding.
      * @type {string}
      */
-    get type() {}
+    get type() { return ''; }
 }

@@ -85,6 +85,7 @@ before_install:
 
 before_script:
 - node_modules/.bin/gulp build
+- node_modules/.bin/gulp build-leveldb build-leveldb-istanbul
 
 script:
 - if [[ "$TO_TEST" == Karma/SauceLabs/Chrome_Old ]]; then export KARMA_BROWSERS="SL_Chrome_61,SL_Chrome_60,SL_Chrome_59,SL_Chrome_58" TO_TEST=Karma; fi
@@ -93,7 +94,7 @@ script:
 - if [[ "$TO_TEST" == Karma/Travis_CI/Firefox_* ]] && [ "$KARMA_BROWSERS" = "" ]; then export KARMA_BROWSERS=Firefox TO_TEST=Karma USE_ISTANBUL=1; fi
 - if [[ "$TO_TEST" == Karma/Travis_CI/* ]] && [ "$KARMA_BROWSERS" = "" ]; then export KARMA_BROWSERS=Safari TO_TEST=Karma; fi
 - if [ "$TO_TEST" = "Karma" ]; then node_modules/.bin/karma start; fi
-- if [ "$TO_TEST" = "leveldb" ]; then node_modules/.bin/jasmine; fi
-- if [ "$TO_TEST" = "lmdb" ]; then node_modules/.bin/jasmine --config=spec/support/lmdb-jasmine.json; fi
+- if [ "$TO_TEST" = "leveldb" ]; then node_modules/.bin/jasmine --config=spec/support/leveldb-jasmine.json; fi
+- if [ "$TO_TEST" = "lmdb" ]; then node_modules/.bin/jasmine; fi
 - if [ "$TO_TEST" = "ESLint" ]; then node_modules/.bin/eslint src/main src/test *.js && node_modules/.bin/esdoc; fi
 - if [ "$USE_ISTANBUL" = "1" ]; then node_modules/.bin/codecov; fi

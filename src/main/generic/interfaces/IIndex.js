@@ -26,7 +26,7 @@ class IIndex {
      * @abstract
      * @type {string|Array.<string>}
      */
-    get keyPath() {} // eslint-disable-line no-unused-vars
+    get keyPath() { return null; } // eslint-disable-line no-unused-vars
 
     /**
      * This value determines whether the index supports multiple secondary keys per entry.
@@ -34,14 +34,14 @@ class IIndex {
      * @abstract
      * @type {boolean}
      */
-    get multiEntry() {} // eslint-disable-line no-unused-vars
+    get multiEntry() { return false; } // eslint-disable-line no-unused-vars
 
     /**
      * This value determines whether the index is a unique constraint.
      * @abstract
      * @type {boolean}
      */
-    get unique() {} // eslint-disable-line no-unused-vars
+    get unique() { return false; } // eslint-disable-line no-unused-vars
 
     /**
      * Returns a promise of a set of primary keys, whose associated objects' secondary keys are in the given range.

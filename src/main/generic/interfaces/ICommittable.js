@@ -90,7 +90,7 @@ class ICommittable {
      * @type {IObjectStore}
      * @protected
      */
-    get _parent() {} // eslint-disable-line no-unused-vars
+    get _parent() { return null; } // eslint-disable-line no-unused-vars
 
     /**
      * Sets a new CombinedTransaction as dependency.
@@ -102,11 +102,11 @@ class ICommittable {
     /**
      * @type {CombinedTransaction} If existent, a combined transaction encompassing this object.
      */
-    get dependency() {} // eslint-disable-line no-unused-vars
+    get dependency() { return null; } // eslint-disable-line no-unused-vars
 
     /**
      * Returns the object store this transaction belongs to.
      * @tyoe {ObjectStore}
      */
-    get objectStore() {} // eslint-disable-line no-unused-vars
+    get objectStore() { return null; } // eslint-disable-line no-unused-vars
 }

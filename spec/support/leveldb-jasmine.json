@@ -2,10 +2,10 @@
   "spec_dir": "src/test",
   "spec_files": [
     "generic/**/*.[sS]pec.js",
-    "backend/lmdb/**/*.[sS]pec.js"
+    "backend/leveldb/**/*.[sS]pec.js"
   ],
   "helpers": [
-    "backend/lmdb/spec.js"
+    "backend/leveldb/spec.js"
   ],
   "stopSpecOnExpectationFailure": false,
   "random": false
