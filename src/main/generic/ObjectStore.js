@@ -621,7 +621,7 @@ class ObjectStore {
 
     toStringFull() {
         return `ObjectStore{
-    stack=[${this._stateStack.map(tx => `{tx=${tx}, open=${this._openTransactions.get(tx.id) ? this._openTransactions.get(tx.id).size : 0}}`)}],
+    stack=[${this._stateStack.map(tx => `{tx=${tx}, open=${tx.numOpenChildren}}`)}],
     db=${this._db}/${this._name ? this._name : 'unnamed'}
 }`;
     }
