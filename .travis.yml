@@ -2,7 +2,7 @@ dist: trusty
 
 language: node_js
 node_js:
-- "9"
+- "10"
 
 cache: yarn
 
@@ -96,5 +96,5 @@ script:
 - if [ "$TO_TEST" = "Karma" ]; then node_modules/.bin/karma start; fi
 - if [ "$TO_TEST" = "leveldb" ]; then node_modules/.bin/jasmine --config=spec/support/leveldb-jasmine.json; fi
 - if [ "$TO_TEST" = "lmdb" ]; then node_modules/.bin/jasmine; fi
-- if [ "$TO_TEST" = "ESLint" ]; then node_modules/.bin/eslint src/main src/test *.js && node_modules/.bin/esdoc; fi
+- if [ "$TO_TEST" = "ESLint" ]; then node_modules/.bin/eslint src/main *.js && node_modules/.bin/esdoc; fi
 - if [ "$USE_ISTANBUL" = "1" ]; then node_modules/.bin/codecov; fi
