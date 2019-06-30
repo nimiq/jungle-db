@@ -8,7 +8,6 @@ const merge = require('merge2');
 const source = require('vinyl-source-stream');
 const sourcemaps = require('gulp-sourcemaps');
 const uglify = require('gulp-uglify-es').default;
-const util = require('gulp-util');
 
 const sources = {
     backend: {
