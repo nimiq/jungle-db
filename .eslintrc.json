@@ -33,6 +33,9 @@
             "error",
             "always"
         ],
+        "require-atomic-updates": [
+             "warn"
+        ],
         "require-jsdoc": [
             "warn",
             {
