@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "minimist": "^1.2.0",
-    "jungle-db": "../.."
+    "jungle-db": "../..",
+    "minimist": "^1.2.0"
   }
 }
