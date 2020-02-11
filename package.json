@@ -1,6 +1,6 @@
 {
   "name": "@nimiq/jungle-db",
-  "version": "0.9.20",
+  "version": "0.9.21",
   "main": "dist/lmdb.js",
   "unpkg": "dist/indexeddb.js",
   "scripts": {
