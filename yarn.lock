@@ -5405,10 +5405,10 @@ node-gyp-build@~4.1.0:
   resolved "https://registry.yarnpkg.com/node-gyp-build/-/node-gyp-build-4.1.0.tgz#3bc3dd7dd4aafecaf64a2e3729e785bc3cdea565"
   integrity sha512-rGLv++nK20BG8gc0MzzcYe1Nl3p3mtwJ74Q2QD0HTEDKZ6NvOFSelY6s2QBPWIHRR8h7hpad0LiwajfClBJfNg==
 
-node-lmdb@0.7.0:
-  version "0.7.0"
-  resolved "https://registry.yarnpkg.com/node-lmdb/-/node-lmdb-0.7.0.tgz#6f458605b8b23e4b53615b57c1ce6f390a842e92"
-  integrity sha512-yEf93a+sSvqYW1k2AvALQh0bOwDvvfnfkoeH0xL6jD2avkHeIfI/GwU0JHIZJPVYpN3vC1DW1tHfgtiE6SeL6A==
+node-lmdb@^0.8.0:
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/node-lmdb/-/node-lmdb-0.8.0.tgz#d9797f3504a7b25a34c2c50481b5220a64c4e8d0"
+  integrity sha512-fFMNIjOyUtJn7ZsDG/zP2iaHp6IaIVQ42foqFyWhqc9dEfaiZtzhjLL+k6KMChfaeLdAL0f2em8Z33gBc2zeMg==
   dependencies:
     bindings "^1.5.0"
     nan "^2.13.1"
