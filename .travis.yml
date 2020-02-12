@@ -37,25 +37,13 @@ matrix:
 #        secure: UIsO/eO8sTJSAKcKIEej74QCa9cS3zPd0dmnJs6K9K8PcA55eDbOSPgKLxzhFHjyd/+MEjNssmuJTzZ5Wu3ma79z28muALrS65LjBRLJzP1eYGUc/mBHD998S97yllvJOO3vemf8Rb9GxaJCBdDbY5aJlNuJNT74XUzppsWZ2Og3yQaFUtVzfQrVbFRA12Qwm7tgM75q+kpVe+RAn7iIqrPjKTwSTdkd5AkHvSA87S8SadpGr5WKA+M/yuDomsO+58AuKG7lHq3Y9sO7N372OyFEnktp+jvEbHDlk8iJF7s/xB9YvRZYEZyY0MF6E350zXN50hKEgguR9TVXiSsWZnKeHA+lWUz45/jec0k0SrSaBSkQxBc5quNPZZeUzVd++n3IFVh1lc+YxxSLadIdfwjlJbaDdR8+yPpAx/7Q0UDb65XVD5ar7a2gqrJgxtZaa5TOLo1AHoWkkdBzHWL9wYO4cfGvneIGeEgXjMYSCBUBHGoBnQGTjTREMer2pLo5HB/HzDKRq5SRftQYTCavEzAau5/ZqC26k5h2X/55JijE/6FKeoqEYS12fCT+be7EyEVjX6iQIeV77Bc+OVvlF2Fep0omZKeb9HSP3djURrjxwOGokBOxhXtdHvbKPizAqLYh2x9uEz/Ed6upVsa8q9ByrB6GCsYpU05Q6QuWzBA=
   - env: TO_TEST=Karma/Travis_CI/Chrome_Stable
     addons:
-      apt:
-        sources:
-        - google-chrome
-        packages:
-        - google-chrome-stable
+      chrome: stable
   - env: TO_TEST=Karma/Travis_CI/Chrome_Stable USE_BABEL=1
     addons:
-      apt:
-        sources:
-        - google-chrome
-        packages:
-        - google-chrome-stable
+      chrome: stable
   - env: TO_TEST=Karma/Travis_CI/Chrome_Beta
     addons:
-      apt:
-        sources:
-        - google-chrome
-        packages:
-        - google-chrome-beta
+      chrome: beta
 #  - env: TO_TEST=Karma/SauceLabs/Chrome_Old
 #    addons:
 #      sauce_connect:
