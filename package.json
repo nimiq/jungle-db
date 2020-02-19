@@ -39,7 +39,7 @@
     "@babel/preset-env": "^7.4.4",
     "@babel/runtime": "^7.4.4",
     "browserify": "^16.1.1",
-    "codecov": "^3.5.0",
+    "codecov": "^3.6.5",
     "esdoc": "^1.0.4",
     "esdoc-es7-plugin": "^0.0.3",
     "esdoc-standard-plugin": "^1.0.0",
