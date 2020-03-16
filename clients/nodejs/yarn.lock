@@ -248,11 +248,11 @@ isarray@~1.0.0:
   integrity sha1-u5NdSFgsuhaMBoNJV6VKPgcSTxE=
 
 jungle-db@../..:
-  version "0.9.20"
+  version "0.9.21"
   dependencies:
     atob "^2.0.3"
     btoa "^1.1.2"
-    node-lmdb "0.7.0"
+    node-lmdb "^0.8.0"
   optionalDependencies:
     level-sublevel "^6.6.5"
     leveldown "^5.1.1"
@@ -363,9 +363,9 @@ minimist@0.0.8:
   integrity sha1-hX/Kv8M5fSYluCKCYuhqp6ARsF0=
 
 minimist@^1.2.0:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.0.tgz#a35008b20f41383eec1fb914f4cd5df79a264284"
-  integrity sha1-o1AIsg9BOD7sH7kU9M1d95omQoQ=
+  version "1.2.2"
+  resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.2.tgz#b00a00230a1108c48c169e69a291aafda3aacd63"
+  integrity sha512-rIqbOrKb8GJmx/5bc2M0QchhUouMXSpd1RTclXsB41JdL+VtnojfaJR+h7F9k18/4kHUsBFgk80Uk+q569vjPA==
 
 mkdirp@^0.5.1:
   version "0.5.1"
@@ -401,10 +401,10 @@ node-gyp-build@~4.1.0:
   resolved "https://registry.yarnpkg.com/node-gyp-build/-/node-gyp-build-4.1.0.tgz#3bc3dd7dd4aafecaf64a2e3729e785bc3cdea565"
   integrity sha512-rGLv++nK20BG8gc0MzzcYe1Nl3p3mtwJ74Q2QD0HTEDKZ6NvOFSelY6s2QBPWIHRR8h7hpad0LiwajfClBJfNg==
 
-node-lmdb@0.7.0:
-  version "0.7.0"
-  resolved "https://registry.yarnpkg.com/node-lmdb/-/node-lmdb-0.7.0.tgz#6f458605b8b23e4b53615b57c1ce6f390a842e92"
-  integrity sha512-yEf93a+sSvqYW1k2AvALQh0bOwDvvfnfkoeH0xL6jD2avkHeIfI/GwU0JHIZJPVYpN3vC1DW1tHfgtiE6SeL6A==
+node-lmdb@^0.8.0:
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/node-lmdb/-/node-lmdb-0.8.0.tgz#d9797f3504a7b25a34c2c50481b5220a64c4e8d0"
+  integrity sha512-fFMNIjOyUtJn7ZsDG/zP2iaHp6IaIVQ42foqFyWhqc9dEfaiZtzhjLL+k6KMChfaeLdAL0f2em8Z33gBc2zeMg==
   dependencies:
     bindings "^1.5.0"
     nan "^2.13.1"
