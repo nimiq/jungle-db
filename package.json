@@ -1,13 +1,12 @@
 {
   "name": "@nimiq/jungle-db",
-  "version": "0.9.23",
+  "version": "0.10.0",
   "main": "dist/lmdb.js",
   "unpkg": "dist/indexeddb.js",
   "scripts": {
     "build": "gulp build",
     "esdoc": "esdoc",
     "test": "jasmine && karma start",
-    "test-leveldb": "jasmine --config=spec/support/leveldb-jasmine.json",
     "test-lmdb": "jasmine",
     "test-indexeddb": "karma start",
     "lint": "gulp eslint"
@@ -25,11 +24,6 @@
     "atob": "^2.0.3",
     "btoa": "^1.1.2",
     "node-lmdb": "^0.9.6"
-  },
-  "optionalDependencies": {
-    "level-sublevel": "^6.6.5",
-    "leveldown": "^5.1.1",
-    "levelup": "^4.1.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.4.4",

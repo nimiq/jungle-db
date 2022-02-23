@@ -19,13 +19,6 @@ const sources = {
             './src/main/backend/indexeddb/JungleDB.js',
             './src/main/backend/indexeddb/PersistentIndex.js'
         ],
-        leveldb: [
-            './src/main/platform/nodejs/utils/LogNative.js',
-            './src/main/backend/leveldb/utils/LevelDBTools.js',
-            './src/main/backend/leveldb/LevelDBBackend.js',
-            './src/main/backend/leveldb/JungleDB.js',
-            './src/main/backend/leveldb/PersistentIndex.js'
-        ],
         lmdb: [
             './src/main/platform/nodejs/utils/LogNative.js',
             './src/main/backend/lmdb/utils/EncodedLMDBTransaction.js',
@@ -184,47 +177,6 @@ gulp.task('build-indexeddb-istanbul', gulp.series('build-istanbul', function () 
         .pipe(sourcemaps.init({ loadMaps: true }))
         .pipe(concat('indexeddb-istanbul.js'))
         //.pipe(uglify(uglify_config))
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest('dist'));
-}));
-
-const LEVELDB_SOURCES = [
-    './src/loader/nodejs/index.prefix.js',
-    ...sources.generic,
-    ...sources.backend.leveldb,
-    './src/loader/nodejs/index.suffix.js'
-];
-
-gulp.task('build-leveldb', function () {
-    console.warn('Usage of LevelDB is not recommended.');
-    try {
-        require('leveldown');
-    } catch (e) {
-        console.warn('LevelDB build process has been skipped, since the dependency is not met.');
-        return Promise.resolve();
-    }
-
-    return gulp.src(LEVELDB_SOURCES, { base: 'src' })
-        .pipe(sourcemaps.init())
-        .pipe(concat('leveldb.js'))
-        // .pipe(uglify(uglify_config))
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest('dist'));
-});
-
-gulp.task('build-leveldb-istanbul', gulp.series('build-istanbul', function () {
-    console.warn('Usage of LevelDB is not recommended.');
-    try {
-        require('leveldown');
-    } catch (e) {
-        console.warn('LevelDB build process has been skipped, since the dependency is not met.');
-        return Promise.resolve();
-    }
-
-    return gulp.src(LEVELDB_SOURCES.map(f => f.indexOf('./src/main') === 0 ? `./.istanbul/${f}` : f))
-        .pipe(sourcemaps.init())
-        .pipe(concat('leveldb-istanbul.js'))
-        .pipe(uglify(uglify_config))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest('dist'));
 }));

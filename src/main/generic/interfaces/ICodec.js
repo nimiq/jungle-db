@@ -30,18 +30,11 @@ class ICodec {
     decode(obj, key) {} // eslint-disable-line no-unused-vars
 
     /**
-     * A value encoding used for the levelDB and LMDB implementation and ignored for the indexedDB.
+     * A value encoding used for the LMDB implementation and ignored for the indexedDB.
      * For example, JungleDB.JSON_ENCODING provides a slightly modified JSON encoding supporting UInt8Arrays and Sets.
-     * @type {ILMDBEncoding|ILevelDBEncoding|void}
+     * @type {ILMDBEncoding|void}
      */
     get valueEncoding() { return null; } // eslint-disable-line no-unused-vars
-
-    /**
-     * A value encoding used only for the levelDB implementation and ignored for the indexedDB.
-     * For example, JungleDB.JSON_ENCODING provides a slightly modified JSON encoding supporting UInt8Arrays and Sets.
-     * @type {?ILevelDBEncoding}
-     */
-    get leveldbValueEncoding() { return null; } // eslint-disable-line no-unused-vars
 
     /**
      * A value encoding used only for the LMDB implementation and ignored for the indexedDB.

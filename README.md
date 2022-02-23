@@ -1,6 +1,6 @@
 # jungle-db [![Complete Check](https://github.com/nimiq/jungle-db/actions/workflows/build.yml/badge.svg)](https://github.com/nimiq/jungle-db/actions/workflows/build.yml)
 
-JungleDB is a simple database abstraction layer for NodeJS (LMDB or LevelDB) and browsers (IndexedDB) supporting advanced features such as transactions with read-isolation and secondary indices.
+JungleDB is a simple database abstraction layer for NodeJS (LMDB) and browsers (IndexedDB) supporting advanced features such as transactions with read-isolation and secondary indices.
 
 ## Quickstart
 
@@ -19,10 +19,8 @@ Depending on your target and preferences, include one of the files in the dist f
 * Modern Browsers: `indexeddb.js`
 * Browser backwards compatibility: `indexeddb-babel.js`
 * NodeJS LMDB: `lmdb.js`
-* NodeJS LevelDB: `leveldb.js` (*not recommended*)
 
 In NodeJS, you can use `var JDB = require('@nimiq/jungle-db');` to include the LMDB backend.
-In order to use the LevelDB backend, `var JDB = require('@nimiq/jungle-db/dist/leveldb.js');` has to be used. Note that the usage of LevelDB is *not recommended*. LMDB should be preferred for most use cases.
 
 **Note on Edge browser:** At the time of writing, Edge does not provide full IndexedDB support.
 That means that using certain types of indices might fail on Edge.
@@ -113,14 +111,14 @@ db.createObjectStore('test', {
     codec: {
         encode: value => yourEncodeFunction(value),
         decode: (value, key) => yourDecodeFunction(value, key),
-        valueEncoding: JungleDB.JSON_ENCODING // This property is only used for levelDB and LMDB.
+        valueEncoding: JungleDB.JSON_ENCODING // This property is only used for LMDB.
     }    
 });
 ``` 
 
 The `valueEncoding` property defines a backend specific encoding.
 While the default JSON encoding is sufficient for most cases, it can be used to optimise storage in case only binary data is stored.
-There is also the possibility to define different backend specific encodings for LevelDB and LMDB using `leveldbValueEncoding` and `lmdbValueEncoding`.
+There is also the possibility to define different backend specific encodings for LMDB using `lmdbValueEncoding`.
 Possible backend specific encodings are:
 * `JungleDB.JSON_ENCODING` for JSON objects
 * `JungleDB.NUMBER_ENCODING` for numbers
@@ -183,15 +181,6 @@ node index.js
 #### Run IndexedDB Benchmarks
 Open `benchmark/indexeddb/index.html` in your browser
 
-#### Run LevelDB Benchmarks
-
-Start the example by running `benchmark/leveldb/index.js`.
-
-```bash
-cd benchmark/leveldb/
-node index.js
-```
-
 #### Run LMDB Benchmarks
 
 Start the example by running `benchmark/lmdb/index.js`.
@@ -206,14 +195,13 @@ node index.js
 #### Run Testsuite
 - `npm test` or `yarn test` runs browser and NodeJS tests.
 - `npm run test-indexeddb` or `yarn test-indexeddb` runs the testsuite in your browser only.
-- `npm run test-leveldb` or `yarn test-leveldb` runs the LevelDB testsuite for NodeJS only.
 - `npm run test-lmdb` or `yarn test-lmdb` runs the LMDB testsuite for NodeJS only.
 
 #### Run ESLint
 `npm run lint` or `yarn lint` runs the ESLint javascript linter.
 
 #### Build
-Executing `npm run build` or `yarn build` concatenates all sources into `dist/{indexeddb,leveldb,lmdb}.js`
+Executing `npm run build` or `yarn build` concatenates all sources into `dist/{indexeddb,lmdb}.js`
 
 ## Contribute
 
