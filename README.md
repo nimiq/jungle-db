@@ -1,4 +1,4 @@
-# jungle-db [![Build Status](https://travis-ci.org/nimiq-network/jungle-db.svg?branch=master)](https://travis-ci.org/nimiq-network/jungle-db)
+# jungle-db [![Complete Check](https://github.com/nimiq/jungle-db/actions/workflows/build.yml/badge.svg)](https://github.com/nimiq/jungle-db/actions/workflows/build.yml)
 
 JungleDB is a simple database abstraction layer for NodeJS (LMDB or LevelDB) and browsers (IndexedDB) supporting advanced features such as transactions with read-isolation and secondary indices.
 

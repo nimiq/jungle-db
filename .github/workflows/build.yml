@@ -9,13 +9,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [ '12', '14' ]
+        node: [ '12', '14', '16' ]
     name: Node ${{ matrix.node }} build
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-node@v2-beta
       with:
         node-version: ${{ matrix.node }}
+    - uses: browser-actions/setup-chrome@latest
+      with:
+        chrome-version: beta
+    - uses: browser-actions/setup-firefox@latest
+      with:
+        firefox-version: latest-beta
     - uses: actions/cache@v2
       with:
         path: '**/node_modules'
@@ -24,5 +30,6 @@ jobs:
       run: yarn
     - name: Build
       run: yarn build
-    # - name: Test
-    #   run: yarn test
+    - run: sudo apt-get install xvfb
+    - name: Test
+      run: KARMA_BROWSERS=Chrome,Firefox xvfb-run --auto-servernum yarn test

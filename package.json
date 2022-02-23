@@ -63,7 +63,6 @@
     "karma-firefox-launcher": "^1.0.1",
     "karma-jasmine": "*",
     "karma-safari-launcher": "^1.0.0",
-    "karma-sauce-launcher": "^2.0.2",
     "merge2": "^1.0.3",
     "vinyl-buffer": "^1.0.0",
     "vinyl-source-stream": "^2.0.0"
