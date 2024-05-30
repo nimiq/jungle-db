@@ -9,11 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [ '12', '14', '16' ]
+        node: [ '18', '20', '22' ]
     name: Node ${{ matrix.node }} build
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-node@v2-beta
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node }}
     - uses: browser-actions/setup-chrome@latest
@@ -22,7 +22,7 @@ jobs:
     - uses: browser-actions/setup-firefox@latest
       with:
         firefox-version: latest-beta
-    - uses: actions/cache@v2
+    - uses: actions/cache@v4
       with:
         path: '**/node_modules'
         key: ${{ runner.os }}-modules-node${{ matrix.node }}-${{ hashFiles('**/yarn.lock') }}
