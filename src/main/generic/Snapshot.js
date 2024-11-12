@@ -55,10 +55,10 @@ class Snapshot extends Transaction {
         }
         for (const [key, value] of tx._modified) {
             // Continue if we already have the old value for this key.
-            if (this._modified.has(key)) {
+            if (this._modified.has(key) || this._removed.has(key)) {
                 continue;
             }
-            let oldValue = await this.get(key);
+            const oldValue = await this.get(key);
             // If this key is newly introduced,
             // we have to mark it as removed to maintain our state.
             if (!oldValue) {
@@ -70,11 +70,11 @@ class Snapshot extends Transaction {
         }
         for (const key of tx._removed) {
             // Continue if we already have the old value for this key.
-            if (this._modified.has(key)) {
+            if (this._modified.has(key) || this._removed.has(key)) {
                 continue;
             }
             // Removed values have to be remembered.
-            let oldValue = await this.get(key);
+            const oldValue = await this.get(key);
             this._put(key, oldValue);
         }
     }

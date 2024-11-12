@@ -58,6 +58,35 @@ describe('Snapshot', () => {
         })().then(done, done.fail);
     });
 
+    it('works with adding and removing', (done) => {
+        (async function () {
+            const snap = objectStore.snapshot();
+            for (let i=0; i<10; ++i) {
+                expect(await snap.get(`key${i}`)).toBe(`value${i}`);
+            }
+
+            // Add an item first.
+            await objectStore.put('something_new', 'test');
+            expect(await objectStore.get('something_new')).toBe('test');
+
+            expect(await snap.get('something_new')).toBe(undefined);
+            let keys = await snap.keys();
+            expect(keys.size).toBe(10);
+            expect(keys.has('something_new')).toBe(false);
+
+            // Then remove it.
+            await objectStore.remove('something_new');
+            expect(await objectStore.get('something_new')).toBe(undefined);
+
+            expect(await snap.get('something_new')).toBe(undefined);
+            keys = await snap.keys();
+            expect(keys.size).toBe(10);
+            expect(keys.has('something_new')).toBe(false);
+
+            await snap.abort();
+        })().then(done, done.fail);
+    });
+
     it('works on unflushed transaction', (done) => {
         (async function () {
             const tx1 = objectStore.transaction();
